@@ -6,3 +6,9 @@
   },
   "disks": []
 }
+
+{
+    "laravel": {
+      "phpVersion": "8.2"
+  }
+}
