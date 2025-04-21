@@ -1,11 +1,8 @@
 {
-  "app": "balyan-blog",
-  "port": 80,
-  "build": {
-    "location": "iran"
-  },
   "laravel": {
     "phpVersion": "8.2"
-  },
-  "disks": []
+},
+ "build": {
+  "location": "iran"
+}
 }
