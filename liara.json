@@ -2,11 +2,11 @@
   "platform": "laravel",
   "app": "balyan-blog",
   "port": 3000,
+  "laravel": {
+    "phpVersion": "8.2"
+  },
   "build": {
     "location": "iran"
-  },
-  "php": {
-    "version": "8.2"
   },
   "disks": []
 }
