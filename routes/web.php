@@ -6,10 +6,8 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\BlogController;
 use Illuminate\Support\Facades\Route;
 
-// روت‌های پیش‌فرض
-Route::get('/', function () {
-    return view('welcome');
-});
+// روت اصلی به بلاگ منتقل شده است
+Route::get('/', [BlogController::class, 'index'])->name('blog.index');
 
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -27,9 +25,8 @@ Route::middleware('auth')->group(function () {
     });
 });
 
-// روت‌های عمومی بلاگ
-Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
-Route::get('/blog/{post:slug}', [BlogController::class, 'show'])->name('blog.show');
-Route::get('/blog/category/{category:slug}', [BlogController::class, 'category'])->name('blog.category');
+// روت‌های بلاگ
+Route::get('/post/{post:slug}', [BlogController::class, 'show'])->name('blog.show');
+Route::get('/category/{category:slug}', [BlogController::class, 'category'])->name('blog.category');
 
 require __DIR__.'/auth.php';
