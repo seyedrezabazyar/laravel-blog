@@ -1,7 +1,8 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\PostController;
+use App\Http\Controllers\Admin\PostController;
+use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\BlogController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,7 +23,7 @@ Route::middleware('auth')->group(function () {
     // روت‌های مدیریت پست‌ها (پنل ادمین)
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('posts', PostController::class);
-        Route::resource('categories.blade.php', App\Http\Controllers\CategoryController::class);
+        Route::resource('categories', CategoryController::class);
     });
 });
 
