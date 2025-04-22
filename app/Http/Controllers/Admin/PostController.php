@@ -28,7 +28,7 @@ class PostController extends Controller
         $validated = $request->validate([
             'title' => 'required|max:255',
             'content' => 'required',
-            'category_id' => 'required|exists:categories,id',
+            'category_id' => 'required|exists:categories.blade.php,id',
             'featured_image' => 'nullable|image|max:2048',
             'is_published' => 'boolean',
         ]);
@@ -63,7 +63,7 @@ class PostController extends Controller
         $validated = $request->validate([
             'title' => 'required|max:255',
             'content' => 'required',
-            'category_id' => 'required|exists:categories,id',
+            'category_id' => 'required|exists:categories.blade.php,id',
             'featured_image' => 'nullable|image|max:2048',
             'is_published' => 'boolean',
         ]);

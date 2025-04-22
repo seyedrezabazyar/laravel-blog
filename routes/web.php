@@ -22,7 +22,7 @@ Route::middleware('auth')->group(function () {
     // روت‌های مدیریت پست‌ها (پنل ادمین)
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('posts', PostController::class);
-        Route::resource('categories', App\Http\Controllers\CategoryController::class);
+        Route::resource('categories.blade.php', App\Http\Controllers\CategoryController::class);
     });
 });
 
