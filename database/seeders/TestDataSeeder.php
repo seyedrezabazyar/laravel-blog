@@ -15,17 +15,23 @@ class TestDataSeeder extends Seeder
      */
     public function run(): void
     {
-        // ایجاد کاربر تستی
+        // ایجاد کاربر تستی و تعیین آن به عنوان مدیر
         $user = User::firstOrCreate(
             ['email' => 'test@example.com'],
             [
                 'name' => 'کاربر تستی',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
+                'role' => 'admin', // تعیین نقش مدیر
             ]
         );
 
-        $this->command->info('کاربر تستی با موفقیت ایجاد شد یا به‌روزرسانی شد.');
+        // اگر کاربر قبلاً وجود داشت، نقش آن را به مدیر تغییر دهید
+        if ($user->wasRecentlyCreated == false) {
+            $user->update(['role' => 'admin']);
+        }
+
+        $this->command->info('کاربر تستی با موفقیت به عنوان مدیر ایجاد یا به‌روزرسانی شد.');
         $this->command->info('ایمیل: test@example.com');
         $this->command->info('رمز عبور: password');
 

@@ -25,7 +25,7 @@
                     @endif
 
                     <div class="prose max-w-none">
-                        {!! $post->content !!}
+                        {!! $post->purified_content !!}
                     </div>
                 </div>
             </div>

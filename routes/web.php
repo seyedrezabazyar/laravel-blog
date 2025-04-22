@@ -20,8 +20,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // روت‌های مدیریت پست‌ها (پنل ادمین)
-    Route::prefix('admin')->name('admin.')->group(function () {
+    // روت‌های مدیریت پست‌ها (پنل ادمین) - فقط مدیران دسترسی دارند
+    Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::resource('posts', PostController::class);
         Route::resource('categories', CategoryController::class);
     });

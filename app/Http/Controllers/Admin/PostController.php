@@ -8,6 +8,7 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Mews\Purifier\Facades\Purifier;
 
 class PostController extends Controller
 {
@@ -35,6 +36,9 @@ class PostController extends Controller
 
         $validated['user_id'] = auth()->id();
         $validated['slug'] = Str::slug($validated['title']);
+
+        // پاکسازی محتوا قبل از ذخیره
+        $validated['content'] = Purifier::clean($validated['content']);
 
         if ($request->hasFile('featured_image')) {
             $path = $request->file('featured_image')->store('posts', 'public');
@@ -67,6 +71,9 @@ class PostController extends Controller
             'featured_image' => 'nullable|image|max:2048',
             'is_published' => 'boolean',
         ]);
+
+        // پاکسازی محتوا قبل از به‌روزرسانی
+        $validated['content'] = Purifier::clean($validated['content']);
 
         if ($request->hasFile('featured_image')) {
             if ($post->featured_image) {
