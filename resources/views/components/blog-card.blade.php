@@ -14,11 +14,14 @@
     @endif
     <div class="p-6">
         <div class="flex items-center text-sm text-gray-500 mb-2">
-            <span>{{ $post->created_at->format('Y/m/d') }}</span>
-            <span class="mx-2">•</span>
             <a href="{{ route('blog.category', $post->category->slug) }}" class="text-indigo-600 hover:text-indigo-800">{{ $post->category->name }}</a>
         </div>
-        <h3 class="text-xl font-bold mb-3">{{ $post->title }}</h3>
+        <h3 class="text-xl font-bold mb-3">
+            <a href="{{ route('blog.show', $post->slug) }}" class="text-blue-600">
+                {{ $post->title }}
+            </a>
+        </h3>
+
         <p class="text-gray-600 mb-4">{{ Str::limit(strip_tags($post->content), 120) }}</p>
         <div class="flex items-center justify-between">
             <a href="{{ route('blog.show', $post->slug) }}" class="text-indigo-600 hover:text-indigo-800 font-medium">ادامه مطلب</a>

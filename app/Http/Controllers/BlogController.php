@@ -2,91 +2,83 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Post;
+use App\Models\Book;
 use App\Models\Category;
+use App\Models\Author;
 use Illuminate\Http\Request;
 
-class BlogController extends Controller
+class BookController extends Controller
 {
-    /**
-     * نمایش صفحه اصلی وبلاگ
-     */
     public function index()
     {
-        $posts = Post::where('is_published', true)
-            ->with(['user', 'category'])
+        $books = Book::where('is_published', true)
+            ->where('is_restricted', false)
+            ->with(['category', 'authors'])
             ->latest()
             ->paginate(12);
 
-        $categories = Category::withCount('posts')->get();
-
-        return view('blog.index', compact('posts', 'categories'));
+        return view('books.index', compact('books'));
     }
 
-    /**
-     * نمایش جزئیات یک پست
-     */
-    public function show(Post $post)
+    public function show(Book $book)
     {
-        if (!$post->is_published) {
+        // اگر کتاب مخفی است و کاربر مدیر نیست، 404 برگردان
+        if ($book->is_restricted && (!auth()->check() || !auth()->user()->isAdmin())) {
             abort(404);
         }
 
-        // دریافت پست‌های مرتبط
-        $relatedPosts = Post::where('category_id', $post->category_id)
-            ->where('id', '!=', $post->id)
-            ->where('is_published', true)
-            ->latest()
-            ->take(3)
-            ->get();
-
-        return view('blog.show', compact('post', 'relatedPosts'));
-    }
-
-    /**
-     * نمایش پست‌های یک دسته‌بندی خاص
-     */
-    public function category(Category $category)
-    {
-        $posts = Post::where('category_id', $category->id)
-            ->where('is_published', true)
-            ->with(['user', 'category'])
-            ->latest()
-            ->paginate(12);
-
-        $allCategories = Category::withCount('posts')->get();
-
-        return view('blog.category', compact('posts', 'category', 'allCategories'));
-    }
-
-    /**
-     * جستجو در وبلاگ
-     */
-    public function search(Request $request)
-    {
-        $query = $request->input('q');
-
-        if (empty($query)) {
-            return redirect()->route('blog.index');
+        // اگر کتاب منتشر نشده است و کاربر مدیر نیست، 404 برگردان
+        if (!$book->is_published && (!auth()->check() || !auth()->user()->isAdmin())) {
+            abort(404);
         }
 
-        $posts = Post::where('is_published', true)
-            ->where(function($q) use ($query) {
-                $q->where('title', 'like', "%{$query}%")
-                    ->orWhere('content', 'like', "%{$query}%");
-            })
-            ->with(['user', 'category'])
+        $book->load('authors', 'category');
+        $relatedBooks = Book::where('category_id', $book->category_id)
+            ->where('id', '!=', $book->id)
+            ->where('is_published', true)
+            ->where('is_restricted', false)
+            ->take(4)
+            ->get();
+
+        return view('books.show', compact('book', 'relatedBooks'));
+    }
+
+    public function category(Category $category)
+    {
+        $books = Book::where('category_id', $category->id)
+            ->where('is_published', true)
+            ->where('is_restricted', false)
+            ->with(['authors', 'category'])
             ->latest()
             ->paginate(12);
 
-        $categories = Category::withCount('posts')->get();
+        return view('books.category', compact('books', 'category'));
+    }
 
-        // پست‌های محبوب برای نمایش در صورت عدم یافتن نتیجه
-        $popularPosts = Post::where('is_published', true)
+    public function author(Author $author)
+    {
+        $books = $author->publicBooks()->latest()->paginate(12);
+        return view('books.author', compact('books', 'author'));
+    }
+
+    public function search(Request $request)
+    {
+        $query = $request->input('query');
+
+        $books = Book::where('is_published', true)
+            ->where('is_restricted', false)
+            ->where(function($q) use ($query) {
+                $q->where('title_fa', 'like', "%{$query}%")
+                    ->orWhere('title_en', 'like', "%{$query}%")
+                    ->orWhere('description_fa', 'like', "%{$query}%")
+                    ->orWhere('description_en', 'like', "%{$query}%")
+                    ->orWhere('keywords', 'like', "%{$query}%")
+                    ->orWhere('isbn_codes', 'like', "%{$query}%");
+            })
+            ->with(['category', 'authors'])
             ->latest()
-            ->take(3)
-            ->get();
+            ->paginate(12);
 
-        return view('blog.search', compact('posts', 'query', 'categories', 'popularPosts'));
+        return view('books.search', compact('books', 'query'));
     }
 }
