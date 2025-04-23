@@ -25,8 +25,12 @@ Route::middleware('auth')->group(function () {
     });
 });
 
-// روت‌های بلاگ
-Route::get('/post/{post:slug}', [BlogController::class, 'show'])->name('blog.show');
-Route::get('/category/{category:slug}', [BlogController::class, 'category'])->name('blog.category');
+// روت‌های بلاگ با ساختار جدید
+Route::prefix('blog')->name('blog.')->group(function () {
+    Route::get('/', [BlogController::class, 'index'])->name('index');
+    Route::get('/post/{post:slug}', [BlogController::class, 'show'])->name('show');
+    Route::get('/category/{category:slug}', [BlogController::class, 'category'])->name('category');
+    Route::get('/search', [BlogController::class, 'search'])->name('search');
+});
 
 require __DIR__.'/auth.php';
