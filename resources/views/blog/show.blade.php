@@ -1,195 +1,255 @@
 @extends('layouts.blog-app')
 
 @section('content')
-    <div class="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div class="bg-white shadow-lg rounded-lg overflow-hidden">
-            <!-- Post Header -->
-            <div class="p-6 md:p-8">
-                <div class="flex items-center text-sm text-gray-500 mb-4">
-                    <span>{{ $post->created_at->format('Y/m/d') }}</span>
-                    <span class="mx-2">•</span>
-                    <a href="{{ route('blog.category', $post->category->slug) }}" class="text-indigo-600 hover:text-indigo-800">{{ $post->category->name }}</a>
-                    @if($post->author)
-                        <span class="mx-2">•</span>
-                        <a href="{{ route('blog.author', $post->author->slug) }}" class="text-indigo-600 hover:text-indigo-800">{{ $post->author->name }}</a>
+    <!-- نان‌برد و هدر کتاب - بهبود یافته -->
+    <div class="bg-gray-50 py-6 mb-6 border-b border-gray-100">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center text-sm mb-4">
+                <a href="{{ route('blog.index') }}" class="text-blue-600 hover:text-blue-800 transition font-medium">خانه</a>
+                <span class="mx-2 text-gray-400">›</span>
+                <a href="{{ route('blog.category', $post->category->slug) }}" class="text-blue-600 hover:text-blue-800 transition font-medium">{{ $post->category->name }}</a>
+                <span class="mx-2 text-gray-400">›</span>
+                <span class="text-gray-600">{{ $post->title }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 pb-12">
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- ستون راست - تصویر و دکمه خرید (30%) -->
+            <div class="w-full lg:w-3/10" style="width: 30%;">
+                <!-- تصویر کتاب -->
+                <div class="card mb-6 overflow-hidden rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
+                    <div class="relative">
+                        @if($post->featured_image && !$post->hide_image)
+                            <img src="{{ asset('storage/' . $post->featured_image) }}" alt="{{ $post->title }}" class="w-full h-auto">
+                        @else
+                            <img src="{{ asset('images/default-book.png') }}" alt="{{ $post->title }}" class="w-full h-auto">
+                        @endif
+
+                        @if($post->publication_year)
+                            <div class="absolute top-4 right-4 bg-white px-3 py-1.5 rounded-md text-sm font-semibold text-gray-700 shadow-sm">
+                                {{ $post->publication_year }}
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <!-- دکمه خرید کتاب - برگشت به حالت قبلی -->
+                @if($post->purchase_link)
+                    <div class="mb-6">
+                        <a href="{{ $post->purchase_link }}" target="_blank" class="btn btn-primary block text-center py-3 text-lg font-bold rounded-lg transition-all hover:shadow-lg bg-blue-600 hover:bg-blue-700 text-white">
+                            خرید کتاب از سایت ناشر
+                        </a>
+                        <p class="text-xs text-gray-500 text-center mt-2">انتقال به وب‌سایت رسمی ناشر</p>
+                    </div>
+                @endif
+            </div>
+
+            <!-- ستون چپ - عنوان، اطلاعات و محتوای کتاب (70%) -->
+            <div class="w-full lg:w-7/10" style="width: 70%;">
+                <!-- عنوان فارسی و انگلیسی -->
+                <div class="mb-6">
+                    <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">{{ $post->title }}</h1>
+                    @if($post->english_title)
+                        <p class="text-lg text-gray-600">{{ $post->english_title }}</p>
                     @endif
                 </div>
 
-                <h1 class="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">{{ $post->title }}</h1>
-                @if($post->english_title)
-                    <h2 class="text-xl text-gray-600 mb-4">{{ $post->english_title }}</h2>
-                @endif
-
-                <!-- Post Navigation -->
-                <div class="flex justify-between text-sm mb-6">
-                    <a href="{{ route('blog.index') }}" class="text-indigo-600 hover:text-indigo-800 flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                        بازگشت به کتاب‌ها
-                    </a>
-
-                    <!-- Share Links -->
-                    <div class="flex space-x-3 space-x-reverse">
-                        <a href="#" class="text-gray-500 hover:text-indigo-600">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"></path>
+                <!-- اطلاعات کتاب به صورت جدول زیبا - بهبود یافته برای خوانایی بیشتر -->
+                <div class="card mb-8 overflow-hidden rounded-xl shadow-md bg-white border border-gray-100">
+                    <div class="bg-blue-600 py-4 px-6">
+                        <h2 class="text-xl font-bold text-white flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                        </a>
-                        <a href="#" class="text-gray-500 hover:text-indigo-600">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"></path>
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Book Details -->
-            <div class="p-6 md:p-8 bg-gray-50">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Book Cover -->
-                    <div class="md:col-span-1">
-                        @if($post->featured_image && !$post->hide_image)
-                            <img src="{{ asset('storage/' . $post->featured_image) }}" alt="{{ $post->title }}" class="w-full h-auto object-cover rounded-lg shadow-md">
-                        @else
-                            <div class="w-full h-64 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg shadow-md flex items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                </svg>
-                            </div>
-                        @endif
-
-                        @if($post->purchase_link)
-                            <a href="{{ $post->purchase_link }}" target="_blank" class="mt-4 block w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md text-center transition">
-                                خرید کتاب
-                            </a>
-                        @endif
+                            مشخصات کتاب
+                        </h2>
                     </div>
 
-                    <!-- Book Info -->
-                    <div class="md:col-span-2">
-                        <h3 class="text-lg font-semibold mb-4">مشخصات کتاب</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="p-6">
+                        <table class="w-full border-collapse">
+                            <tbody>
                             @if($post->author)
-                                <div class="flex items-center">
-                                    <span class="font-medium ml-2">نویسنده:</span>
-                                    <a href="{{ route('blog.author', $post->author->slug) }}" class="text-indigo-600 hover:text-indigo-800">
-                                        {{ $post->author->name }}
-                                    </a>
-                                </div>
-                            @endif
-
-                            @if($post->authors->count() > 0)
-                                <div class="flex items-start">
-                                    <span class="font-medium ml-2">همکاران:</span>
-                                    <div>
-                                        @foreach($post->authors as $coAuthor)
-                                            <a href="{{ route('blog.author', $coAuthor->slug) }}" class="text-indigo-600 hover:text-indigo-800 block">
-                                                {{ $coAuthor->name }}
-                                            </a>
-                                        @endforeach
-                                    </div>
-                                </div>
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-3 pr-4 text-blue-700 font-medium w-1/4 whitespace-nowrap">نویسنده</td>
+                                    <td class="py-3 px-4">
+                                        <a href="{{ route('blog.author', $post->author->slug) }}" class="text-gray-800 hover:text-blue-600">
+                                            {{ $post->author->name }}
+                                        </a>
+                                    </td>
+                                </tr>
                             @endif
 
                             @if($post->publisher)
-                                <div class="flex items-center">
-                                    <span class="font-medium ml-2">ناشر:</span>
-                                    <a href="{{ route('blog.publisher', $post->publisher->slug) }}" class="text-indigo-600 hover:text-indigo-800">
-                                        {{ $post->publisher->name }}
-                                    </a>
-                                </div>
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-3 pr-4 text-blue-700 font-medium w-1/4 whitespace-nowrap">ناشر</td>
+                                    <td class="py-3 px-4">
+                                        <a href="{{ route('blog.publisher', $post->publisher->slug) }}" class="text-gray-800 hover:text-blue-600">
+                                            {{ $post->publisher->name }}
+                                        </a>
+                                    </td>
+                                </tr>
                             @endif
 
                             @if($post->language)
-                                <div class="flex items-center">
-                                    <span class="font-medium ml-2">زبان:</span>
-                                    <span>{{ $post->language }}</span>
-                                </div>
-                            @endif
-
-                            @if($post->publication_year)
-                                <div class="flex items-center">
-                                    <span class="font-medium ml-2">سال انتشار:</span>
-                                    <span>{{ $post->publication_year }}</span>
-                                </div>
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-3 pr-4 text-blue-700 font-medium w-1/4 whitespace-nowrap">زبان</td>
+                                    <td class="py-3 px-4">{{ $post->language }}</td>
+                                </tr>
                             @endif
 
                             @if($post->format)
-                                <div class="flex items-center">
-                                    <span class="font-medium ml-2">فرمت:</span>
-                                    <span>{{ $post->format }}</span>
-                                </div>
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-3 pr-4 text-blue-700 font-medium w-1/4 whitespace-nowrap">فرمت</td>
+                                    <td class="py-3 px-4">{{ $post->format }}</td>
+                                </tr>
                             @endif
 
                             @if($post->book_codes)
-                                <div class="flex items-start col-span-2">
-                                    <span class="font-medium ml-2">شابک:</span>
-                                    <span>{{ $post->book_codes }}</span>
-                                </div>
+                                <tr>
+                                    <td class="py-3 pr-4 text-blue-700 font-medium w-1/4 whitespace-nowrap">شابک</td>
+                                    <td class="py-3 px-4">
+                                        <code class="bg-gray-50 px-3 py-1 rounded-md font-mono text-sm text-gray-700 select-all border border-gray-200">{{ $post->book_codes }}</code>
+                                    </td>
+                                </tr>
                             @endif
-                        </div>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-                        @if($post->keywords)
-                            <div class="mt-6">
-                                <h4 class="text-md font-semibold mb-2">کلمات کلیدی:</h4>
-                                <div class="flex flex-wrap gap-2">
-                                    @foreach(explode(',', $post->keywords) as $keyword)
-                                        <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-                                            {{ trim($keyword) }}
-                                        </span>
-                                    @endforeach
-                                </div>
+                <!-- توضیحات فارسی کتاب -->
+                <div class="card mb-6 rounded-xl shadow-md overflow-hidden border border-gray-100">
+                    <div class="card-header bg-green-600 border-b border-gray-200 py-4 px-6">
+                        <h2 class="text-xl font-bold text-white flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                            </svg>
+                            معرفی کتاب
+                        </h2>
+                    </div>
+                    <div class="card-body p-6 bg-white">
+                        @if(strip_tags($post->purified_content))
+                            <div class="blog-content prose prose-green max-w-none">
+                                {!! $post->purified_content !!}
+                            </div>
+                        @else
+                            <div class="text-center py-12 flex flex-col items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                                <h3 class="text-xl font-bold text-gray-700 mb-2">توضیحاتی برای این کتاب ثبت نشده است</h3>
+                                <p class="text-gray-500 max-w-md text-center">می‌توانید برای کسب اطلاعات بیشتر در مورد این کتاب با ناشر تماس بگیرید.</p>
                             </div>
                         @endif
                     </div>
                 </div>
-            </div>
 
-            <!-- Book Content -->
-            <div class="p-6 md:p-8">
-                <div class="prose max-w-none prose-lg">
-                    {!! $post->purified_content !!}
-                </div>
-
+                <!-- توضیحات انگلیسی کتاب -->
                 @if($post->english_content)
-                    <div class="mt-10 pt-6 border-t border-gray-200">
-                        <h3 class="text-lg font-semibold mb-4">English Description</h3>
-                        <div class="prose max-w-none prose-lg ltr">
-                            {!! $post->english_content !!}
+                    <div class="card mb-6 rounded-xl shadow-md overflow-hidden border border-gray-100">
+                        <div class="card-header bg-purple-600 border-b border-gray-200 py-4 px-6">
+                            <h2 class="text-xl font-bold text-white flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                                </svg>
+                                Book Description
+                            </h2>
+                        </div>
+                        <div class="card-body p-6 bg-white">
+                            <div class="blog-content prose prose-purple max-w-none ltr" dir="ltr">
+                                {!! $post->english_content !!}
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                <!-- کلمات کلیدی -->
+                @if($post->keywords)
+                    <div class="card mb-8 rounded-xl shadow-md overflow-hidden border border-gray-100">
+                        <div class="card-header bg-yellow-600 border-b border-gray-200 py-4 px-6">
+                            <h2 class="text-xl font-bold text-white flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                </svg>
+                                کلمات کلیدی
+                            </h2>
+                        </div>
+                        <div class="card-body p-6 bg-white">
+                            <div class="flex flex-wrap gap-2">
+                                @foreach(explode(',', $post->keywords) as $keyword)
+                                    <span class="badge px-4 py-2 rounded-full text-sm bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 transition-colors duration-200">
+                                        {{ trim($keyword) }}
+                                    </span>
+                                @endforeach
+                            </div>
                         </div>
                     </div>
                 @endif
             </div>
-
-            <!-- Book Images -->
-            @if(count($post->visible_images) > 0)
-                <div class="p-6 md:p-8 bg-gray-50 border-t border-gray-200">
-                    <h3 class="text-xl font-bold mb-6">تصاویر بیشتر</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        @foreach($post->visible_images as $image)
-                            <div class="bg-white p-2 rounded-lg shadow-md">
-                                <img src="{{ asset('storage/' . $image->image_path) }}" alt="{{ $image->caption ?? $post->title }}" class="w-full h-auto rounded-md">
-                                @if($image->caption)
-                                    <div class="text-sm text-gray-600 mt-2 p-2 text-center">{{ $image->caption }}</div>
-                                @endif
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
         </div>
 
-        <!-- Related Books -->
+        <!-- کتاب‌های مشابه - 4 ستونه - بهبود یافته -->
         <div class="mt-12">
-            <h3 class="text-2xl font-bold text-gray-900 mb-6">کتاب‌های مرتبط</h3>
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ml-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    کتاب‌های مشابه
+                </h2>
+                <a href="{{ route('blog.index') }}" class="text-blue-600 hover:text-blue-800 text-sm flex items-center">
+                    مشاهده بیشتر
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </a>
+            </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                @foreach($relatedPosts as $relatedPost)
-                    <x-blog-card :post="$relatedPost" />
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                @foreach($relatedPosts->take(4) as $relatedPost)
+                    <div class="group">
+                        <a href="{{ route('blog.show', $relatedPost->slug) }}" class="block">
+                            <div class="overflow-hidden rounded-xl shadow-md hover:shadow-xl transition-all duration-300 bg-white border border-gray-100 transform group-hover:-translate-y-1">
+                                <div class="aspect-w-3 aspect-h-4 overflow-hidden">
+                                    @if($relatedPost->featured_image)
+                                        <img src="{{ asset('storage/' . $relatedPost->featured_image) }}" alt="{{ $relatedPost->title }}"
+                                             class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
+                                    @else
+                                        <img src="{{ asset('images/default-book.png') }}" alt="{{ $relatedPost->title }}"
+                                             class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
+                                    @endif
+                                </div>
+                                <div class="p-4">
+                                    <h3 class="font-bold text-gray-900 group-hover:text-blue-600 text-lg mb-1 line-clamp-2 transition-colors duration-200">
+                                        {{ $relatedPost->title }}
+                                    </h3>
+                                    @if($relatedPost->publication_year)
+                                        <div class="mt-2">
+                                            <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded-md text-xs font-medium">
+                                                {{ $relatedPost->publication_year }}
+                                            </span>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </a>
+                    </div>
                 @endforeach
             </div>
         </div>
     </div>
+
+    <style>
+        /* اضافه کردن استایل‌های سفارشی برای عرض ستون‌ها */
+        @media (min-width: 1024px) {
+            .lg\:w-3\/10 {
+                width: 30%;
+            }
+            .lg\:w-7\/10 {
+                width: 70%;
+            }
+        }
+    </style>
 @endsection
