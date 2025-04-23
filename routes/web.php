@@ -3,6 +3,8 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\AuthorController;
+use App\Http\Controllers\Admin\PublisherController;
 use App\Http\Controllers\BlogController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,10 +20,16 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // روت‌های مدیریت پست‌ها (پنل ادمین) - فقط مدیران دسترسی دارند
+    // روت‌های مدیریت (پنل ادمین) - فقط مدیران دسترسی دارند
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::resource('posts', PostController::class);
         Route::resource('categories', CategoryController::class);
+        Route::resource('authors', AuthorController::class);
+        Route::resource('publishers', PublisherController::class);
+
+        // روت‌های اضافی برای مدیریت تصاویر
+        Route::delete('post-images/{image}', [PostController::class, 'destroyImage'])->name('post-images.destroy');
+        Route::post('post-images/reorder', [PostController::class, 'reorderImages'])->name('post-images.reorder');
     });
 });
 
@@ -30,6 +38,9 @@ Route::prefix('blog')->name('blog.')->group(function () {
     Route::get('/', [BlogController::class, 'index'])->name('index');
     Route::get('/post/{post:slug}', [BlogController::class, 'show'])->name('show');
     Route::get('/category/{category:slug}', [BlogController::class, 'category'])->name('category');
+    Route::get('/categories', [BlogController::class, 'categories'])->name('categories');
+    Route::get('/author/{author:slug}', [BlogController::class, 'author'])->name('author');
+    Route::get('/publisher/{publisher:slug}', [BlogController::class, 'publisher'])->name('publisher');
     Route::get('/search', [BlogController::class, 'search'])->name('search');
 });
 

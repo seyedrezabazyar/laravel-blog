@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\Category;
+use App\Models\Author;
+use App\Models\Publisher;
 use Illuminate\Http\Request;
 
 class BlogController extends Controller
@@ -14,11 +16,15 @@ class BlogController extends Controller
     public function index()
     {
         $posts = Post::where('is_published', true)
-            ->with(['user', 'category'])
+            ->where('hide_content', false)
+            ->with(['user', 'category', 'author', 'publisher'])
             ->latest()
             ->paginate(12);
 
-        $categories = Category::withCount('posts')->get();
+        $categories = Category::withCount(['posts' => function($query) {
+            $query->where('is_published', true)
+                ->where('hide_content', false);
+        }])->get();
 
         return view('blog.index', compact('posts', 'categories'));
     }
@@ -28,14 +34,20 @@ class BlogController extends Controller
      */
     public function show(Post $post)
     {
-        if (!$post->is_published) {
+        if (!$post->is_published || $post->hide_content) {
             abort(404);
         }
+
+        // بارگیری اطلاعات مرتبط
+        $post->load(['user', 'category', 'author', 'publisher', 'authors', 'images' => function($query) {
+            $query->where('hide_image', false)->orderBy('sort_order');
+        }]);
 
         // دریافت پست‌های مرتبط
         $relatedPosts = Post::where('category_id', $post->category_id)
             ->where('id', '!=', $post->id)
             ->where('is_published', true)
+            ->where('hide_content', false)
             ->latest()
             ->take(3)
             ->get();
@@ -53,11 +65,15 @@ class BlogController extends Controller
     {
         $posts = Post::where('category_id', $category->id)
             ->where('is_published', true)
-            ->with(['user', 'category'])
+            ->where('hide_content', false)
+            ->with(['user', 'category', 'author', 'publisher'])
             ->latest()
             ->paginate(12);
 
-        $allCategories = Category::withCount('posts')->get();
+        $allCategories = Category::withCount(['posts' => function($query) {
+            $query->where('is_published', true)
+                ->where('hide_content', false);
+        }])->get();
 
         return view('blog.category', compact('posts', 'category', 'allCategories'));
     }
@@ -67,7 +83,10 @@ class BlogController extends Controller
      */
     public function categories()
     {
-        $categories = Category::withCount('posts')
+        $categories = Category::withCount(['posts' => function($query) {
+            $query->where('is_published', true)
+                ->where('hide_content', false);
+        }])
             ->orderByDesc('posts_count')
             ->get();
 
@@ -75,6 +94,7 @@ class BlogController extends Controller
         $categories->each(function ($category) {
             $category->sample_post = Post::where('category_id', $category->id)
                 ->where('is_published', true)
+                ->where('hide_content', false)
                 ->latest()
                 ->first();
         });
@@ -83,6 +103,47 @@ class BlogController extends Controller
         $popularCategories = $categories->take(5);
 
         return view('blog.categories', compact('categories', 'popularCategories'));
+    }
+
+    /**
+     * نمایش پست‌های یک نویسنده خاص
+     */
+    public function author(Author $author)
+    {
+        // ترکیب پست‌های نویسنده اصلی و همکار
+        $authorPosts = $author->posts()
+            ->where('is_published', true)
+            ->where('hide_content', false)
+            ->pluck('id');
+
+        $coAuthorPosts = $author->coAuthoredPosts()
+            ->where('is_published', true)
+            ->where('hide_content', false)
+            ->pluck('id');
+
+        $allPostIds = $authorPosts->merge($coAuthorPosts)->unique();
+
+        $posts = Post::whereIn('id', $allPostIds)
+            ->with(['user', 'category', 'author', 'publisher'])
+            ->latest()
+            ->paginate(12);
+
+        return view('blog.author', compact('posts', 'author'));
+    }
+
+    /**
+     * نمایش پست‌های یک ناشر خاص
+     */
+    public function publisher(Publisher $publisher)
+    {
+        $posts = Post::where('publisher_id', $publisher->id)
+            ->where('is_published', true)
+            ->where('hide_content', false)
+            ->with(['user', 'category', 'author', 'publisher'])
+            ->latest()
+            ->paginate(12);
+
+        return view('blog.publisher', compact('posts', 'publisher'));
     }
 
     /**
@@ -97,18 +158,27 @@ class BlogController extends Controller
         }
 
         $posts = Post::where('is_published', true)
+            ->where('hide_content', false)
             ->where(function($q) use ($query) {
                 $q->where('title', 'like', "%{$query}%")
-                    ->orWhere('content', 'like', "%{$query}%");
+                    ->orWhere('english_title', 'like', "%{$query}%")
+                    ->orWhere('content', 'like', "%{$query}%")
+                    ->orWhere('english_content', 'like', "%{$query}%")
+                    ->orWhere('keywords', 'like', "%{$query}%")
+                    ->orWhere('book_codes', 'like', "%{$query}%");
             })
-            ->with(['user', 'category'])
+            ->with(['user', 'category', 'author', 'publisher'])
             ->latest()
             ->paginate(12);
 
-        $categories = Category::withCount('posts')->get();
+        $categories = Category::withCount(['posts' => function($query) {
+            $query->where('is_published', true)
+                ->where('hide_content', false);
+        }])->get();
 
         // پست‌های محبوب برای نمایش در صورت عدم یافتن نتیجه
         $popularPosts = Post::where('is_published', true)
+            ->where('hide_content', false)
             ->latest()
             ->take(3)
             ->get();

@@ -12,7 +12,7 @@ class AuthorController extends Controller
 {
     public function index()
     {
-        $authors = Author::withCount('books')->paginate(10);
+        $authors = Author::withCount('posts')->paginate(10);
         return view('admin.authors.index', compact('authors'));
     }
 
@@ -44,8 +44,14 @@ class AuthorController extends Controller
 
     public function show(Author $author)
     {
-        $author->load('books');
-        return view('admin.authors.show', compact('author'));
+        // بارگذاری پست‌هایی که این نویسنده در آن‌ها نقش دارد
+        // (هم به عنوان نویسنده اصلی و هم نویسنده همکار)
+        $author->load(['posts', 'coAuthoredPosts']);
+
+        // ترکیب هر دو نوع پست
+        $books = $author->posts->merge($author->coAuthoredPosts)->unique('id');
+
+        return view('admin.authors.show', compact('author', 'books'));
     }
 
     public function edit(Author $author)
@@ -80,8 +86,8 @@ class AuthorController extends Controller
 
     public function destroy(Author $author)
     {
-        // بررسی اینکه آیا نویسنده دارای کتاب است
-        if ($author->books()->count() > 0) {
+        // بررسی اینکه آیا نویسنده دارای پست است
+        if ($author->posts()->count() > 0 || $author->coAuthoredPosts()->count() > 0) {
             return redirect()->route('admin.authors.index')
                 ->with('error', 'این نویسنده دارای کتاب است و نمی‌توان آن را حذف کرد.');
         }

@@ -2,13 +2,13 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ __('مدیریت پست‌ها') }}
+                {{ __('مدیریت کتاب‌ها') }}
             </h2>
             <a href="{{ route('admin.posts.create') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-150 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
                 </svg>
-                افزودن پست جدید
+                افزودن کتاب جدید
             </a>
         </div>
     </x-slot>
@@ -28,7 +28,7 @@
 
                     <div class="mb-6 flex items-center justify-between">
                         <div>
-                            <form action="{{ route('admin.posts.index') }}" method="GET" class="flex space-x-2 space-x-reverse">
+                            <form action="{{ route('admin.posts.index') }}" method="GET" class="flex flex-wrap gap-2">
                                 <div class="relative">
                                     <input type="text" name="search" value="{{ request('search') }}" placeholder="جستجو..." class="pr-8 rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -45,6 +45,20 @@
                                     @endforeach
                                 </select>
 
+                                <select name="author" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                    <option value="">همه نویسندگان</option>
+                                    @foreach(\App\Models\Author::all() as $author)
+                                        <option value="{{ $author->id }}" {{ request('author') == $author->id ? 'selected' : '' }}>{{ $author->name }}</option>
+                                    @endforeach
+                                </select>
+
+                                <select name="publisher" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                    <option value="">همه ناشران</option>
+                                    @foreach(\App\Models\Publisher::all() as $publisher)
+                                        <option value="{{ $publisher->id }}" {{ request('publisher') == $publisher->id ? 'selected' : '' }}>{{ $publisher->name }}</option>
+                                    @endforeach
+                                </select>
+
                                 <select name="status" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                                     <option value="">همه وضعیت‌ها</option>
                                     <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>منتشر شده</option>
@@ -53,7 +67,7 @@
 
                                 <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">فیلتر</button>
 
-                                @if(request('search') || request('category') || request('status'))
+                                @if(request('search') || request('category') || request('status') || request('author') || request('publisher'))
                                     <a href="{{ route('admin.posts.index') }}" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300">حذف فیلترها</a>
                                 @endif
                             </form>
@@ -67,29 +81,67 @@
                                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">عنوان</th>
                                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">دسته‌بندی</th>
                                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">نویسنده</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">ناشر</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">سال انتشار</th>
                                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">وضعیت</th>
-                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">تاریخ</th>
                                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">عملیات</th>
                             </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                             @forelse($posts as $post)
                                 <tr class="hover:bg-gray-50 transition">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $post->title }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        @if($post->featured_image && !$post->hide_image)
+                                            <div class="flex items-center">
+                                                <img src="{{ asset('storage/' . $post->featured_image) }}" alt="{{ $post->title }}" class="w-10 h-14 object-cover rounded ml-2">
+                                                <span>{{ $post->title }}</span>
+                                            </div>
+                                        @else
+                                            {{ $post->title }}
+                                        @endif
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <a href="{{ route('blog.category', $post->category->slug) }}" class="text-indigo-600 hover:text-indigo-900">
                                             {{ $post->category->name }}
                                         </a>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $post->user->name }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        @if($post->is_published)
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">منتشر شده</span>
+                                        @if($post->author)
+                                            <a href="{{ route('admin.authors.show', $post->author) }}" class="text-indigo-600 hover:text-indigo-900">
+                                                {{ $post->author->name }}
+                                            </a>
+                                            @if($post->authors->count() > 0)
+                                                <span class="text-xs text-gray-500"> و {{ $post->authors->count() }} نویسنده دیگر</span>
+                                            @endif
                                         @else
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">پیش‌نویس</span>
+                                            <span class="text-gray-400">تعیین نشده</span>
                                         @endif
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $post->created_at->format('Y/m/d') }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        @if($post->publisher)
+                                            <a href="{{ route('admin.publishers.show', $post->publisher) }}" class="text-indigo-600 hover:text-indigo-900">
+                                                {{ $post->publisher->name }}
+                                            </a>
+                                        @else
+                                            <span class="text-gray-400">تعیین نشده</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ $post->publication_year ?? '-' }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            @if($post->is_published)
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">منتشر شده</span>
+                                            @else
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">پیش‌نویس</span>
+                                            @endif
+
+                                            @if($post->hide_content)
+                                                <span class="mr-1 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">مخفی</span>
+                                            @endif
+                                        </div>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div class="flex items-center">
                                             <a href="{{ route('admin.posts.edit', $post) }}" class="text-indigo-600 hover:text-indigo-900 ml-2 flex items-center">
@@ -107,7 +159,7 @@
                                                 نمایش
                                             </a>
 
-                                            <form class="inline-block" action="{{ route('admin.posts.destroy', $post) }}" method="POST" onsubmit="return confirm('آیا از حذف این پست اطمینان دارید؟');">
+                                            <form class="inline-block" action="{{ route('admin.posts.destroy', $post) }}" method="POST" onsubmit="return confirm('آیا از حذف این کتاب اطمینان دارید؟');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="text-red-600 hover:text-red-900 flex items-center">
@@ -122,16 +174,16 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">هیچ پستی یافت نشد</td>
+                                    <td colspan="7" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">هیچ کتابی یافت نشد</td>
                                 </tr>
                             @endforelse
                             </tbody>
                         </table>
                     </div>
 
-                        <div class="mt-4">
-                            {{ $posts->withQueryString()->links() }}
-                        </div>
+                    <div class="mt-4">
+                        {{ $posts->withQueryString()->links() }}
+                    </div>
                 </div>
             </div>
         </div>
