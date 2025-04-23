@@ -13,13 +13,39 @@ return new class extends Migration
     {
         Schema::create('posts', function (Blueprint $table) {
             $table->id();
+            $table->string('md5_hash')->unique(); // Unique MD5 hash for each book
             $table->foreignId('user_id')->constrained();
             $table->foreignId('category_id')->constrained('categories');
-            $table->string('title');
+            $table->foreignId('author_id')->nullable()->constrained('authors')->nullOnDelete();
+            $table->foreignId('publisher_id')->nullable()->constrained('publishers')->nullOnDelete();
+
+            // Book titles
+            $table->string('title'); // Persian title
+            $table->string('english_title')->nullable(); // English title
             $table->string('slug')->unique();
-            $table->text('content');
-            $table->string('featured_image')->nullable();
+
+            // Book contents
+            $table->text('content'); // Persian content
+            $table->text('english_content')->nullable(); // English content
+
+            // Book details
+            $table->string('language')->nullable(); // Language of the book
+            $table->year('publication_year')->nullable(); // Publication year
+            $table->string('format')->nullable(); // Book format (PDF, EPUB, etc.)
+            $table->text('book_codes')->nullable(); // ISBN codes (10 or 13 digits)
+            $table->text('keywords')->nullable(); // Keywords separated by commas
+
+            // Purchase information
+            $table->string('purchase_link')->nullable(); // Link to purchase the book
+
+            // Image and content restrictions
+            $table->string('featured_image')->nullable(); // Cover image
+            $table->boolean('hide_image')->default(false); // Flag to hide the image from users
+            $table->boolean('hide_content')->default(false); // Flag to hide the content from users
+
+            // Publication status
             $table->boolean('is_published')->default(false);
+
             $table->timestamps();
         });
     }
