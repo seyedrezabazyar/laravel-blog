@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Author;
 use App\Models\Publisher;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class BlogController extends Controller
 {
@@ -17,7 +18,7 @@ class BlogController extends Controller
     {
         $posts = Post::where('is_published', true)
             ->where('hide_content', false)
-            ->with(['user', 'category', 'author', 'publisher'])
+            ->with(['user', 'category', 'author', 'publisher', 'authors'])
             ->latest()
             ->paginate(12);
 
@@ -66,7 +67,7 @@ class BlogController extends Controller
         $posts = Post::where('category_id', $category->id)
             ->where('is_published', true)
             ->where('hide_content', false)
-            ->with(['user', 'category', 'author', 'publisher'])
+            ->with(['user', 'category', 'author', 'publisher', 'authors'])
             ->latest()
             ->paginate(12);
 
@@ -108,21 +109,36 @@ class BlogController extends Controller
     /**
      * نمایش پست‌های یک نویسنده خاص
      */
+    /**
+     * نمایش پست‌های یک نویسنده خاص
+     */
+    /**
+     * نمایش پست‌های یک نویسنده خاص
+     */
     public function author(Author $author)
     {
-        // روش با استفاده از union
-        $mainAuthorPosts = Post::where('author_id', $author->id)
-            ->where('is_published', true)
-            ->where('hide_content', false);
+        // برای جلوگیری از تکرار کتاب‌ها، از یک متغیر قابل شمارش استفاده می‌کنیم
+        $postIds = collect();
 
-        $coAuthorPosts = Post::join('post_author', 'posts.id', '=', 'post_author.post_id')
+        // پست‌هایی که این نویسنده، نویسنده اصلی آن‌ها است
+        $mainAuthorPostIds = Post::where('author_id', $author->id)
+            ->where('is_published', true)
+            ->where('hide_content', false)
+            ->pluck('id');
+        $postIds = $postIds->concat($mainAuthorPostIds);
+
+        // پست‌هایی که این نویسنده، نویسنده همکار آن‌ها است
+        $coAuthorPostIds = DB::table('post_author')
             ->where('post_author.author_id', $author->id)
+            ->join('posts', 'post_author.post_id', '=', 'posts.id')
             ->where('posts.is_published', true)
             ->where('posts.hide_content', false)
-            ->select('posts.*');
+            ->pluck('posts.id');
+        $postIds = $postIds->concat($coAuthorPostIds)->unique();
 
-        $posts = $mainAuthorPosts->union($coAuthorPosts)
-            ->with(['user', 'category', 'author', 'publisher'])
+        // حالا تمام پست‌های مرتبط را با شناسه‌های جمع‌آوری شده بازیابی می‌کنیم
+        $posts = Post::whereIn('id', $postIds)
+            ->with(['user', 'category', 'author', 'publisher', 'authors'])
             ->latest()
             ->paginate(12);
 
@@ -137,7 +153,7 @@ class BlogController extends Controller
         $posts = Post::where('publisher_id', $publisher->id)
             ->where('is_published', true)
             ->where('hide_content', false)
-            ->with(['user', 'category', 'author', 'publisher'])
+            ->with(['user', 'category', 'author', 'publisher', 'authors'])
             ->latest()
             ->paginate(12);
 
@@ -165,7 +181,7 @@ class BlogController extends Controller
                     ->orWhere('keywords', 'like', "%{$query}%")
                     ->orWhere('book_codes', 'like', "%{$query}%");
             })
-            ->with(['user', 'category', 'author', 'publisher'])
+            ->with(['user', 'category', 'author', 'publisher', 'authors'])
             ->latest()
             ->paginate(12);
 

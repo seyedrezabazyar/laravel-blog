@@ -37,12 +37,23 @@
 
         <!-- اطلاعات نویسنده و ناشر -->
         <div class="text-sm text-gray-600 mb-4">
-            @if($post->author)
+            @if($post->author || $post->authors->count() > 0)
                 <span>
-                    نویسنده:
-                    <a href="{{ route('blog.author', $post->author->slug) }}" class="text-indigo-600 hover:text-indigo-800">
-                        {{ $post->author->name }}
-                    </a>
+                    {{ ($post->authors->count() > 0) ? 'نویسندگان:' : 'نویسنده:' }}
+                    @if($post->author)
+                        <a href="{{ route('blog.author', $post->author->slug) }}" class="text-indigo-600 hover:text-indigo-800">
+                            {{ $post->author->name }}
+                        </a>
+                    @endif
+
+                    @if($post->authors->count() > 0)
+                        @if($post->author) <span class="mx-1">،</span> @endif
+                        @foreach($post->authors as $index => $author)
+                            <a href="{{ route('blog.author', $author->slug) }}" class="text-indigo-600 hover:text-indigo-800">
+                                {{ $author->name }}{{ $index < $post->authors->count() - 1 ? '، ' : '' }}
+                            </a>
+                        @endforeach
+                    @endif
                 </span>
             @endif
 

@@ -70,13 +70,24 @@
                     <div class="p-6">
                         <table class="w-full border-collapse">
                             <tbody>
-                            @if($post->author)
+                            @if($post->author || $post->authors->count() > 0)
                                 <tr class="border-b border-gray-100">
-                                    <td class="py-3 pr-4 text-blue-700 font-medium w-1/4 whitespace-nowrap">نویسنده</td>
+                                    <td class="py-3 pr-4 text-blue-700 font-medium w-1/4 whitespace-nowrap">{{ ($post->authors->count() > 0) ? 'نویسندگان' : 'نویسنده' }}</td>
                                     <td class="py-3 px-4">
-                                        <a href="{{ route('blog.author', $post->author->slug) }}" class="text-gray-800 hover:text-blue-600">
-                                            {{ $post->author->name }}
-                                        </a>
+                                        @if($post->author)
+                                            <a href="{{ route('blog.author', $post->author->slug) }}" class="text-gray-800 hover:text-blue-600">
+                                                {{ $post->author->name }}
+                                            </a>
+                                        @endif
+
+                                        @if($post->authors->count() > 0)
+                                            @if($post->author) <span class="mx-1">،</span> @endif
+                                            @foreach($post->authors as $index => $author)
+                                                <a href="{{ route('blog.author', $author->slug) }}" class="text-gray-800 hover:text-blue-600">
+                                                    {{ $author->name }}{{ $index < $post->authors->count() - 1 ? '، ' : '' }}
+                                                </a>
+                                            @endforeach
+                                        @endif
                                     </td>
                                 </tr>
                             @endif
