@@ -1,8 +1,18 @@
 {
-  "laravel": {
-    "phpVersion": "8.2"
-},
- "build": {
-  "location": "iran"
-}
+    "laravel": {
+        "phpVersion": "8.2"
+    },
+    "build": {
+        "location": "iran"
+    },
+    "discs": [
+        {
+            "name": "uploads",
+            "mountTo": "public/uploads"
+        },
+        {
+            "name": "purifier",
+            "mountTo": "storage/app/purifier"
+        }
+    ]
 }

@@ -110,20 +110,18 @@ class BlogController extends Controller
      */
     public function author(Author $author)
     {
-        // ترکیب پست‌های نویسنده اصلی و همکار
-        $authorPosts = $author->posts()
+        // روش با استفاده از union
+        $mainAuthorPosts = Post::where('author_id', $author->id)
             ->where('is_published', true)
-            ->where('hide_content', false)
-            ->pluck('id');
+            ->where('hide_content', false);
 
-        $coAuthorPosts = $author->coAuthoredPosts()
-            ->where('is_published', true)
-            ->where('hide_content', false)
-            ->pluck('id');
+        $coAuthorPosts = Post::join('post_author', 'posts.id', '=', 'post_author.post_id')
+            ->where('post_author.author_id', $author->id)
+            ->where('posts.is_published', true)
+            ->where('posts.hide_content', false)
+            ->select('posts.*');
 
-        $allPostIds = $authorPosts->merge($coAuthorPosts)->unique();
-
-        $posts = Post::whereIn('id', $allPostIds)
+        $posts = $mainAuthorPosts->union($coAuthorPosts)
             ->with(['user', 'category', 'author', 'publisher'])
             ->latest()
             ->paginate(12);
