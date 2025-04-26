@@ -34,6 +34,9 @@ class BlogController extends Controller
     /**
      * نمایش جزئیات یک پست
      */
+    /**
+     * نمایش جزئیات یک پست
+     */
     public function show(Post $post)
     {
         if (!$post->is_published || $post->hide_content) {
@@ -54,12 +57,12 @@ class BlogController extends Controller
             ->take(3)
             ->get();
 
-        // افزایش تعداد بازدید پست (اختیاری)
-        // $post->increment('views');
+        // بررسی IP کاربر
+        $ipLocationService = new \App\Services\IpLocationService();
+        $isIranianIp = $ipLocationService->isIranianIp(request()->ip());
 
-        return view('blog.show', compact('post', 'relatedPosts'));
+        return view('blog.show', compact('post', 'relatedPosts', 'isIranianIp'));
     }
-
     /**
      * نمایش پست‌های یک دسته‌بندی خاص
      */

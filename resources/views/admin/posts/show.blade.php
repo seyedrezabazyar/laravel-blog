@@ -161,14 +161,14 @@
                                 </div>
                             @endif
 
-                            @if($post->keywords)
+                            @if($post->tags && $post->tags->count() > 0)
                                 <div class="bg-gray-50 p-4 rounded-lg mb-6">
-                                    <h3 class="text-lg font-semibold mb-2">کلمات کلیدی</h3>
+                                    <h3 class="text-lg font-semibold mb-2">برچسب‌های کتاب</h3>
                                     <div class="flex flex-wrap gap-2">
-                                        @foreach(explode(',', $post->keywords) as $keyword)
-                                            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-                                            {{ trim($keyword) }}
-                                        </span>
+                                        @foreach($post->tags as $tag)
+                                            <a href="{{ route('blog.tag', $tag->slug) }}" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm hover:bg-blue-200 transition">
+                                                {{ $tag->name }}
+                                            </a>
                                         @endforeach
                                     </div>
                                 </div>

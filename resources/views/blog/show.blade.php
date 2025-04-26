@@ -35,13 +35,18 @@
                     </div>
                 </div>
 
-                <!-- دکمه خرید کتاب - برگشت به حالت قبلی -->
+                <!-- دکمه خرید کتاب -->
                 @if($post->purchase_link)
                     <div class="mb-6">
                         <a href="{{ $post->purchase_link }}" target="_blank" class="btn btn-primary block text-center py-3 text-lg font-bold rounded-lg transition-all hover:shadow-lg bg-blue-600 hover:bg-blue-700 text-white">
                             خرید کتاب از سایت ناشر
                         </a>
                         <p class="text-xs text-gray-500 text-center mt-2">انتقال به وب‌سایت رسمی ناشر</p>
+
+                        <!-- نمایش باکس وضعیت کشور -->
+                        <div class="mt-3 py-2 px-3 rounded-lg text-center text-sm font-medium {{ $isIranianIp ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                            {{ $isIranianIp ? 'ایران' : 'خارج' }}
+                        </div>
                     </div>
                 @endif
             </div>
