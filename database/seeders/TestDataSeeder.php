@@ -97,6 +97,31 @@ class TestDataSeeder extends Seeder
 
         $this->command->info('ناشران با موفقیت ایجاد شدند یا به‌روزرسانی شدند.');
 
+        // ایجاد تگ‌های تستی
+        $tags = [
+            ['name' => 'آموزش', 'slug' => 'education'],
+            ['name' => 'برنامه‌نویسی', 'slug' => 'programming'],
+            ['name' => 'توسعه فردی', 'slug' => 'personal-development'],
+            ['name' => 'تاریخی', 'slug' => 'historical'],
+            ['name' => 'هوش مصنوعی', 'slug' => 'artificial-intelligence'],
+            ['name' => 'روانشناسی', 'slug' => 'psychology'],
+            ['name' => 'ادبیات', 'slug' => 'literature'],
+            ['name' => 'علمی', 'slug' => 'scientific'],
+            ['name' => 'فلسفه', 'slug' => 'philosophy'],
+            ['name' => 'هنر', 'slug' => 'art'],
+        ];
+
+        $tagModels = [];
+        foreach ($tags as $tagData) {
+            $tag = \App\Models\Tag::firstOrCreate(
+                ['slug' => $tagData['slug']],
+                ['name' => $tagData['name']]
+            );
+            $tagModels[] = $tag;
+        }
+
+        $this->command->info('تگ‌ها با موفقیت ایجاد شدند یا به‌روزرسانی شدند.');
+
         // ایجاد پست‌های تستی
         $existingPostsCount = Post::count();
 
@@ -105,6 +130,7 @@ class TestDataSeeder extends Seeder
             $categories = Category::all();
             $authors = Author::all();
             $publishers = Publisher::all();
+            $tagCollection = collect($tagModels);
 
             $bookTitles = [
                 'راهنمای برنامه‌نویسی وب',
@@ -133,8 +159,8 @@ class TestDataSeeder extends Seeder
 
                 // محتوای پست
                 $content = "<p>این یک پست تستی است برای کتاب {$title}.</p>
-                <p>این کتاب توسط {$author->name} نوشته شده و توسط {$publisher->name} منتشر شده است.</p>
-                <p>لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است. چاپگرها و متون بلکه روزنامه و مجله در ستون و سطرآنچنان که لازم است و برای شرایط فعلی تکنولوژی مورد نیاز و کاربردهای متنوع با هدف بهبود ابزارهای کاربردی می باشد.</p>";
+            <p>این کتاب توسط {$author->name} نوشته شده و توسط {$publisher->name} منتشر شده است.</p>
+            <p>لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است. چاپگرها و متون بلکه روزنامه و مجله در ستون و سطرآنچنان که لازم است و برای شرایط فعلی تکنولوژی مورد نیاز و کاربردهای متنوع با هدف بهبود ابزارهای کاربردی می باشد.</p>";
 
                 // ایجاد پست
                 $post = Post::create([
@@ -163,11 +189,30 @@ class TestDataSeeder extends Seeder
                 if (!empty($coAuthors)) {
                     $post->authors()->attach($coAuthors);
                 }
+
+                // اضافه کردن تگ‌های تصادفی به پست
+                $randomTagCount = rand(2, 5); // هر پست بین 2 تا 5 تگ خواهد داشت
+                $randomTags = $tagCollection->random($randomTagCount);
+                $post->tags()->attach($randomTags->pluck('id')->toArray());
             }
 
             $this->command->info("{$postsToCreate} پست تستی با موفقیت ایجاد شد.");
         } else {
             $this->command->info("پست‌های کافی در پایگاه داده وجود دارد. نیازی به ایجاد پست جدید نیست.");
+
+            // اضافه کردن تگ‌ها به پست‌های موجود اگر تگ ندارند
+            $posts = Post::all();
+            $tagCollection = collect($tagModels);
+
+            foreach ($posts as $post) {
+                if ($post->tags()->count() == 0) {
+                    $randomTagCount = rand(2, 5);
+                    $randomTags = $tagCollection->random($randomTagCount);
+                    $post->tags()->attach($randomTags->pluck('id')->toArray());
+                }
+            }
+
+            $this->command->info("تگ‌ها با موفقیت به پست‌های موجود اضافه شدند.");
         }
     }
 }

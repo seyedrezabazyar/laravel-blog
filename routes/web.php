@@ -33,9 +33,6 @@ Route::middleware('auth')->group(function () {
     });
 });
 
-// در بخش روت‌های بلاگ
-Route::get('/tag/{tag:slug}', [BlogController::class, 'tag'])->name('tag');
-
 // روت‌های بلاگ با ساختار جدید
 Route::prefix('blog')->name('blog.')->group(function () {
     Route::get('/', [BlogController::class, 'index'])->name('index');
@@ -45,6 +42,7 @@ Route::prefix('blog')->name('blog.')->group(function () {
     Route::get('/author/{author:slug}', [BlogController::class, 'author'])->name('author');
     Route::get('/publisher/{publisher:slug}', [BlogController::class, 'publisher'])->name('publisher');
     Route::get('/search', [BlogController::class, 'search'])->name('search');
+    Route::get('/tag/{tag:slug}', [BlogController::class, 'tag'])->name('tag'); // اضافه‌کردن به گروه روت‌های بلاگ
 });
 
 require __DIR__.'/auth.php';
