@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\Category;
 use App\Models\Author;
+use App\Models\Tag;
 use App\Models\Publisher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -178,7 +179,6 @@ class BlogController extends Controller
                     ->orWhere('english_title', 'like', "%{$query}%")
                     ->orWhere('content', 'like', "%{$query}%")
                     ->orWhere('english_content', 'like', "%{$query}%")
-                    ->orWhere('keywords', 'like', "%{$query}%")
                     ->orWhere('book_codes', 'like', "%{$query}%");
             })
             ->with(['user', 'category', 'author', 'publisher', 'authors'])

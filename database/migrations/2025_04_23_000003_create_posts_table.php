@@ -33,7 +33,6 @@ return new class extends Migration
             $table->year('publication_year')->nullable(); // Publication year
             $table->string('format')->nullable(); // Book format (PDF, EPUB, etc.)
             $table->text('book_codes')->nullable(); // ISBN codes (10 or 13 digits)
-            $table->text('keywords')->nullable(); // Keywords separated by commas
 
             // Purchase information
             $table->string('purchase_link')->nullable(); // Link to purchase the book

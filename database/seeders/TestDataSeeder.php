@@ -178,7 +178,6 @@ class TestDataSeeder extends Seeder
                     'publication_year' => rand(2010, (int)date('Y')),
                     'format' => $i % 3 == 0 ? 'چاپی' : ($i % 3 == 1 ? 'PDF' : 'EPUB'),
                     'book_codes' => 'ISBN: 978-3-16-148410-' . $i,
-                    'keywords' => 'کلیدواژه۱, کلیدواژه۲, کلیدواژه۳',
                     'purchase_link' => 'https://example.com/books/' . $slug,
                     'is_published' => ($i <= 8), // 8 پست منتشر شده و 2 پیش‌نویس
                     'hide_image' => false,

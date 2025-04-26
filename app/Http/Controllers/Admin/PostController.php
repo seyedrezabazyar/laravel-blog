@@ -46,7 +46,6 @@ class PostController extends Controller
             'publication_year' => 'nullable|integer|min:1800|max:' . date('Y'),
             'format' => 'nullable|max:50',
             'book_codes' => 'nullable',
-            'keywords' => 'nullable',
             'tags' => 'nullable|string',
             'purchase_link' => 'nullable|url',
             'is_published' => 'boolean',

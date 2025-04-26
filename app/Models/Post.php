@@ -22,7 +22,6 @@ class Post extends Model
         'publication_year',
         'format',
         'book_codes',
-        'keywords',
         'purchase_link',
         'hide_image',
         'hide_content',
