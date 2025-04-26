@@ -20,8 +20,8 @@ return [
     'encoding'           => 'UTF-8',
     'finalize'           => true,
     'ignoreNonStrings'   => false,
-    'cachePath'          => storage_path('app/purifier'),
-    'cacheFileMode'      => 0755,
+    'cachePath'          => storage_path('framework/cache/purifier'),
+    'cacheFileMode'      => 0777,
     'settings'      => [
         'default' => [
             'HTML.Doctype'             => 'HTML 4.01 Transitional',

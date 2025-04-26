@@ -1,13 +1,15 @@
 #!/bin/bash
 echo "Running liara_pre_start hook..."
 
-# انتشار کانفیگ Purifier (منتظر باشید تا دیسک متصل شود)
-sleep 5
+# انتظار برای اتصال دیسک
+sleep 10
+
+# انتشار کانفیگ Purifier
 php artisan vendor:publish --provider="Mews\Purifier\PurifierServiceProvider" --force
 
-# ایجاد دایرکتوری کش Purifier
+# ایجاد دایرکتوری کش Purifier در مسیر framework/cache
 echo "Creating purifier cache directory..."
-mkdir -p /var/www/html/storage/app/purifier
-chmod -R 755 /var/www/html/storage/app/purifier
+mkdir -p /var/www/html/storage/framework/cache/purifier
+chmod -R 777 /var/www/html/storage/framework/cache/purifier
 
-echo "Purifier configuration published and cache directory created."
+echo "Purifier configuration completed."

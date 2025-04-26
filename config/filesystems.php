@@ -49,7 +49,7 @@ return [
 
         'purifier' => [
             'driver' => 'local',
-            'root' => storage_path('app/purifier'), // اضافه کردن دایرکتوری purifier
+            'root' => storage_path('framework/cache/purifier'),
             'throw' => false,
             'report' => false,
         ],
