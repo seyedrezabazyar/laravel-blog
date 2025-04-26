@@ -5,7 +5,7 @@
     "build": {
         "location": "iran"
     },
-    "discs": [
+    "disks": [
         {
             "name": "storage",
             "mountTo": "/var/www/html/storage"
