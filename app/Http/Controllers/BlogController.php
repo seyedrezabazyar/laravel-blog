@@ -199,4 +199,21 @@ class BlogController extends Controller
 
         return view('blog.search', compact('posts', 'query', 'categories', 'popularPosts'));
     }
+
+    // در app/Http/Controllers/BlogController.php
+
+    /**
+     * نمایش پست‌های یک برچسب خاص
+     */
+    public function tag(Tag $tag)
+    {
+        $posts = $tag->posts()
+            ->where('is_published', true)
+            ->where('hide_content', false)
+            ->with(['user', 'category', 'author', 'publisher', 'authors'])
+            ->latest()
+            ->paginate(12);
+
+        return view('blog.tag', compact('posts', 'tag'));
+    }
 }

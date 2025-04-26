@@ -196,6 +196,16 @@
                                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                     @enderror
                                 </div>
+
+                                <div>
+                                    <label for="tags" class="block text-sm font-medium text-gray-700 mb-1">برچسب‌ها</label>
+                                    <input type="text" name="tags" id="tags" value="{{ old('tags', $post->tags->pluck('name')->implode(', ')) }}"
+                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 @error('tags') border-red-300 @enderror">
+                                    <p class="text-xs text-gray-500 mt-1">برچسب‌ها را با کاما از هم جدا کنید.</p>
+                                    @error('tags')
+                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
                             </div>
                         </div>
 

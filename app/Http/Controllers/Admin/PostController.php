@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Author;
 use App\Models\Publisher;
 use App\Models\PostImage;
+use App\Models\Tag;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -26,7 +27,8 @@ class PostController extends Controller
         $categories = Category::all();
         $authors = Author::all();
         $publishers = Publisher::all();
-        return view('admin.posts.create', compact('categories', 'authors', 'publishers'));
+        $tags = Tag::orderBy('name')->get();
+        return view('admin.posts.create', compact('categories', 'authors', 'publishers', 'tags'));
     }
 
     public function store(Request $request)
@@ -45,6 +47,7 @@ class PostController extends Controller
             'format' => 'nullable|max:50',
             'book_codes' => 'nullable',
             'keywords' => 'nullable',
+            'tags' => 'nullable|string',
             'purchase_link' => 'nullable|url',
             'is_published' => 'boolean',
             'hide_image' => 'boolean',
@@ -80,6 +83,12 @@ class PostController extends Controller
         $postImages = $request->file('post_images', []);
         $imageCaptions = $request->input('image_captions', []);
         $hidePostImages = $request->input('hide_post_images', []);
+        $tags = null;
+
+        if (isset($validated['tags'])) {
+            $tags = $validated['tags'];
+            unset($validated['tags']);
+        }
 
         // حذف فیلدهای اضافی که مستقیماً در مدل ذخیره نمی‌شوند
         unset($validated['co_authors']);
@@ -93,6 +102,11 @@ class PostController extends Controller
         // اضافه کردن نویسندگان همکار
         if (!empty($coAuthors)) {
             $post->authors()->attach($coAuthors);
+        }
+
+        // همگام‌سازی برچسب‌ها
+        if ($tags !== null) {
+            $this->syncTags($post, $tags);
         }
 
         // ذخیره تصاویر اضافی
@@ -118,7 +132,7 @@ class PostController extends Controller
 
     public function show(Post $post)
     {
-        $post->load(['user', 'category', 'author', 'publisher', 'authors', 'images']);
+        $post->load(['user', 'category', 'author', 'publisher', 'authors', 'images', 'tags']);
         return view('admin.posts.show', compact('post'));
     }
 
@@ -128,7 +142,8 @@ class PostController extends Controller
         $authors = Author::all();
         $publishers = Publisher::all();
         $coAuthors = $post->authors->pluck('id')->toArray();
-        return view('admin.posts.edit', compact('post', 'categories', 'authors', 'publishers', 'coAuthors'));
+        $tags = Tag::orderBy('name')->get();
+        return view('admin.posts.edit', compact('post', 'categories', 'authors', 'publishers', 'coAuthors', 'tags'));
     }
 
     public function update(Request $request, Post $post)
@@ -147,6 +162,7 @@ class PostController extends Controller
             'format' => 'nullable|max:50',
             'book_codes' => 'nullable',
             'keywords' => 'nullable',
+            'tags' => 'nullable|string',
             'purchase_link' => 'nullable|url',
             'is_published' => 'boolean',
             'hide_image' => 'boolean',
@@ -188,6 +204,12 @@ class PostController extends Controller
         $existingImageCaptions = $request->input('existing_image_captions', []);
         $deleteImages = $request->input('delete_images', []);
         $hideExistingImages = $request->input('hide_existing_images', []);
+        $tags = null;
+
+        if (isset($validated['tags'])) {
+            $tags = $validated['tags'];
+            unset($validated['tags']);
+        }
 
         // حذف فیلدهای اضافی که مستقیماً در مدل ذخیره نمی‌شوند
         unset($validated['co_authors']);
@@ -203,6 +225,11 @@ class PostController extends Controller
 
         // به‌روزرسانی نویسندگان همکار
         $post->authors()->sync($coAuthors);
+
+        // همگام‌سازی برچسب‌ها
+        if ($tags !== null) {
+            $this->syncTags($post, $tags);
+        }
 
         // به‌روزرسانی تصاویر موجود
         if (!empty($existingImageCaptions)) {
@@ -265,10 +292,40 @@ class PostController extends Controller
         // حذف رابطه با نویسندگان همکار
         $post->authors()->detach();
 
+        // حذف رابطه با برچسب‌ها
+        $post->tags()->detach();
+
         // حذف پست
         $post->delete();
 
         return redirect()->route('admin.posts.index')
             ->with('success', 'پست با موفقیت حذف شد.');
+    }
+
+    /**
+     * همگام‌سازی برچسب‌های پست
+     *
+     * @param Post $post
+     * @param string $tagsString
+     * @return void
+     */
+    private function syncTags(Post $post, string $tagsString)
+    {
+        // جداسازی برچسب‌ها با کاما
+        $tagNames = array_map('trim', explode(',', $tagsString));
+        $tagIds = [];
+
+        foreach ($tagNames as $tagName) {
+            if (!empty($tagName)) {
+                $tag = Tag::firstOrCreate(
+                    ['slug' => Str::slug($tagName)],
+                    ['name' => $tagName]
+                );
+                $tagIds[] = $tag->id;
+            }
+        }
+
+        // همگام‌سازی برچسب‌ها با پست
+        $post->tags()->sync($tagIds);
     }
 }

@@ -33,6 +33,9 @@ Route::middleware('auth')->group(function () {
     });
 });
 
+// در بخش روت‌های بلاگ
+Route::get('/tag/{tag:slug}', [BlogController::class, 'tag'])->name('tag');
+
 // روت‌های بلاگ با ساختار جدید
 Route::prefix('blog')->name('blog.')->group(function () {
     Route::get('/', [BlogController::class, 'index'])->name('index');

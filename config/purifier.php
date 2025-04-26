@@ -21,7 +21,7 @@ return [
     'finalize'           => true,
     'ignoreNonStrings'   => false,
     'cachePath'          => storage_path('framework/cache/purifier'),
-    'cacheFileMode'      => 0777,
+    'cacheFileMode'      => 0755,
     'settings'      => [
         'default' => [
             'HTML.Doctype'             => 'HTML 4.01 Transitional',

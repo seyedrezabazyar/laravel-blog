@@ -11,7 +11,7 @@
     @else
         <div class="overflow-hidden">
             <img
-                src="{{ url('http://127.0.0.1:8000/images/default-book.png') }}"
+                src="{{ url('images/default-book.png') }}"
                 alt="تصویر پیش‌فرض کتاب"
                 class="custom-square-image">
         </div>

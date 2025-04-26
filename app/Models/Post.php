@@ -124,4 +124,9 @@ class Post extends Model
     {
         return $this->images()->where('hide_image', false)->orderBy('sort_order')->get();
     }
+
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class);
+    }
 }
