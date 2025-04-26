@@ -8,7 +8,7 @@
     "discs": [
         {
             "name": "storage",
-            "mountTo": "storage"
+            "mountTo": "/var/www/html/storage"
         }
     ]
 }
