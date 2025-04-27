@@ -4,7 +4,7 @@
     @if($post->featured_image && !$post->hide_image)
         <div class="overflow-hidden">
             <img
-                src="{{ asset('storage/' . $post->featured_image) }}"
+                src="{{ $post->featured_image_url }}"
                 alt="{{ $post->title }}"
                 class="custom-square-image">
         </div>

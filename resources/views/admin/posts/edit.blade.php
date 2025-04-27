@@ -263,7 +263,7 @@
                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
                                         @foreach($post->images as $image)
                                             <div class="border border-gray-200 rounded-lg p-3 relative">
-                                                <img src="{{ asset('storage/' . $image->image_path) }}" alt="{{ $image->caption ?? $post->title }}" class="w-full h-32 object-cover rounded">
+                                                <img src="{{ $image->image_url }}" alt="{{ $image->caption ?? $post->title }}" class="w-full h-32 object-cover rounded">
                                                 <div class="mt-2">
                                                     <input type="text" name="existing_image_captions[{{ $image->id }}]" value="{{ old('existing_image_captions.' . $image->id, $image->caption) }}" placeholder="عنوان تصویر" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm">
 

@@ -9,6 +9,7 @@ use App\Models\Author;
 use App\Models\Publisher;
 use App\Models\PostImage;
 use App\Models\Tag;
+use App\Services\DownloadHostService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -16,12 +17,39 @@ use Mews\Purifier\Facades\Purifier;
 
 class PostController extends Controller
 {
+    /**
+     * سرویس مدیریت هاست دانلود
+     *
+     * @var DownloadHostService
+     */
+    protected $downloadHostService;
+
+    /**
+     * ایجاد نمونه جدید از کنترلر
+     *
+     * @param DownloadHostService $downloadHostService
+     */
+    public function __construct(DownloadHostService $downloadHostService)
+    {
+        $this->downloadHostService = $downloadHostService;
+    }
+
+    /**
+     * نمایش لیست پست‌ها
+     *
+     * @return \Illuminate\View\View
+     */
     public function index()
     {
         $posts = Post::with(['user', 'category', 'author', 'publisher'])->latest()->paginate(10);
         return view('admin.posts.index', compact('posts'));
     }
 
+    /**
+     * نمایش فرم ایجاد پست جدید
+     *
+     * @return \Illuminate\View\View
+     */
     public function create()
     {
         $categories = Category::all();
@@ -31,6 +59,12 @@ class PostController extends Controller
         return view('admin.posts.create', compact('categories', 'authors', 'publishers', 'tags'));
     }
 
+    /**
+     * ذخیره پست جدید در دیتابیس
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -71,10 +105,16 @@ class PostController extends Controller
             $validated['english_content'] = Purifier::clean($validated['english_content']);
         }
 
-        // ذخیره تصویر شاخص
+        // ذخیره تصویر شاخص در هاست دانلود
         if ($request->hasFile('featured_image')) {
-            $path = $request->file('featured_image')->store('posts', 'public');
-            $validated['featured_image'] = $path;
+            $path = $this->downloadHostService->upload($request->file('featured_image'), 'posts');
+            if ($path) {
+                $validated['featured_image'] = $path;
+            } else {
+                // اگر آپلود در هاست دانلود با خطا مواجه شد، از روش قبلی استفاده می‌کنیم
+                $path = $request->file('featured_image')->store('posts', 'public');
+                $validated['featured_image'] = $path;
+            }
         }
 
         // حذف فیلدهای اضافی از آرایه اعتبارسنجی شده
@@ -108,10 +148,17 @@ class PostController extends Controller
             $this->syncTags($post, $tags);
         }
 
-        // ذخیره تصاویر اضافی
+        // ذخیره تصاویر اضافی در هاست دانلود
         if (!empty($postImages)) {
             foreach ($postImages as $index => $image) {
-                $imagePath = $image->store('post_images', 'public');
+                // آپلود به هاست دانلود
+                $imagePath = $this->downloadHostService->upload($image, 'post_images');
+
+                // اگر آپلود به هاست دانلود با خطا مواجه شد، از روش قبلی استفاده می‌کنیم
+                if (!$imagePath) {
+                    $imagePath = $image->store('post_images', 'public');
+                }
+
                 $caption = isset($imageCaptions[$index]) ? $imageCaptions[$index] : null;
                 $hideImage = isset($hidePostImages[$index]) ? true : false;
 
@@ -129,12 +176,24 @@ class PostController extends Controller
             ->with('success', 'پست با موفقیت ایجاد شد.');
     }
 
+    /**
+     * نمایش جزئیات یک پست
+     *
+     * @param  \App\Models\Post  $post
+     * @return \Illuminate\View\View
+     */
     public function show(Post $post)
     {
         $post->load(['user', 'category', 'author', 'publisher', 'authors', 'images', 'tags']);
         return view('admin.posts.show', compact('post'));
     }
 
+    /**
+     * نمایش فرم ویرایش پست
+     *
+     * @param  \App\Models\Post  $post
+     * @return \Illuminate\View\View
+     */
     public function edit(Post $post)
     {
         $categories = Category::all();
@@ -145,6 +204,13 @@ class PostController extends Controller
         return view('admin.posts.edit', compact('post', 'categories', 'authors', 'publishers', 'coAuthors', 'tags'));
     }
 
+    /**
+     * به‌روزرسانی پست در دیتابیس
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\Post  $post
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function update(Request $request, Post $post)
     {
         $validated = $request->validate([
@@ -185,12 +251,26 @@ class PostController extends Controller
             $validated['english_content'] = Purifier::clean($validated['english_content']);
         }
 
-        // ذخیره تصویر شاخص
+        // ذخیره تصویر شاخص در هاست دانلود
         if ($request->hasFile('featured_image')) {
+            // حذف تصویر قبلی
             if ($post->featured_image) {
-                Storage::disk('public')->delete($post->featured_image);
+                // بررسی کنیم که تصویر در هاست دانلود است یا در استوریج محلی
+                if (strpos($post->featured_image, 'http') === 0 || strpos($post->featured_image, 'posts/') === 0) {
+                    $this->downloadHostService->delete($post->featured_image);
+                } else {
+                    Storage::disk('public')->delete($post->featured_image);
+                }
             }
-            $path = $request->file('featured_image')->store('posts', 'public');
+
+            // آپلود تصویر جدید به هاست دانلود
+            $path = $this->downloadHostService->upload($request->file('featured_image'), 'posts');
+
+            // اگر آپلود به هاست دانلود با خطا مواجه شد، از روش قبلی استفاده می‌کنیم
+            if (!$path) {
+                $path = $request->file('featured_image')->store('posts', 'public');
+            }
+
             $validated['featured_image'] = $path;
         }
 
@@ -246,18 +326,30 @@ class PostController extends Controller
             foreach ($deleteImages as $imageId) {
                 $image = PostImage::find($imageId);
                 if ($image && $image->post_id == $post->id) {
-                    Storage::disk('public')->delete($image->image_path);
+                    // بررسی کنیم که تصویر در هاست دانلود است یا در استوریج محلی
+                    if (strpos($image->image_path, 'http') === 0 || strpos($image->image_path, 'post_images/') === 0) {
+                        $this->downloadHostService->delete($image->image_path);
+                    } else {
+                        Storage::disk('public')->delete($image->image_path);
+                    }
                     $image->delete();
                 }
             }
         }
 
-        // افزودن تصاویر جدید
+        // افزودن تصاویر جدید به هاست دانلود
         if (!empty($postImages)) {
             $lastSortOrder = $post->images()->max('sort_order') ?? 0;
 
             foreach ($postImages as $index => $image) {
-                $imagePath = $image->store('post_images', 'public');
+                // آپلود به هاست دانلود
+                $imagePath = $this->downloadHostService->upload($image, 'post_images');
+
+                // اگر آپلود به هاست دانلود با خطا مواجه شد، از روش قبلی استفاده می‌کنیم
+                if (!$imagePath) {
+                    $imagePath = $image->store('post_images', 'public');
+                }
+
                 $caption = isset($imageCaptions[$index]) ? $imageCaptions[$index] : null;
                 $hideImage = isset($hidePostImages[$index]) ? true : false;
 
@@ -275,16 +367,32 @@ class PostController extends Controller
             ->with('success', 'پست با موفقیت بروزرسانی شد.');
     }
 
+    /**
+     * حذف پست از دیتابیس
+     *
+     * @param  \App\Models\Post  $post
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function destroy(Post $post)
     {
         // حذف تصویر شاخص
         if ($post->featured_image) {
-            Storage::disk('public')->delete($post->featured_image);
+            // بررسی کنیم که تصویر در هاست دانلود است یا در استوریج محلی
+            if (strpos($post->featured_image, 'http') === 0 || strpos($post->featured_image, 'posts/') === 0) {
+                $this->downloadHostService->delete($post->featured_image);
+            } else {
+                Storage::disk('public')->delete($post->featured_image);
+            }
         }
 
         // حذف تصاویر اضافی
         foreach ($post->images as $image) {
-            Storage::disk('public')->delete($image->image_path);
+            // بررسی کنیم که تصویر در هاست دانلود است یا در استوریج محلی
+            if (strpos($image->image_path, 'http') === 0 || strpos($image->image_path, 'post_images/') === 0) {
+                $this->downloadHostService->delete($image->image_path);
+            } else {
+                Storage::disk('public')->delete($image->image_path);
+            }
         }
 
         // حذف رابطه با نویسندگان همکار

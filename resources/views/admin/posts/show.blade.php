@@ -205,7 +205,7 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 @foreach($post->images as $image)
                                     <div class="bg-white shadow rounded-lg overflow-hidden {{ $image->hide_image ? 'opacity-50' : '' }}">
-                                        <img src="{{ asset('storage/' . $image->image_path) }}" alt="{{ $image->caption ?? $post->title }}" class="w-full h-48 object-cover">
+                                        <img src="{{ $image->image_url }}" alt="{{ $image->caption ?? $post->title }}" class="w-full h-48 object-cover">
                                         <div class="p-4">
                                             @if($image->caption)
                                                 <p class="text-gray-700 text-sm">{{ $image->caption }}</p>

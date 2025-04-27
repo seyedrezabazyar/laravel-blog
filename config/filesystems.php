@@ -54,6 +54,19 @@ return [
             'report' => false,
         ],
 
+        'download_host' => [
+            'driver' => 'ftp',
+            'host' => env('FTP_HOST', '171.22.24.32'),
+            'username' => env('FTP_USERNAME', 'pz21170'),
+            'password' => env('FTP_PASSWORD', ''),
+            'port' => env('FTP_PORT', 21),
+            'root' => env('FTP_ROOT', '/'),
+            'passive' => true,
+            'ssl' => env('FTP_SSL', false),
+            'timeout' => 30,
+            'url' => env('FTP_URL', 'https://2870351904.cloudydl.com'),
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

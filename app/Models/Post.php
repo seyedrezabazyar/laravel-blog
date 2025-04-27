@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Mews\Purifier\Facades\Purifier;
+use App\Services\DownloadHostService;
 
 class Post extends Model
 {
@@ -127,5 +128,24 @@ class Post extends Model
     public function tags()
     {
         return $this->belongsToMany(Tag::class);
+    }
+
+    public function getFeaturedImageUrlAttribute()
+    {
+        if (!$this->featured_image) {
+            return null;
+        }
+
+        if (strpos($this->featured_image, 'http') === 0) {
+            return $this->featured_image;
+        }
+
+        // اگر تصویر در Storage باشد
+        if (strpos($this->featured_image, 'posts/') === 0 || strpos($this->featured_image, 'post_images/') === 0) {
+            return app(DownloadHostService::class)->url($this->featured_image);
+        }
+
+        // برای سازگاری با تصاویر قدیمی
+        return asset('storage/' . $this->featured_image);
     }
 }

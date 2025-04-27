@@ -123,4 +123,7 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    // هاست دانلود
+    'custom_image_host' => env('CUSTOM_IMAGE_HOST', 'https://images.balyan.ir'),
+
 ];
