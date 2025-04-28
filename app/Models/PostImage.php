@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Services\DownloadHostService;
 
 class PostImage extends Model
 {
@@ -38,6 +37,10 @@ class PostImage extends Model
      */
     public function getImageUrlAttribute()
     {
+        if (empty($this->image_path)) {
+            return asset('images/default-book.png');
+        }
+
         // اگر URL کامل HTTP یا HTTPS باشد، مستقیماً برگردانده شود
         if (strpos($this->image_path, 'http://') === 0 || strpos($this->image_path, 'https://') === 0) {
             return $this->image_path;
@@ -55,5 +58,26 @@ class PostImage extends Model
 
         // برای سازگاری با تصاویر قدیمی ذخیره شده در استوریج محلی
         return asset('storage/' . $this->image_path);
+    }
+
+    /**
+     * دریافت URL برای نمایش تصویر
+     * اگر تصویر مخفی باشد یا آدرس تصویر وجود نداشته باشد، تصویر پیش‌فرض را برمی‌گرداند
+     *
+     * @return string
+     */
+    public function getDisplayUrlAttribute()
+    {
+        // برای مدیر سایت همیشه تصویر اصلی را برمی‌گردانیم، حتی اگر مخفی باشد
+        if (auth()->check() && auth()->user()->isAdmin()) {
+            return $this->image_url;
+        }
+
+        // اگر تصویر مخفی باشد یا آدرس تصویر خالی باشد، تصویر پیش‌فرض را برمی‌گردانیم
+        if ($this->hide_image || empty($this->image_path)) {
+            return asset('images/default-book.png');
+        }
+
+        return $this->image_url;
     }
 }
