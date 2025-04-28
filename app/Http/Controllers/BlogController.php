@@ -31,12 +31,10 @@ class BlogController extends Controller
         return view('blog.index', compact('posts', 'categories'));
     }
 
-    /**
-     * نمایش جزئیات یک پست
-     */
-    /**
-     * نمایش جزئیات یک پست
-     */
+// app/Http/Controllers/BlogController.php
+
+// در تابع show
+
     public function show(Post $post)
     {
         if (!$post->is_published || $post->hide_content) {
@@ -44,9 +42,7 @@ class BlogController extends Controller
         }
 
         // بارگیری اطلاعات مرتبط
-        $post->load(['user', 'category', 'author', 'publisher', 'authors', 'images' => function($query) {
-            $query->where('hide_image', false)->orderBy('sort_order');
-        }]);
+        $post->load(['user', 'category', 'author', 'publisher', 'authors', 'featuredImage']);
 
         // دریافت پست‌های مرتبط
         $relatedPosts = Post::where('category_id', $post->category_id)
@@ -63,6 +59,7 @@ class BlogController extends Controller
 
         return view('blog.show', compact('post', 'relatedPosts', 'isIranianIp'));
     }
+
     /**
      * نمایش پست‌های یک دسته‌بندی خاص
      */

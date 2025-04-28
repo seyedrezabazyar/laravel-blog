@@ -1,3 +1,5 @@
+// resources/views/blog/show.blade.php
+
 @extends('layouts.blog-app')
 
 @section('content')
@@ -21,8 +23,8 @@
                 <!-- تصویر کتاب -->
                 <div class="card mb-6 overflow-hidden rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
                     <div class="relative">
-                        @if($post->featured_image && !$post->hide_image)
-                            <img src="{{ $post->featured_image_url }}" alt="{{ $post->title }}" class="w-full h-auto">
+                        @if($post->featuredImage && !($post->featuredImage->hide_image && !auth()->check()))
+                            <img src="{{ $post->featuredImage->display_url }}" alt="{{ $post->title }}" class="w-full h-auto">
                         @else
                             <div class="w-full h-64 bg-gradient-to-r from-indigo-100 to-purple-100 flex items-center justify-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -36,27 +38,14 @@
                                 {{ $post->publication_year }}
                             </div>
                         @endif
+
+                        @if(auth()->check() && auth()->user()->isAdmin() && $post->featuredImage && $post->featuredImage->hide_image)
+                            <div class="absolute bottom-0 left-0 right-0 bg-red-600 text-white text-center py-2 text-sm">
+                                این تصویر برای کاربران عادی مخفی است
+                            </div>
+                        @endif
                     </div>
                 </div>
-
-                <!-- تصاویر اضافی کتاب -->
-                @if($post->images && $post->images->count() > 0)
-                    <div class="mt-8 mb-6">
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">تصاویر بیشتر</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            @foreach($post->images->where('hide_image', false) as $image)
-                                <div class="overflow-hidden rounded-lg shadow-md relative group">
-                                    <img src="{{ $image->image_url }}" alt="{{ $image->caption ?? $post->title }}" class="w-full h-auto object-cover transition duration-300 group-hover:scale-105">
-                                    @if($image->caption)
-                                        <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white p-3 transition-all duration-300">
-                                            <p class="text-sm">{{ $image->caption }}</p>
-                                        </div>
-                                    @endif
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
 
                 <!-- دکمه خرید کتاب -->
                 @if($post->purchase_link)
@@ -204,7 +193,6 @@
                     </div>
                 @endif
 
-                <!-- کلمات کلیدی -->
                 <!-- برچسب‌های پست -->
                 @if($post->tags && $post->tags->count() > 0)
                     <div class="card mb-6 rounded-xl shadow-md overflow-hidden border border-gray-100">
@@ -226,7 +214,8 @@
                             </div>
                         </div>
                     </div>
-                @endif            </div>
+                @endif
+            </div>
         </div>
 
         <!-- کتاب‌های مشابه - 4 ستونه - بهبود یافته -->
@@ -252,8 +241,8 @@
                         <a href="{{ route('blog.show', $relatedPost->slug) }}" class="block">
                             <div class="overflow-hidden rounded-xl shadow-md hover:shadow-xl transition-all duration-300 bg-white border border-gray-100 transform group-hover:-translate-y-1">
                                 <div class="aspect-w-3 aspect-h-4 overflow-hidden">
-                                    @if($relatedPost->featured_image)
-                                        <img src="{{ asset('storage/' . $relatedPost->featured_image) }}" alt="{{ $relatedPost->title }}"
+                                    @if($relatedPost->featuredImage && !($relatedPost->featuredImage->hide_image && !auth()->check()))
+                                        <img src="{{ $relatedPost->featuredImage->display_url }}" alt="{{ $relatedPost->title }}"
                                              class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
                                     @else
                                         <img src="{{ asset('images/default-book.png') }}" alt="{{ $relatedPost->title }}"

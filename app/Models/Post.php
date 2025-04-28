@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Mews\Purifier\Facades\Purifier;
-use App\Services\DownloadHostService;
 
 class Post extends Model
 {
@@ -72,9 +71,9 @@ class Post extends Model
     /**
      * رابطه با تصاویر پست
      */
-    public function images()
+    public function featuredImage()
     {
-        return $this->hasMany(PostImage::class);
+        return $this->hasOne(PostImage::class)->orderBy('sort_order');
     }
 
     /**

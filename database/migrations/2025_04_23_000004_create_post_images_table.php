@@ -1,3 +1,5 @@
+// database/migrations/2025_04_23_000004_create_post_images_table.php
+
 <?php
 
 use Illuminate\Database\Migrations\Migration;

@@ -1,3 +1,5 @@
+// database/migrations/2025_04_23_000003_create_posts_table.php
+
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -37,12 +39,8 @@ return new class extends Migration
             // Purchase information
             $table->string('purchase_link')->nullable(); // Link to purchase the book
 
-            // Image and content restrictions
-            $table->string('featured_image')->nullable(); // Cover image
-            $table->boolean('hide_image')->default(false); // Flag to hide the image from users
-            $table->boolean('hide_content')->default(false); // Flag to hide the content from users
-
             // Publication status
+            $table->boolean('hide_content')->default(false); // Flag to hide the content from users
             $table->boolean('is_published')->default(false);
 
             $table->timestamps();
