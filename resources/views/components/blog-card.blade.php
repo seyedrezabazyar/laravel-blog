@@ -3,21 +3,26 @@
 <div class="bg-white rounded-lg overflow-hidden shadow hover:shadow-md transition duration-300">
     {{-- نمایش تصویر بدون فاصله و با سایز کامل --}}
     <div class="w-full relative">
-        @if($post->featuredImage && !($post->featuredImage->hide_image && !auth()->check()))
-            <img
-                src="{{ $post->featuredImage->display_url }}"
-                alt="{{ $post->title }}"
-                class="w-full object-cover" style="height: auto; max-width: 100%; display: block;">
+        @if($post->featuredImage)
+            @if(!$post->featuredImage->hide_image || (auth()->check() && auth()->user()->isAdmin()))
+                <img
+                    src="{{ $post->featuredImage->display_url }}"
+                    alt="{{ $post->title }}"
+                    class="w-full object-cover" style="height: auto; max-width: 100%; display: block;">
+            @else
+                <img
+                    src="{{ asset('images/default-book.png') }}"
+                    alt="{{ $post->title }}"
+                    class="w-full object-cover" style="height: auto; max-width: 100%; display: block;">
+            @endif
         @else
-            <div class="w-full bg-gradient-to-r from-indigo-100 to-purple-100 flex items-center justify-center py-10">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
+            <div class="w-full h-48 bg-gradient-to-r from-indigo-100 to-purple-100 flex items-center justify-center">
+                <img src="{{ asset('images/default-book.png') }}" alt="{{ $post->title }}" class="max-h-40 max-w-full">
             </div>
         @endif
 
-        {{-- نمایش متن "تصویر مخفی شده است" روی تصویر --}}
-        @if($post->featuredImage && $post->featuredImage->hide_image)
+        {{-- نمایش متن "تصویر مخفی شده است" روی تصویر فقط برای مدیران --}}
+        @if($post->featuredImage && $post->featuredImage->hide_image && auth()->check() && auth()->user()->isAdmin())
             <div class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                 <span class="bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium">
                     تصویر مخفی شده است
@@ -35,7 +40,7 @@
         </h3>
 
         {{-- اطلاعات نویسنده - با فاصله از بالا و پایین --}}
-        <div class="text-sm text-gray-600 my-6">
+        <div class="text-sm text-gray-600 my-6" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
             @if($post->author || $post->authors->count() > 0)
                 <span>
                     نویسنده:

@@ -40,8 +40,6 @@ return new class extends Migration
             // Publication status
             $table->boolean('hide_content')->default(false); // Flag to hide the content from users
             $table->boolean('is_published')->default(false);
-            $table->boolean('hide_image')->default(false); // Column that was missing
-            $table->string('featured_image')->nullable(); // Column that was missing
 
             $table->timestamps();
         });
