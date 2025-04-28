@@ -178,53 +178,49 @@ class TestDataSeeder extends Seeder
                 <p>این کتاب توسط {$author->name} نوشته شده و توسط {$publisher->name} منتشر شده است.</p>
                 <p>لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است. چاپگرها و متون بلکه روزنامه و مجله در ستون و سطرآنچنان که لازم است و برای شرایط فعلی تکنولوژی مورد نیاز و کاربردهای متنوع با هدف بهبود ابزارهای کاربردی می باشد.</p>";
 
-                // Create post first to get ID
-                $post = Post::create([
-                    'title' => $title,
-                    'slug' => $slug,
-                    'english_title' => 'English Title for ' . $title,
-                    'content' => $content,
-                    'english_content' => '<p>This is a test post for the book "' . $title . '".</p>',
-                    'user_id' => $user->id,
-                    'category_id' => $category->id,
-                    'author_id' => $author->id,
-                    'publisher_id' => $publisher->id,
-                    'md5_hash' => md5($title . time() . uniqid(rand(), true)),
-                    'language' => $i % 2 == 0 ? 'فارسی' : 'انگلیسی',
-                    'publication_year' => rand(2010, (int)date('Y')),
-                    'format' => $i % 3 == 0 ? 'چاپی' : ($i % 3 == 1 ? 'PDF' : 'EPUB'),
-                    'book_codes' => 'ISBN: 978-3-16-148410-' . $i,
-                    'purchase_link' => 'https://example.com/books/' . $slug,
-                    'is_published' => ($i <= 8), // 8 published posts and 2 drafts
-                    'hide_image' => false,
-                    'hide_content' => false,
-                    'featured_image' => null, // Will be updated after we have the ID
-                ]);
+                try {
+                    // Create post with basic fields first
+                    $post = Post::create([
+                        'title' => $title,
+                        'slug' => $slug,
+                        'english_title' => 'English Title for ' . $title,
+                        'content' => $content,
+                        'english_content' => '<p>This is a test post for the book "' . $title . '".</p>',
+                        'user_id' => $user->id,
+                        'category_id' => $category->id,
+                        'author_id' => $author->id,
+                        'publisher_id' => $publisher->id,
+                        'md5_hash' => md5($title . time() . uniqid(rand(), true)),
+                        'language' => $i % 2 == 0 ? 'فارسی' : 'انگلیسی',
+                        'publication_year' => rand(2010, (int)date('Y')),
+                        'format' => $i % 3 == 0 ? 'چاپی' : ($i % 3 == 1 ? 'PDF' : 'EPUB'),
+                        'book_codes' => 'ISBN: 978-3-16-148410-' . $i,
+                        'purchase_link' => 'https://example.com/books/' . $slug,
+                        'is_published' => ($i <= 8), // 8 published posts and 2 drafts
+                        'hide_content' => false,
+                    ]);
 
-                // Add featured image now that we have the post ID
-                $featuredImage = $this->getRandomImageUrl($post->id);
-                $post->update(['featured_image' => $featuredImage]);
+                    // Add co-authors
+                    if (!empty($coAuthors)) {
+                        $post->authors()->attach($coAuthors);
+                    }
 
-                // Add co-authors
-                if (!empty($coAuthors)) {
-                    $post->authors()->attach($coAuthors);
-                }
+                    // Add random tags to post
+                    $randomTagCount = rand(2, 5);
+                    $randomTags = $tagCollection->random($randomTagCount);
+                    $post->tags()->attach($randomTags->pluck('id')->toArray());
 
-                // Add random tags to post
-                $randomTagCount = rand(2, 5);
-                $randomTags = $tagCollection->random($randomTagCount);
-                $post->tags()->attach($randomTags->pluck('id')->toArray());
-
-                // Add additional images to the post (2-5 images per post)
-                $imageCount = rand(2, 5);
-                for ($j = 0; $j < $imageCount; $j++) {
+                    // در اینجا فقط یک تصویر اصلی برای پست اضافه می‌کنیم
                     PostImage::create([
                         'post_id' => $post->id,
                         'image_path' => $this->getRandomImageUrl($post->id),
-                        'caption' => 'تصویر شماره ' . ($j + 1) . ' برای کتاب ' . $title,
+                        'caption' => 'تصویر اصلی برای کتاب ' . $title,
                         'hide_image' => false,
-                        'sort_order' => $j
+                        'sort_order' => 0 // تصویر اصلی
                     ]);
+
+                } catch (\Exception $e) {
+                    $this->command->error("خطا در ایجاد پست {$title}: " . $e->getMessage());
                 }
             }
 
@@ -244,23 +240,15 @@ class TestDataSeeder extends Seeder
                     $post->tags()->attach($randomTags->pluck('id')->toArray());
                 }
 
-                // Add featured image if it doesn't exist
-                if (empty($post->featured_image)) {
-                    $post->update(['featured_image' => $this->getRandomImageUrl($post->id)]);
-                }
-
-                // Add post images if they don't exist
+                // Add post image if it doesn't exist
                 if ($post->images()->count() == 0) {
-                    $imageCount = rand(2, 5);
-                    for ($j = 0; $j < $imageCount; $j++) {
-                        PostImage::create([
-                            'post_id' => $post->id,
-                            'image_path' => $this->getRandomImageUrl($post->id),
-                            'caption' => 'تصویر شماره ' . ($j + 1) . ' برای کتاب ' . $post->title,
-                            'hide_image' => false,
-                            'sort_order' => $j
-                        ]);
-                    }
+                    PostImage::create([
+                        'post_id' => $post->id,
+                        'image_path' => $this->getRandomImageUrl($post->id),
+                        'caption' => 'تصویر اصلی برای کتاب ' . $post->title,
+                        'hide_image' => false,
+                        'sort_order' => 0
+                    ]);
                 }
             }
 

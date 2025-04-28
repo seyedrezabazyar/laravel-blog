@@ -1,4 +1,4 @@
-.<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="rtl">
 <head>
     <meta charset="utf-8">
@@ -89,6 +89,16 @@
         .me-4 {
             margin-left: 1rem !important;
         }
+
+        /* Custom column widths */
+        @media (min-width: 1024px) {
+            .lg\:w-3\/10 {
+                width: 30%;
+            }
+            .lg\:w-7\/10 {
+                width: 70%;
+            }
+        }
     </style>
 
     @stack('styles')
@@ -115,7 +125,7 @@
     <div class="container mx-auto px-4 pb-12">
         <div class="flex flex-col lg:flex-row gap-8">
             <!-- ستون راست - تصویر و دکمه خرید (30%) -->
-            <div class="w-full lg:w-3/10" style="width: 30%;">
+            <div class="w-full lg:w-3/10">
                 <!-- تصویر کتاب -->
                 <div class="card mb-6 overflow-hidden rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
                     <div class="relative">
@@ -160,7 +170,7 @@
             </div>
 
             <!-- ستون چپ - عنوان، اطلاعات و محتوای کتاب (70%) -->
-            <div class="w-full lg:w-7/10" style="width: 70%;">
+            <div class="w-full lg:w-7/10">
                 @yield('content')
             </div>
         </div>
