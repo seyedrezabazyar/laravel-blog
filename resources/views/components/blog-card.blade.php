@@ -2,18 +2,17 @@
 
 <div class="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition duration-300">
     @if($post->featured_image && !$post->hide_image)
-        <div class="overflow-hidden">
+        <div class="overflow-hidden h-48">
             <img
                 src="{{ $post->featured_image_url }}"
                 alt="{{ $post->title }}"
-                class="custom-square-image">
+                class="w-full h-full object-cover hover:scale-105 transition duration-500">
         </div>
     @else
-        <div class="overflow-hidden">
-            <img
-                src="{{ url('images/default-book.png') }}"
-                alt="تصویر پیش‌فرض کتاب"
-                class="custom-square-image">
+        <div class="overflow-hidden h-48 bg-gradient-to-r from-indigo-100 to-purple-100 flex items-center justify-center">
+            <svg class="w-16 h-16 text-indigo-300" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+            </svg>
         </div>
     @endif
 

@@ -64,7 +64,9 @@ return [
             'passive' => true,
             'ssl' => env('FTP_SSL', false),
             'timeout' => 30,
-            'url' => env('FTP_URL', 'https://2870351904.cloudydl.com'),
+            'url' => env('CUSTOM_IMAGE_HOST', 'https://images.balyan.ir'),
+            'throw' => false,
+            'report' => true,
         ],
 
         's3' => [

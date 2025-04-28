@@ -130,22 +130,33 @@ class Post extends Model
         return $this->belongsToMany(Tag::class);
     }
 
+    /**
+     * دریافت URL کامل تصویر شاخص
+     *
+     * @return string|null
+     */
     public function getFeaturedImageUrlAttribute()
     {
         if (!$this->featured_image) {
             return null;
         }
 
-        if (strpos($this->featured_image, 'http') === 0) {
+        // اگر URL کامل HTTP یا HTTPS باشد، مستقیماً برگردانده شود
+        if (strpos($this->featured_image, 'http://') === 0 || strpos($this->featured_image, 'https://') === 0) {
             return $this->featured_image;
         }
 
-        // اگر تصویر در Storage باشد
-        if (strpos($this->featured_image, 'posts/') === 0 || strpos($this->featured_image, 'post_images/') === 0) {
-            return app(DownloadHostService::class)->url($this->featured_image);
+        // اگر مسیر با images.balyan.ir شروع شود
+        if (strpos($this->featured_image, 'images.balyan.ir/') !== false) {
+            return 'https://' . $this->featured_image;
         }
 
-        // برای سازگاری با تصاویر قدیمی
+        // اگر تصویر در هاست دانلود باشد (با الگوی posts/ یا post_images/)
+        if (strpos($this->featured_image, 'posts/') === 0 || strpos($this->featured_image, 'post_images/') === 0) {
+            return config('app.custom_image_host', 'https://images.balyan.ir') . '/' . $this->featured_image;
+        }
+
+        // برای سازگاری با تصاویر قدیمی ذخیره شده در استوریج محلی
         return asset('storage/' . $this->featured_image);
     }
 }

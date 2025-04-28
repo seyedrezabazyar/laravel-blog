@@ -22,9 +22,13 @@
                 <div class="card mb-6 overflow-hidden rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
                     <div class="relative">
                         @if($post->featured_image && !$post->hide_image)
-                            <img src="{{ asset('storage/' . $post->featured_image) }}" alt="{{ $post->title }}" class="w-full h-auto">
+                            <img src="{{ $post->featured_image_url }}" alt="{{ $post->title }}" class="w-full h-auto">
                         @else
-                            <img src="{{ asset('images/default-book.png') }}" alt="{{ $post->title }}" class="w-full h-auto">
+                            <div class="w-full h-64 bg-gradient-to-r from-indigo-100 to-purple-100 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                            </div>
                         @endif
 
                         @if($post->publication_year)
@@ -34,6 +38,25 @@
                         @endif
                     </div>
                 </div>
+
+                <!-- تصاویر اضافی کتاب -->
+                @if($post->images && $post->images->count() > 0)
+                    <div class="mt-8 mb-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">تصاویر بیشتر</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            @foreach($post->images->where('hide_image', false) as $image)
+                                <div class="overflow-hidden rounded-lg shadow-md relative group">
+                                    <img src="{{ $image->image_url }}" alt="{{ $image->caption ?? $post->title }}" class="w-full h-auto object-cover transition duration-300 group-hover:scale-105">
+                                    @if($image->caption)
+                                        <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white p-3 transition-all duration-300">
+                                            <p class="text-sm">{{ $image->caption }}</p>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
 
                 <!-- دکمه خرید کتاب -->
                 @if($post->purchase_link)
