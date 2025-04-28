@@ -14,7 +14,14 @@
                     </div>
                 </div>
                 <div class="md:w-1/2 mt-10 md:mt-0 fade-in" style="animation-delay: 0.3s;">
-                    <img src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80" alt="کتابخانه" class="rounded-lg shadow-xl">
+                    <div class="relative">
+                        <img
+                            src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+                            alt="کتابخانه"
+                            class="rounded-lg shadow-xl w-full h-auto"
+                            onerror="this.onerror=null; this.src='{{ asset('images/default-hero.png') }}'; if(!this.src.includes('default-hero.png')) this.src='{{ asset('images/default-book.png') }}';"
+                        >
+                    </div>
                 </div>
             </div>
         </div>
@@ -42,7 +49,6 @@
             </div>
         </div>
     </section>
-
 
     <!-- Latest Posts Section -->
     <section id="latest-posts" class="py-16">
@@ -78,4 +84,21 @@
         </div>
     </section>
 
+    {{-- اسکریپت جاوااسکریپت برای بررسی وجود تصاویر --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // بررسی وجود تصاویر و جایگزینی با تصویر پیش‌فرض در صورت خطا
+            function handleImageError(img) {
+                img.onerror = null; // برای جلوگیری از تکرار خطا
+                img.src = '{{ asset('images/default-book.png') }}';
+            }
+
+            // اضافه کردن ویژگی onerror به تمام تصاویر صفحه
+            document.querySelectorAll('img').forEach(function(img) {
+                img.addEventListener('error', function() {
+                    handleImageError(this);
+                });
+            });
+        });
+    </script>
 @endsection

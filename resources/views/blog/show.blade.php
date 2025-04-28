@@ -18,28 +18,44 @@
         <div class="flex flex-col lg:flex-row gap-8">
             <!-- ستون راست - تصویر و دکمه خرید (30%) -->
             <div class="w-full lg:w-3/10" style="width: 30%;">
+
                 <!-- تصویر کتاب -->
                 <div class="card mb-6 overflow-hidden rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
                     <div class="relative">
-                        @if($post->featuredImage && !($post->featuredImage->hide_image && !auth()->check()))
-                            <img src="{{ $post->featuredImage->display_url }}" alt="{{ $post->title }}" class="w-full h-auto">
+                        @if($post->featuredImage)
+                            @if(auth()->check() && auth()->user()->isAdmin())
+                                {{-- مدیر سایت همیشه تصویر اصلی را می‌بیند --}}
+                                <div class="relative">
+                                    <img src="{{ $post->featuredImage->image_url }}" alt="{{ $post->title }}" class="w-full h-auto">
+
+                                    {{-- نمایش پیام مخفی بودن روی تصویر برای مدیران --}}
+                                    @if($post->featuredImage->hide_image)
+                                        <div class="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center">
+                            <span class="bg-red-600 text-white px-4 py-2 rounded-md font-bold shadow-lg">
+                                تصویر مخفی شده است
+                            </span>
+                                        </div>
+                                    @endif
+                                </div>
+                            @elseif(!$post->featuredImage->hide_image)
+                                {{-- کاربران عادی و مهمان‌ها فقط تصاویر غیر مخفی را می‌بینند --}}
+                                <img src="{{ $post->featuredImage->display_url }}" alt="{{ $post->title }}" class="w-full h-auto">
+                            @else
+                                {{-- تصویر پیش‌فرض برای تصاویر مخفی (برای کاربران عادی و مهمان‌ها) --}}
+                                <div class="w-full h-64 bg-gradient-to-r from-indigo-100 to-purple-100 flex items-center justify-center">
+                                    <img src="{{ asset('images/default-book.png') }}" alt="{{ $post->title }}" class="max-h-40">
+                                </div>
+                            @endif
                         @else
+                            {{-- تصویر پیش‌فرض برای پست‌های بدون تصویر --}}
                             <div class="w-full h-64 bg-gradient-to-r from-indigo-100 to-purple-100 flex items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                </svg>
+                                <img src="{{ asset('images/default-book.png') }}" alt="{{ $post->title }}" class="max-h-40">
                             </div>
                         @endif
 
                         @if($post->publication_year)
                             <div class="absolute top-4 right-4 bg-white px-3 py-1.5 rounded-md text-sm font-semibold text-gray-700 shadow-sm">
                                 {{ $post->publication_year }}
-                            </div>
-                        @endif
-
-                        @if(auth()->check() && auth()->user()->isAdmin() && $post->featuredImage && $post->featuredImage->hide_image)
-                            <div class="absolute bottom-0 left-0 right-0 bg-red-600 text-white text-center py-2 text-sm">
-                                این تصویر برای کاربران عادی مخفی است
                             </div>
                         @endif
                     </div>

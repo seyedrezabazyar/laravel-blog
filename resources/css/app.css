@@ -50,6 +50,12 @@ html[dir="rtl"] .mr-4 {
     margin-left: 1rem;
 }
 
+/* اصلاح my-6 در راست‌چین */
+html[dir="rtl"] .my-6 {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
 /* اصلاح گردشه‌ها در RTL */
 html[dir="rtl"] .rounded-l-lg {
     border-top-left-radius: 0;
