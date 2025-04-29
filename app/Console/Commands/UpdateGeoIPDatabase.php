@@ -50,11 +50,11 @@ class UpdateGeoIPDatabase extends Command
 
         // ایجاد دایرکتوری‌ها اگر وجود ندارند
         if (!File::exists($this->dbPath)) {
-            File::makeDirectory($this->dbPath, 0755, true);
+            File::makeDirectory($this->dbPath, 0775, true);
         }
 
         if (!File::exists($this->tempPath)) {
-            File::makeDirectory($this->tempPath, 0755, true);
+            File::makeDirectory($this->tempPath, 0775, true);
         }
 
         $accountId = config('services.maxmind.account_id');

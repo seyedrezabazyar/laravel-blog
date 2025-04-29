@@ -22,15 +22,15 @@ class DownloadHostService
             $filename = $this->generateUniqueFilename($file);
             $path = trim($directory, '/') . '/' . $filename;
 
+            // استفاده از مسیر نسبی به جای مسیر مطلق
             $stream = fopen($file->getRealPath(), 'r+');
-            $result = Storage::disk('download_host')->put($path, $stream);
+            $result = Storage::disk(config('filesystems.cloud', 'download_host'))->put($path, $stream);
 
             if (is_resource($stream)) {
                 fclose($stream);
             }
 
             if ($result) {
-                // لاگ کردن برای دیباگ
                 Log::info('File uploaded to download host', [
                     'path' => $path,
                     'original_name' => $file->getClientOriginalName()

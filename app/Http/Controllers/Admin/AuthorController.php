@@ -71,7 +71,7 @@ class AuthorController extends Controller
 
             // اگر آپلود به هاست دانلود با خطا مواجه شد، از روش قبلی استفاده می‌کنیم
             if (!$path) {
-                $path = $request->file('image')->store('authors', 'public');
+                $path = $request->file('image')->store('authors', config('filesystems.default_public', 'public'));
             }
 
             $validated['image'] = $path;
@@ -145,7 +145,7 @@ class AuthorController extends Controller
 
             // اگر آپلود به هاست دانلود با خطا مواجه شد، از روش قبلی استفاده می‌کنیم
             if (!$path) {
-                $path = $request->file('image')->store('authors', 'public');
+                $path = $request->file('image')->store('authors', config('filesystems.default_public'));
             }
 
             $validated['image'] = $path;

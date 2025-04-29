@@ -16,6 +16,19 @@ return [
     'default' => env('FILESYSTEM_DISK', 'local'),
 
     /*
+   |--------------------------------------------------------------------------
+   | Default Public Filesystem Disk
+   |--------------------------------------------------------------------------
+   |
+   | This value determines the default disk that will be used for public files
+   | like images, uploads, etc. This disk should be configured to be publicly
+   | accessible.
+   |
+   */
+
+    'default_public' => env('FILESYSTEM_PUBLIC_DISK', 'public'),
+
+    /*
     |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
