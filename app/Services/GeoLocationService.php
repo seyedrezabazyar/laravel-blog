@@ -6,6 +6,8 @@ use Exception;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Http\Request;
 
 class GeoLocationService
 {
@@ -17,11 +19,11 @@ class GeoLocationService
     protected $ipqsApiKey;
 
     /**
-     * مدت زمان ذخیره در کش (به ساعت)
+     * مدت زمان ذخیره در کش (به دقیقه)
      *
      * @var int
      */
-    protected $cacheTime = 24;
+    protected $cacheTime = 30;
 
     /**
      * ایجاد نمونه جدید از سرویس
@@ -29,6 +31,75 @@ class GeoLocationService
     public function __construct()
     {
         $this->ipqsApiKey = config('services.ipqualityscore.api_key');
+    }
+
+    /**
+     * دریافت آی‌پی واقعی کاربر با در نظر گرفتن هدرهای پروکسی
+     *
+     * @param Request|null $request
+     * @return string
+     */
+    public function getRealIp(?Request $request = null): string
+    {
+        // اگر درخواست تعریف نشده، از درخواست فعلی استفاده می‌کنیم
+        if (is_null($request)) {
+            $request = request();
+        }
+
+        // آی‌پی‌های محلی
+        $localIps = ['127.0.0.1', '::1'];
+        $ip = $request->ip();
+
+        // لاگ برای دیباگ
+        Log::debug('Getting real IP', [
+            'request_ip' => $ip,
+            'server_vars' => $request->server->all()
+        ]);
+
+        // بررسی حالت شبیه‌سازی در محیط محلی
+        if (in_array($ip, $localIps)) {
+            // اگر در محیط محلی هستیم، وضعیت شبیه‌سازی را بررسی کنیم
+            if (Session::has('simulate_iranian_ip')) {
+                Log::info('Using simulated IP mode in local environment', [
+                    'is_iranian' => Session::get('simulate_iranian_ip')
+                ]);
+                return Session::get('simulate_iranian_ip') ? '185.88.112.1' : '8.8.8.8';
+            }
+
+            // اگر شبیه‌سازی نشده، IP محلی را برگردانیم
+            return $ip;
+        }
+
+        // آرایه‌ای از هدرهای ممکن برای یافتن IP واقعی
+        $headers = [
+            'HTTP_CF_CONNECTING_IP', // Cloudflare
+            'HTTP_X_FORWARDED_FOR',  // پروکسی‌های عمومی
+            'HTTP_X_REAL_IP',        // Nginx
+            'HTTP_X_CLIENT_IP',      // برخی پروکسی‌ها
+            'HTTP_CLIENT_IP',        // برخی پروکسی‌ها
+            'REMOTE_ADDR'            // آدرس IP اصلی
+        ];
+
+        // بررسی هدرهای مختلف برای دریافت IP واقعی
+        foreach ($headers as $header) {
+            $headerValue = $request->server($header);
+            if (!empty($headerValue)) {
+                // برای X-Forwarded-For که می‌تواند چندین IP داشته باشد
+                if ($header === 'HTTP_X_FORWARDED_FOR') {
+                    $ips = explode(',', $headerValue);
+                    $clientIp = trim($ips[0]);
+                    Log::info("IP detected from {$header}: {$clientIp}");
+                    return $clientIp;
+                }
+
+                Log::info("IP detected from {$header}: {$headerValue}");
+                return $headerValue;
+            }
+        }
+
+        // اگر هیچ هدری پیدا نشد، به IP پیش‌فرض بازگردیم
+        Log::info('No special headers found, using default request IP', ['ip' => $ip]);
+        return $ip;
     }
 
     /**
@@ -40,19 +111,29 @@ class GeoLocationService
     public function isIranianIp(?string $ip = null): bool
     {
         if (is_null($ip)) {
-            $ip = request()->ip();
+            $ip = $this->getRealIp();
         }
 
-        // اگر در محیط محلی هستیم
-        if ($ip === '127.0.0.1' || $ip === '::1') {
-            // می‌توانید این مقدار را برای تست تغییر دهید
-            return config('app.debug') ? true : false;
+        // عملیات پاکسازی را انجام می‌دهیم تا مطمئن شویم آی‌پی فاقد کاراکترهای اضافی است
+        $ip = trim($ip);
+
+        // لاگ برای دیباگ
+        Log::info("Checking if IP is Iranian: {$ip}");
+
+        // در محیط محلی با شبیه‌سازی
+        if ($ip === '185.88.112.1') {
+            Log::info("Simulated Iranian IP detected");
+            return true;  // IP ایرانی شبیه‌سازی شده
+        } elseif ($ip === '8.8.8.8') {
+            Log::info("Simulated foreign IP detected");
+            return false; // IP خارجی شبیه‌سازی شده
         }
 
-        // بررسی کش
-        $cacheKey = 'ip_location_' . str_replace(['.', ':'], '_', $ip);
+        // کلید کش شامل آی‌پی و نسخه سرویس
+        $cacheKey = 'ip_location_v3_' . str_replace(['.', ':'], '_', $ip);
 
-        return Cache::remember($cacheKey, now()->addHours($this->cacheTime), function () use ($ip) {
+        // کاهش مدت زمان کش برای بهبود دقت
+        return Cache::remember($cacheKey, now()->addMinutes($this->cacheTime), function () use ($ip) {
             // اگر IPQualityScore کانفیگ شده است، از آن استفاده می‌کنیم
             try {
                 if (!empty($this->ipqsApiKey)) {
@@ -64,7 +145,7 @@ class GeoLocationService
                 Log::warning("IPQualityScore check failed: {$e->getMessage()}");
             }
 
-            // استفاده از روش‌های جایگزین
+            // استفاده از روش‌های جایگزین با افزودن روش‌های جدید
             $result = $this->checkWithFallbackMethods($ip);
             Log::info("Fallback methods result for {$ip}: " . ($result ? 'Iranian' : 'Not Iranian'));
             return $result;
@@ -84,20 +165,24 @@ class GeoLocationService
             throw new Exception("IPQualityScore API key not configured");
         }
 
-        $response = Http::get("https://www.ipqualityscore.com/api/json/ip/{$this->ipqsApiKey}/{$ip}");
+        $response = Http::timeout(5)
+            ->get("https://www.ipqualityscore.com/api/json/ip/{$this->ipqsApiKey}/{$ip}");
 
         if ($response->successful()) {
             $data = $response->json();
+
+            // ثبت اطلاعات کامل در لاگ برای دیباگ
+            Log::debug("IPQualityScore full response", $data);
 
             // بررسی کد کشور در پاسخ API
             return isset($data['country_code']) && $data['country_code'] === 'IR';
         }
 
-        throw new Exception("IPQualityScore API request failed: " . $response->status());
+        throw new Exception("IPQualityScore API request failed: " . $response->status() . " - " . $response->body());
     }
 
     /**
-     * بررسی با استفاده از روش‌های جایگزین قبلی
+     * بررسی با استفاده از روش‌های جایگزین قبلی با بهبود عملکرد
      *
      * @param string $ip
      * @return bool
@@ -106,10 +191,10 @@ class GeoLocationService
     {
         // روش اول: IP-API.com
         try {
-            $url = "http://ip-api.com/json/{$ip}?fields=status,countryCode";
-            $response = @file_get_contents($url);
-            if ($response) {
-                $data = json_decode($response, true);
+            $response = Http::timeout(3)->get("http://ip-api.com/json/{$ip}?fields=status,countryCode");
+
+            if ($response->successful()) {
+                $data = $response->json();
                 if (isset($data['status']) && $data['status'] === 'success' && isset($data['countryCode'])) {
                     Log::info("IP-API.com detected country code: " . $data['countryCode']);
                     return $data['countryCode'] === 'IR';
@@ -119,18 +204,49 @@ class GeoLocationService
             Log::warning("IP-API.com check failed: {$e->getMessage()}");
         }
 
-        // روش دوم: ipapi.co
+        // روش دوم: ipinfo.io - افزودن یک سرویس جدید برای دقت بیشتر
         try {
-            $response = @file_get_contents("https://ipapi.co/{$ip}/country/");
-            if ($response) {
-                Log::info("ipapi.co detected country code: " . trim($response));
-                return trim($response) === 'IR';
+            $response = Http::timeout(3)->get("https://ipinfo.io/{$ip}/country");
+
+            if ($response->successful()) {
+                $countryCode = trim($response->body());
+                Log::info("ipinfo.io detected country code: " . $countryCode);
+                return $countryCode === 'IR';
+            }
+        } catch (Exception $e) {
+            Log::warning("ipinfo.io check failed: {$e->getMessage()}");
+        }
+
+        // روش سوم: ipapi.co
+        try {
+            $response = Http::timeout(3)->get("https://ipapi.co/{$ip}/country/");
+
+            if ($response->successful()) {
+                $countryCode = trim($response->body());
+                Log::info("ipapi.co detected country code: " . $countryCode);
+                return $countryCode === 'IR';
             }
         } catch (Exception $e) {
             Log::warning("ipapi.co check failed: {$e->getMessage()}");
         }
 
-        // روش سوم: بررسی محدوده IP
+        // روش چهارم: GeoPlugin
+        try {
+            $response = Http::timeout(3)->get("http://www.geoplugin.net/json.gp?ip={$ip}");
+
+            if ($response->successful()) {
+                $data = $response->json();
+                if (isset($data['geoplugin_countryCode'])) {
+                    Log::info("GeoPlugin detected country code: " . $data['geoplugin_countryCode']);
+                    return $data['geoplugin_countryCode'] === 'IR';
+                }
+            }
+        } catch (Exception $e) {
+            Log::warning("GeoPlugin check failed: {$e->getMessage()}");
+        }
+
+        // روش پنجم: بررسی محدوده IP
+        // توجه: این روش کمترین دقت را دارد و فقط به عنوان آخرین راه حل استفاده می‌شود
         $ipLong = ip2long($ip);
         if ($ipLong === false) {
             return false; // IP نامعتبر است
@@ -173,5 +289,52 @@ class GeoLocationService
 
         Log::info("IP {$ip} not detected as Iranian in any method");
         return false;
+    }
+
+    /**
+     * تنظیم کردن حالت شبیه‌سازی IP ایرانی (برای تست در محیط توسعه)
+     *
+     * @param bool $isIranian
+     * @return void
+     */
+    public function simulateIranianIp(bool $isIranian): void
+    {
+        Session::put('simulate_iranian_ip', $isIranian);
+
+        // پاک کردن کش IP‌های شبیه‌سازی شده
+        $this->clearIpCache('185.88.112.1'); // آی‌پی ایرانی نمونه
+        $this->clearIpCache('8.8.8.8');      // آی‌پی خارجی نمونه
+
+        // لاگ برای دیباگ
+        Log::info('IP simulation mode set', [
+            'is_iranian' => $isIranian,
+            'simulate_ip' => $isIranian ? '185.88.112.1' : '8.8.8.8'
+        ]);
+    }
+
+    /**
+     * پاک کردن کش IP
+     *
+     * @param string|null $ip آدرس IP
+     * @return void
+     */
+    public function clearIpCache(?string $ip = null): void
+    {
+        if (is_null($ip)) {
+            $ip = $this->getRealIp();
+        }
+
+        // پاک کردن تمام نسخه‌های کلید کش
+        $keys = [
+            'ip_location_' . str_replace(['.', ':'], '_', $ip),     // کلید قدیمی
+            'ip_location_v2_' . str_replace(['.', ':'], '_', $ip),  // کلید نسخه ۲
+            'ip_location_v3_' . str_replace(['.', ':'], '_', $ip),  // کلید نسخه ۳
+        ];
+
+        foreach ($keys as $cacheKey) {
+            Cache::forget($cacheKey);
+        }
+
+        Log::info("IP cache cleared for {$ip}");
     }
 }
