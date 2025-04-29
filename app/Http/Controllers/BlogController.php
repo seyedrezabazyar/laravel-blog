@@ -7,55 +7,70 @@ use App\Models\Category;
 use App\Models\Author;
 use App\Models\Tag;
 use App\Models\Publisher;
+use App\Services\GeoLocationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BlogController extends Controller
 {
     /**
+     * سرویس موقعیت‌یابی IP
+     *
+     * @var GeoLocationService
+     */
+    protected $geoLocationService;
+
+    /**
+     * ایجاد نمونه جدید از کنترلر
+     *
+     * @param GeoLocationService $geoLocationService
+     */
+    public function __construct(GeoLocationService $geoLocationService)
+    {
+        $this->geoLocationService = $geoLocationService;
+    }
+
+    /**
      * نمایش صفحه اصلی وبلاگ
      */
     public function index()
     {
-        $posts = Post::where('is_published', true)
-            ->where('hide_content', false)
-            ->with(['user', 'category', 'author', 'publisher', 'authors'])
+        $posts = Post::visibleToUser()
+            ->with(['user', 'category', 'author', 'publisher', 'authors', 'featuredImage'])
             ->latest()
             ->paginate(12);
 
         $categories = Category::withCount(['posts' => function($query) {
-            $query->where('is_published', true)
-                ->where('hide_content', false);
+            $query->visibleToUser();
         }])->get();
 
         return view('blog.index', compact('posts', 'categories'));
     }
 
-// app/Http/Controllers/BlogController.php
-
-// در تابع show
-
+    /**
+     * نمایش جزئیات یک پست
+     */
     public function show(Post $post)
     {
-        if (!$post->is_published || $post->hide_content) {
+        if (!$post->is_published) {
             abort(404);
         }
 
-        // بارگیری اطلاعات مرتبط
+        if ($post->hide_content && !(auth()->check() && auth()->user()->isAdmin())) {
+            abort(404);
+        }
+
         $post->load(['user', 'category', 'author', 'publisher', 'authors', 'featuredImage']);
 
-        // دریافت پست‌های مرتبط
-        $relatedPosts = Post::where('category_id', $post->category_id)
+        $relatedPosts = Post::visibleToUser()
+            ->where('category_id', $post->category_id)
             ->where('id', '!=', $post->id)
-            ->where('is_published', true)
-            ->where('hide_content', false)
             ->latest()
             ->take(3)
             ->get();
 
-        // بررسی IP کاربر
-        $ipLocationService = new \App\Services\IpLocationService();
-        $isIranianIp = $ipLocationService->isIranianIp(request()->ip());
+        // استفاده از سرویس جدید GeoLocationService برای تشخیص IP ایرانی
+        $isIranianIp = $this->geoLocationService->isIranianIp(request()->ip());
 
         return view('blog.show', compact('post', 'relatedPosts', 'isIranianIp'));
     }
@@ -65,16 +80,14 @@ class BlogController extends Controller
      */
     public function category(Category $category)
     {
-        $posts = Post::where('category_id', $category->id)
-            ->where('is_published', true)
-            ->where('hide_content', false)
+        $posts = Post::visibleToUser()
+            ->where('category_id', $category->id)
             ->with(['user', 'category', 'author', 'publisher', 'authors'])
             ->latest()
             ->paginate(12);
 
         $allCategories = Category::withCount(['posts' => function($query) {
-            $query->where('is_published', true)
-                ->where('hide_content', false);
+            $query->visibleToUser();
         }])->get();
 
         return view('blog.category', compact('posts', 'category', 'allCategories'));
@@ -86,22 +99,18 @@ class BlogController extends Controller
     public function categories()
     {
         $categories = Category::withCount(['posts' => function($query) {
-            $query->where('is_published', true)
-                ->where('hide_content', false);
+            $query->visibleToUser();
         }])
             ->orderByDesc('posts_count')
             ->get();
 
-        // دریافت یک پست نمونه برای هر دسته‌بندی
         $categories->each(function ($category) {
-            $category->sample_post = Post::where('category_id', $category->id)
-                ->where('is_published', true)
-                ->where('hide_content', false)
+            $category->sample_post = Post::visibleToUser()
+                ->where('category_id', $category->id)
                 ->latest()
                 ->first();
         });
 
-        // دسته‌بندی‌های پربازدید
         $popularCategories = $categories->take(5);
 
         return view('blog.categories', compact('categories', 'popularCategories'));
@@ -110,25 +119,15 @@ class BlogController extends Controller
     /**
      * نمایش پست‌های یک نویسنده خاص
      */
-    /**
-     * نمایش پست‌های یک نویسنده خاص
-     */
-    /**
-     * نمایش پست‌های یک نویسنده خاص
-     */
     public function author(Author $author)
     {
-        // برای جلوگیری از تکرار کتاب‌ها، از یک متغیر قابل شمارش استفاده می‌کنیم
         $postIds = collect();
 
-        // پست‌هایی که این نویسنده، نویسنده اصلی آن‌ها است
-        $mainAuthorPostIds = Post::where('author_id', $author->id)
-            ->where('is_published', true)
-            ->where('hide_content', false)
+        $mainAuthorPostIds = Post::visibleToUser()
+            ->where('author_id', $author->id)
             ->pluck('id');
         $postIds = $postIds->concat($mainAuthorPostIds);
 
-        // پست‌هایی که این نویسنده، نویسنده همکار آن‌ها است
         $coAuthorPostIds = DB::table('post_author')
             ->where('post_author.author_id', $author->id)
             ->join('posts', 'post_author.post_id', '=', 'posts.id')
@@ -137,7 +136,6 @@ class BlogController extends Controller
             ->pluck('posts.id');
         $postIds = $postIds->concat($coAuthorPostIds)->unique();
 
-        // حالا تمام پست‌های مرتبط را با شناسه‌های جمع‌آوری شده بازیابی می‌کنیم
         $posts = Post::whereIn('id', $postIds)
             ->with(['user', 'category', 'author', 'publisher', 'authors'])
             ->latest()
@@ -151,9 +149,8 @@ class BlogController extends Controller
      */
     public function publisher(Publisher $publisher)
     {
-        $posts = Post::where('publisher_id', $publisher->id)
-            ->where('is_published', true)
-            ->where('hide_content', false)
+        $posts = Post::visibleToUser()
+            ->where('publisher_id', $publisher->id)
             ->with(['user', 'category', 'author', 'publisher', 'authors'])
             ->latest()
             ->paginate(12);
@@ -172,8 +169,7 @@ class BlogController extends Controller
             return redirect()->route('blog.index');
         }
 
-        $posts = Post::where('is_published', true)
-            ->where('hide_content', false)
+        $posts = Post::visibleToUser()
             ->where(function($q) use ($query) {
                 $q->where('title', 'like', "%{$query}%")
                     ->orWhere('english_title', 'like', "%{$query}%")
@@ -186,13 +182,10 @@ class BlogController extends Controller
             ->paginate(12);
 
         $categories = Category::withCount(['posts' => function($query) {
-            $query->where('is_published', true)
-                ->where('hide_content', false);
+            $query->visibleToUser();
         }])->get();
 
-        // پست‌های محبوب برای نمایش در صورت عدم یافتن نتیجه
-        $popularPosts = Post::where('is_published', true)
-            ->where('hide_content', false)
+        $popularPosts = Post::visibleToUser()
             ->latest()
             ->take(3)
             ->get();
@@ -200,16 +193,13 @@ class BlogController extends Controller
         return view('blog.search', compact('posts', 'query', 'categories', 'popularPosts'));
     }
 
-    // در app/Http/Controllers/BlogController.php
-
     /**
      * نمایش پست‌های یک برچسب خاص
      */
     public function tag(Tag $tag)
     {
         $posts = $tag->posts()
-            ->where('is_published', true)
-            ->where('hide_content', false)
+            ->visibleToUser()
             ->with(['user', 'category', 'author', 'publisher', 'authors'])
             ->latest()
             ->paginate(12);

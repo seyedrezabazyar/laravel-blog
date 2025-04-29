@@ -1,6 +1,18 @@
 @extends('layouts.blog-app')
 
 @section('content')
+
+    @if(auth()->check() && auth()->user()->isAdmin() && $post->hide_content)
+        <div class="bg-red-100 border-r-4 border-red-500 text-red-700 p-4 mb-4 rounded-md">
+            <div class="flex items-center">
+                <svg class="h-6 w-6 ml-2 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>توجه: این پست مخفی است و فقط برای مدیران قابل مشاهده است.</span>
+            </div>
+        </div>
+    @endif
+
     <!-- نان‌برد و هدر کتاب - بهبود یافته -->
     <div class="bg-gray-50 py-6 mb-6 border-b border-gray-100">
         <div class="container mx-auto px-4">
@@ -26,7 +38,11 @@
                             @if(auth()->check() && auth()->user()->isAdmin())
                                 {{-- مدیر سایت همیشه تصویر اصلی را می‌بیند --}}
                                 <div class="relative">
-                                    <img src="{{ $post->featuredImage->image_url }}" alt="{{ $post->title }}" class="w-full h-auto">
+                                    @if(file_exists(public_path($post->featuredImage->image_url)))
+                                        <img src="{{ $post->featuredImage->image_url }}" alt="{{ $post->title }}" class="w-full h-auto">
+                                    @else
+                                        <img src="{{ asset('images/default-book.png') }}" alt="{{ $post->title }}" class="w-full h-auto">
+                                    @endif
 
                                     {{-- نمایش پیام مخفی بودن روی تصویر برای مدیران --}}
                                     @if($post->featuredImage->hide_image)
@@ -39,18 +55,18 @@
                                 </div>
                             @elseif(!$post->featuredImage->hide_image)
                                 {{-- کاربران عادی و مهمان‌ها فقط تصاویر غیر مخفی را می‌بینند --}}
-                                <img src="{{ $post->featuredImage->display_url }}" alt="{{ $post->title }}" class="w-full h-auto">
+                                @if(file_exists(public_path($post->featuredImage->display_url)))
+                                    <img src="{{ $post->featuredImage->display_url }}" alt="{{ $post->title }}" class="w-full h-auto">
+                                @else
+                                    <img src="{{ asset('images/default-book.png') }}" alt="{{ $post->title }}" class="w-full h-auto">
+                                @endif
                             @else
                                 {{-- تصویر پیش‌فرض برای تصاویر مخفی (برای کاربران عادی و مهمان‌ها) --}}
-                                <div class="w-full h-64 bg-gradient-to-r from-indigo-100 to-purple-100 flex items-center justify-center">
-                                    <img src="{{ asset('images/default-book.png') }}" alt="{{ $post->title }}" class="max-h-40">
-                                </div>
+                                <img src="{{ asset('images/default-book.png') }}" alt="{{ $post->title }}" class="w-full h-auto">
                             @endif
                         @else
                             {{-- تصویر پیش‌فرض برای پست‌های بدون تصویر --}}
-                            <div class="w-full h-64 bg-gradient-to-r from-indigo-100 to-purple-100 flex items-center justify-center">
-                                <img src="{{ asset('images/default-book.png') }}" alt="{{ $post->title }}" class="max-h-40">
-                            </div>
+                            <img src="{{ asset('images/default-book.png') }}" alt="{{ $post->title }}" class="w-full h-auto">
                         @endif
 
                         @if($post->publication_year)
@@ -69,7 +85,7 @@
                         </a>
                         <p class="text-xs text-gray-500 text-center mt-2">انتقال به وب‌سایت رسمی ناشر</p>
 
-                        <!-- نمایش باکس وضعیت کشور -->
+                        <!-- نمایش ساده وضعیت کشور -->
                         <div class="mt-3 py-2 px-3 rounded-lg text-center text-sm font-medium {{ $isIranianIp ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                             {{ $isIranianIp ? 'ایران' : 'خارج' }}
                         </div>
@@ -152,7 +168,9 @@
                                 <tr>
                                     <td class="py-3 pr-4 text-blue-700 font-medium w-1/4 whitespace-nowrap">شابک</td>
                                     <td class="py-3 px-4">
-                                        <code class="bg-gray-50 px-3 py-1 rounded-md font-mono text-sm text-gray-700 select-all border border-gray-200">{{ $post->book_codes }}</code>
+                                        <div class="text-gray-700 font-mono text-sm">
+                                            {{ $post->book_codes }}
+                                        </div>
                                     </td>
                                 </tr>
                             @endif
@@ -234,17 +252,17 @@
 
         <!-- کتاب‌های مشابه - 4 ستونه - بهبود یافته -->
         <div class="mt-12">
-            <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center justify-between mb-8 bg-gray-50 py-4 px-6 rounded-xl shadow-sm">
                 <h2 class="text-2xl font-bold text-gray-800 flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ml-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                     </svg>
                     کتاب‌های مشابه
                 </h2>
-                <a href="{{ route('blog.index') }}" class="text-blue-600 hover:text-blue-800 text-sm flex items-center">
+                <a href="{{ route('blog.index') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm flex items-center transition-all duration-200 shadow-sm hover:shadow-md">
                     مشاهده بیشتر
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                     </svg>
                 </a>
             </div>
@@ -257,8 +275,13 @@
                                 <div class="aspect-w-3 aspect-h-4 overflow-hidden">
                                     @if($relatedPost->featuredImage)
                                         @if(!$relatedPost->featuredImage->hide_image || (auth()->check() && auth()->user()->isAdmin()))
-                                            <img src="{{ $relatedPost->featuredImage->display_url }}" alt="{{ $relatedPost->title }}"
-                                                 class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
+                                            @if(file_exists(public_path($relatedPost->featuredImage->display_url)))
+                                                <img src="{{ $relatedPost->featuredImage->display_url }}" alt="{{ $relatedPost->title }}"
+                                                     class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
+                                            @else
+                                                <img src="{{ asset('images/default-book.png') }}" alt="{{ $relatedPost->title }}"
+                                                     class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
+                                            @endif
                                         @else
                                             <img src="{{ asset('images/default-book.png') }}" alt="{{ $relatedPost->title }}"
                                                  class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
@@ -282,13 +305,18 @@
                                     <h3 class="font-bold text-gray-900 group-hover:text-blue-600 text-lg mb-1 line-clamp-2 transition-colors duration-200">
                                         {{ $relatedPost->title }}
                                     </h3>
-                                    @if($relatedPost->publication_year)
-                                        <div class="mt-2">
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        @if($relatedPost->publication_year)
                                             <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded-md text-xs font-medium">
                                                 {{ $relatedPost->publication_year }}
                                             </span>
-                                        </div>
-                                    @endif
+                                        @endif
+                                        @if($relatedPost->format)
+                                            <span class="px-2 py-1 bg-green-50 text-green-600 rounded-md text-xs font-medium">
+                                                {{ $relatedPost->format }}
+                                            </span>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                         </a>

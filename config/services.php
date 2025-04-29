@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    // کانفیگ سرویس موقعیت‌یابی IP
+    'ipqualityscore' => [
+        'api_key' => env('IPQS_API_KEY'),
+    ],
+
+    // تنظیمات MaxMind GeoIP
+    'maxmind' => [
+        'account_id' => env('MAXMIND_ACCOUNT_ID'),
+        'license_key' => env('MAXMIND_LICENSE_KEY'),
+    ],
 ];

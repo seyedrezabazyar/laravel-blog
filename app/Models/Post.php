@@ -158,4 +158,15 @@ class Post extends Model
         // برای سازگاری با تصاویر قدیمی ذخیره شده در استوریج محلی
         return asset('storage/' . $this->featured_image);
     }
+
+    public function scopeVisibleToUser($query)
+    {
+        $query->where('is_published', true);
+
+        if (!auth()->check() || !auth()->user()->isAdmin()) {
+            $query->where('hide_content', false);
+        }
+
+        return $query;
+    }
 }

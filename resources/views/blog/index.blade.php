@@ -71,16 +71,21 @@
         </div>
     </section>
 
-    <!-- Quote Section -->
-    <section class="py-20 bg-indigo-700 text-white">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center quote-animation">
-            <svg class="w-12 h-12 mx-auto mb-6 text-indigo-300" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M9.983 3v7.391c0 5.704-3.731 9.57-8.983 10.609l-.995-2.151c2.432-.917 3.995-3.638 3.995-5.849h-4v-10h9.983zm14.017 0v7.391c0 5.704-3.748 9.571-9 10.609l-.996-2.151c2.433-.917 3.996-3.638 3.996-5.849h-3.983v-10h9.983z" />
-            </svg>
-            <blockquote class="text-xl md:text-2xl font-medium mb-8">
-                کتاب‌ها تنها اشیایی هستند که می‌توانید امروز خریداری کنید و تا آخر عمر از آن‌ها لذت ببرید.
-            </blockquote>
-            <p class="text-lg text-indigo-200">— وارن بافت</p>
+    <!-- Quote Section - بخش ساده و زیبا -->
+    <section class="book-quote-section py-20 bg-gradient-to-r from-indigo-700 to-indigo-800">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="book-quote-container bg-white/10 rounded-xl p-10 text-center shadow-lg">
+                <div class="book-quote-icon-wrapper">
+                    <svg class="book-quote-icon" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9.983 3v7.391c0 5.704-3.731 9.57-8.983 10.609l-.995-2.151c2.432-.917 3.995-3.638 3.995-5.849h-4v-10h9.983zm14.017 0v7.391c0 5.704-3.748 9.571-9 10.609l-.996-2.151c2.433-.917 3.996-3.638 3.996-5.849h-3.983v-10h9.983z" />
+                    </svg>
+                </div>
+                <blockquote class="book-quote-text">
+                    کتاب‌ها تنها اشیایی هستند که می‌توانید امروز خریداری کنید و تا آخر عمر از آن‌ها لذت ببرید.
+                </blockquote>
+                <div class="book-quote-divider"></div>
+                <p class="book-quote-author">— وارن بافت</p>
+            </div>
         </div>
     </section>
 
@@ -101,4 +106,60 @@
             });
         });
     </script>
+
+    <!-- استایل‌های اختصاصی برای بخش نقل قول -->
+    <style>
+        /* استایل‌های بخش نقل قول کتاب */
+        .book-quote-section {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .book-quote-container {
+            transition: transform 0.3s ease;
+        }
+
+        .book-quote-container:hover {
+            transform: translateY(-5px);
+        }
+
+        .book-quote-icon-wrapper {
+            margin-bottom: 1.5rem;
+        }
+
+        .book-quote-icon {
+            width: 3rem;
+            height: 3rem;
+            color: rgba(255, 255, 255, 0.8);
+            display: inline-block;
+        }
+
+        .book-quote-text {
+            font-size: 1.5rem;
+            line-height: 1.6;
+            font-weight: 500;
+            color: white;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .book-quote-text {
+                font-size: 1.875rem;
+            }
+        }
+
+        .book-quote-divider {
+            width: 4rem;
+            height: 2px;
+            background: linear-gradient(to right, rgba(255,255,255,0.3), rgba(255,255,255,0.8), rgba(255,255,255,0.3));
+            margin: 1.5rem auto;
+            border-radius: 2px;
+        }
+
+        .book-quote-author {
+            font-size: 1.125rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+        }
+    </style>
 @endsection
