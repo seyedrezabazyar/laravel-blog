@@ -85,10 +85,49 @@
                         </a>
                         <p class="text-xs text-gray-500 text-center mt-2">انتقال به وب‌سایت رسمی ناشر</p>
 
-                        <!-- نمایش ساده وضعیت کشور -->
-                        <div class="mt-3 py-2 px-3 rounded-lg text-center text-sm font-medium {{ $isIranianIp ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                            {{ $isIranianIp ? 'ایران' : 'خارج' }}
+                        <!-- نمایش آی‌پی و وضعیت کشور -->
+                        <div class="mt-3 border border-gray-200 rounded-lg overflow-hidden">
+                            <div class="py-2 px-3 bg-gray-50 border-b border-gray-200 text-center text-xs font-medium text-gray-600">
+                                وضعیت آی‌پی شما (تست)
+                            </div>
+                            <div class="p-3">
+                                <!-- نمایش آی‌پی کاربر -->
+                                <div class="mb-2 text-sm font-mono text-center">
+                                    {{ request()->ip() }}
+                                </div>
+                                <!-- نمایش وضعیت کشور -->
+                                <div class="py-2 px-3 rounded-lg text-center text-sm font-medium {{ $isIranianIp ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                    {{ $isIranianIp ? 'آی‌پی ایران' : 'آی‌پی خارج از ایران' }}
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- نمایش آی‌پی و وضعیت کشور -->
+                        <div class="mt-3 border border-gray-200 rounded-lg overflow-hidden">
+                            <div class="py-2 px-3 bg-gray-50 border-b border-gray-200 text-center text-xs font-medium text-gray-600">
+                                وضعیت آی‌پی شما (تست)
+                            </div>
+                            <div class="p-3">
+                                <!-- نمایش آی‌پی کاربر -->
+                                <div class="mb-2 text-sm font-mono text-center">
+                                    {{ $userIp ?? request()->ip() }}
+                                </div>
+                                <!-- نمایش وضعیت کشور -->
+                                <div class="py-2 px-3 rounded-lg text-center text-sm font-medium {{ $isIranianIp ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                    {{ $isIranianIp ? 'آی‌پی ایران' : 'آی‌پی خارج از ایران' }}
+                                </div>
+                            </div>
+                        </div>
+
+                        @if(!$isIranianIp)
+                            <!-- محتوای مخصوص کاربران خارج از ایران -->
+                            <div class="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                <h4 class="font-bold text-blue-800 mb-2">خدمات ویژه برای کاربران خارج از ایران</h4>
+                                <p class="text-blue-700">شما می‌توانید از خدمات ویژه ما برای کاربران خارج از ایران استفاده کنید.</p>
+                                <a href="#" class="mt-2 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">مشاهده خدمات ویژه</a>
+                            </div>
+                        @endif
+
                     </div>
                 @endif
             </div>

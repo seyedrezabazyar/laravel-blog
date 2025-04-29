@@ -69,10 +69,13 @@ class BlogController extends Controller
             ->take(3)
             ->get();
 
-        // استفاده از سرویس جدید GeoLocationService برای تشخیص IP ایرانی
-        $isIranianIp = $this->geoLocationService->isIranianIp(request()->ip());
+        // دریافت IP واقعی کاربر
+        $userIp = $this->geoLocationService->getRealIp();
 
-        return view('blog.show', compact('post', 'relatedPosts', 'isIranianIp'));
+        // استفاده از سرویس جدید GeoLocationService برای تشخیص IP ایرانی
+        $isIranianIp = $this->geoLocationService->isIranianIp($userIp);
+
+        return view('blog.show', compact('post', 'relatedPosts', 'isIranianIp', 'userIp'));
     }
 
     /**
