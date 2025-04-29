@@ -1,39 +1,47 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\PublisherController;
-use App\Http\Controllers\BlogController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\RssController;
 
-// روت اصلی به بلاگ منتقل شده است
+// Blog main page
 Route::get('/', [BlogController::class, 'index'])->name('blog.index');
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// Dashboard (auth + verified)
+Route::get('/dashboard', fn () => view('dashboard'))
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
+// Authenticated user routes
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // Profile
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', [ProfileController::class, 'edit'])->name('edit');
+        Route::patch('/', [ProfileController::class, 'update'])->name('update');
+        Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
+    });
 
-    // روت‌های مدیریت (پنل ادمین) - فقط مدیران دسترسی دارند
+    // Admin Panel (only for admins)
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
-        Route::resource('posts', PostController::class);
-        Route::resource('categories', CategoryController::class);
-        Route::resource('authors', AuthorController::class);
-        Route::resource('publishers', PublisherController::class);
+        Route::resources([
+            'posts' => PostController::class,
+            'categories' => CategoryController::class,
+            'authors' => AuthorController::class,
+            'publishers' => PublisherController::class,
+        ]);
 
-        // روت‌های اضافی برای مدیریت تصاویر
         Route::delete('post-images/{image}', [PostController::class, 'destroyImage'])->name('post-images.destroy');
         Route::post('post-images/reorder', [PostController::class, 'reorderImages'])->name('post-images.reorder');
     });
 });
 
-// روت‌های بلاگ با ساختار جدید
+// Blog Routes
 Route::prefix('blog')->name('blog.')->group(function () {
     Route::get('/', [BlogController::class, 'index'])->name('index');
     Route::get('/post/{post:slug}', [BlogController::class, 'show'])->name('show');
@@ -41,22 +49,27 @@ Route::prefix('blog')->name('blog.')->group(function () {
     Route::get('/categories', [BlogController::class, 'categories'])->name('categories');
     Route::get('/author/{author:slug}', [BlogController::class, 'author'])->name('author');
     Route::get('/publisher/{publisher:slug}', [BlogController::class, 'publisher'])->name('publisher');
+    Route::get('/tag/{tag:slug}', [BlogController::class, 'tag'])->name('tag');
     Route::get('/search', [BlogController::class, 'search'])->name('search');
-    Route::get('/tag/{tag:slug}', [BlogController::class, 'tag'])->name('tag'); // اضافه‌کردن به گروه روت‌های بلاگ
 });
 
 // Sitemap Routes
-Route::get('sitemap', [App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap.index');
-Route::get('sitemap-posts', [App\Http\Controllers\SitemapController::class, 'posts'])->name('sitemap.posts');
-Route::get('sitemap-categories', [App\Http\Controllers\SitemapController::class, 'categories'])->name('sitemap.categories');
-Route::get('sitemap-authors', [App\Http\Controllers\SitemapController::class, 'authors'])->name('sitemap.authors');
-Route::get('sitemap-publishers', [App\Http\Controllers\SitemapController::class, 'publishers'])->name('sitemap.publishers');
-Route::get('sitemap-tags', [App\Http\Controllers\SitemapController::class, 'tags'])->name('sitemap.tags');
+Route::prefix('sitemap')->name('sitemap.')->group(function () {
+    Route::get('/', [SitemapController::class, 'index'])->name('index');
+    Route::get('/posts', [SitemapController::class, 'posts'])->name('posts');
+    Route::get('/categories', [SitemapController::class, 'categories'])->name('categories');
+    Route::get('/authors', [SitemapController::class, 'authors'])->name('authors');
+    Route::get('/publishers', [SitemapController::class, 'publishers'])->name('publishers');
+    Route::get('/tags', [SitemapController::class, 'tags'])->name('tags');
+});
 
 // RSS Feed Routes
-Route::get('feed', [App\Http\Controllers\RssController::class, 'index'])->name('feed.index');
-Route::get('feed/category/{category:slug}', [App\Http\Controllers\RssController::class, 'category'])->name('feed.category');
-Route::get('feed/author/{author:slug}', [App\Http\Controllers\RssController::class, 'author'])->name('feed.author');
-Route::get('feed/tag/{tag:slug}', [App\Http\Controllers\RssController::class, 'tag'])->name('feed.tag');
+Route::prefix('feed')->name('feed.')->group(function () {
+    Route::get('/', [RssController::class, 'index'])->name('index');
+    Route::get('/category/{category:slug}', [RssController::class, 'category'])->name('category');
+    Route::get('/author/{author:slug}', [RssController::class, 'author'])->name('author');
+    Route::get('/tag/{tag:slug}', [RssController::class, 'tag'])->name('tag');
+});
 
+// Auth Routes
 require __DIR__.'/auth.php';

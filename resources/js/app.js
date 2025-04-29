@@ -1,6 +1,5 @@
 import './bootstrap';
 import '../css/app.css';
-import '../css/blog.css'; // اضافه کردن CSS بلاگ
 
 import Alpine from 'alpinejs';
 
