@@ -93,23 +93,6 @@
                             <div class="p-3">
                                 <!-- نمایش آی‌پی کاربر -->
                                 <div class="mb-2 text-sm font-mono text-center">
-                                    {{ request()->ip() }}
-                                </div>
-                                <!-- نمایش وضعیت کشور -->
-                                <div class="py-2 px-3 rounded-lg text-center text-sm font-medium {{ $isIranianIp ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                    {{ $isIranianIp ? 'آی‌پی ایران' : 'آی‌پی خارج از ایران' }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- نمایش آی‌پی و وضعیت کشور -->
-                        <div class="mt-3 border border-gray-200 rounded-lg overflow-hidden">
-                            <div class="py-2 px-3 bg-gray-50 border-b border-gray-200 text-center text-xs font-medium text-gray-600">
-                                وضعیت آی‌پی شما (تست)
-                            </div>
-                            <div class="p-3">
-                                <!-- نمایش آی‌پی کاربر -->
-                                <div class="mb-2 text-sm font-mono text-center">
                                     {{ $userIp ?? request()->ip() }}
                                 </div>
                                 <!-- نمایش وضعیت کشور -->

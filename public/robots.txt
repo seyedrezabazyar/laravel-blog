@@ -1,2 +1,21 @@
 User-agent: *
-Disallow:
+Allow: /
+
+# Disallow admin pages
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /login/
+Disallow: /register/
+
+# Allow access to important content
+Allow: /blog/
+Allow: /sitemap
+Allow: /sitemap-posts
+Allow: /sitemap-categories
+Allow: /sitemap-authors
+Allow: /sitemap-publishers
+Allow: /sitemap-tags
+Allow: /feed
+
+# Sitemap location
+Sitemap: https://blog.balyan.ir/sitemap

@@ -12,6 +12,7 @@
         "laravel/tinker": "^2.10.1",
         "league/flysystem-ftp": "^3.29",
         "mews/purifier": "^3.4",
+        "spatie/laravel-sitemap": "^7.3",
         "torann/geoip": "^3.0"
     },
     "require-dev": {

@@ -45,4 +45,18 @@ Route::prefix('blog')->name('blog.')->group(function () {
     Route::get('/tag/{tag:slug}', [BlogController::class, 'tag'])->name('tag'); // اضافه‌کردن به گروه روت‌های بلاگ
 });
 
+// Sitemap Routes
+Route::get('sitemap', [App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap.index');
+Route::get('sitemap-posts', [App\Http\Controllers\SitemapController::class, 'posts'])->name('sitemap.posts');
+Route::get('sitemap-categories', [App\Http\Controllers\SitemapController::class, 'categories'])->name('sitemap.categories');
+Route::get('sitemap-authors', [App\Http\Controllers\SitemapController::class, 'authors'])->name('sitemap.authors');
+Route::get('sitemap-publishers', [App\Http\Controllers\SitemapController::class, 'publishers'])->name('sitemap.publishers');
+Route::get('sitemap-tags', [App\Http\Controllers\SitemapController::class, 'tags'])->name('sitemap.tags');
+
+// RSS Feed Routes
+Route::get('feed', [App\Http\Controllers\RssController::class, 'index'])->name('feed.index');
+Route::get('feed/category/{category:slug}', [App\Http\Controllers\RssController::class, 'category'])->name('feed.category');
+Route::get('feed/author/{author:slug}', [App\Http\Controllers\RssController::class, 'author'])->name('feed.author');
+Route::get('feed/tag/{tag:slug}', [App\Http\Controllers\RssController::class, 'tag'])->name('feed.tag');
+
 require __DIR__.'/auth.php';
