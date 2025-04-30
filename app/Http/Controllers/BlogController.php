@@ -60,14 +60,80 @@ class BlogController extends Controller
             abort(404);
         }
 
-        $post->load(['user', 'category', 'author', 'publisher', 'authors', 'featuredImage']);
+        $post->load(['user', 'category', 'author', 'publisher', 'authors', 'featuredImage', 'tags']);
 
-        $relatedPosts = Post::visibleToUser()
+        // بررسی تعداد کل کتاب‌های موجود در این دسته‌بندی
+        $totalCategoryBooks = Post::visibleToUser()
             ->where('category_id', $post->category_id)
             ->where('id', '!=', $post->id)
-            ->latest()
-            ->take(3)
-            ->get();
+            ->count();
+
+        // بارگذاری کتاب‌های مشابه با استفاده از چند راهبرد
+        if ($totalCategoryBooks >= 12) {
+            // اگر در دسته‌بندی به اندازه کافی کتاب وجود دارد
+            $relatedPosts = Post::visibleToUser()
+                ->where('category_id', $post->category_id)
+                ->where('id', '!=', $post->id)
+                ->latest()
+                ->take(12)
+                ->get();
+        } else {
+            // اگر در دسته‌بندی کمتر از 12 کتاب وجود دارد
+            // ابتدا کتاب‌های دسته‌بندی فعلی را می‌گیریم
+            $categoryBooks = Post::visibleToUser()
+                ->where('category_id', $post->category_id)
+                ->where('id', '!=', $post->id)
+                ->latest()
+                ->get();
+
+            // تعداد کتاب‌های دیگری که نیاز داریم
+            $neededBooks = 12 - $categoryBooks->count();
+
+            // آیدی‌های کتاب‌های موجود (برای جلوگیری از تکرار)
+            $existingIds = $categoryBooks->pluck('id')->toArray();
+            $existingIds[] = $post->id; // آیدی خود پست
+
+            // یافتن کتاب‌های مرتبط بر اساس تگ‌های مشترک
+            if ($post->tags && $post->tags->count() > 0) {
+                $tagIds = $post->tags->pluck('id')->toArray();
+
+                $tagRelatedBooks = Post::visibleToUser()
+                    ->whereHas('tags', function($query) use($tagIds) {
+                        $query->whereIn('tags.id', $tagIds);
+                    })
+                    ->whereNotIn('id', $existingIds)
+                    ->latest()
+                    ->take($neededBooks)
+                    ->get();
+
+                // ترکیب دو مجموعه
+                $relatedPosts = $categoryBooks->concat($tagRelatedBooks);
+
+                // اگر بعد از جستجو بر اساس تگ هنوز به 12 کتاب نرسیدیم
+                if ($relatedPosts->count() < 12) {
+                    $remainingNeeded = 12 - $relatedPosts->count();
+                    $currentIds = $relatedPosts->pluck('id')->toArray();
+
+                    // کتاب‌های پربازدید یا جدید دیگر
+                    $otherBooks = Post::visibleToUser()
+                        ->whereNotIn('id', $currentIds)
+                        ->latest()
+                        ->take($remainingNeeded)
+                        ->get();
+
+                    $relatedPosts = $relatedPosts->concat($otherBooks);
+                }
+            } else {
+                // اگر تگی وجود نداشت، فقط بر اساس جدیدترین کتاب‌ها اضافه می‌کنیم
+                $otherBooks = Post::visibleToUser()
+                    ->whereNotIn('id', $existingIds)
+                    ->latest()
+                    ->take($neededBooks)
+                    ->get();
+
+                $relatedPosts = $categoryBooks->concat($otherBooks);
+            }
+        }
 
         // دریافت IP واقعی کاربر
         $userIp = $this->geoLocationService->getRealIp();
@@ -75,7 +141,14 @@ class BlogController extends Controller
         // استفاده از سرویس جدید GeoLocationService برای تشخیص IP ایرانی
         $isIranianIp = $this->geoLocationService->isIranianIp($userIp);
 
-        return view('blog.show', compact('post', 'relatedPosts', 'isIranianIp', 'userIp'));
+        // ارسال اطلاعات اضافی به view
+        return view('blog.show', compact(
+            'post',
+            'relatedPosts',
+            'isIranianIp',
+            'userIp',
+            'totalCategoryBooks'
+        ));
     }
 
     /**
