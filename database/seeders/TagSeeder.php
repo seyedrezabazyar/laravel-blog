@@ -13,7 +13,7 @@ class TagSeeder extends Seeder
     public function run(): void
     {
         $tags = [
-            устройства ['name' => 'آموزش', 'slug' => 'education'],
+            ['name' => 'آموزش', 'slug' => 'education'],
             ['name' => 'برنامه‌نویسی', 'slug' => 'programming'],
             ['name' => 'توسعه فردی', 'slug' => 'personal-development'],
             ['name' => 'تاریخی', 'slug' => 'historical'],
