@@ -98,18 +98,5 @@
             @endif
         @endif
 
-        <!-- Categories List -->
-        <div class="mt-16 bg-gray-50 p-6 rounded-lg shadow-sm">
-            <h3 class="text-xl font-bold text-gray-800 mb-6">جستجو در دسته‌بندی‌ها</h3>
-            <div class="flex flex-wrap gap-3">
-                @foreach($categories as $category)
-                    <a href="{{ route('blog.category', $category->slug) }}"
-                       class="px-4 py-2 rounded-full text-sm bg-white text-gray-700 hover:bg-indigo-50 transition shadow-sm">
-                        {{ $category->name }}
-                        <span class="text-xs text-gray-500 ml-1">({{ $category->posts_count }})</span>
-                    </a>
-                @endforeach
-            </div>
-        </div>
     </div>
 @endsection

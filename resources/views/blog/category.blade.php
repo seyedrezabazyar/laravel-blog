@@ -61,19 +61,5 @@
             {{ $posts->links() }}
         </div>
 
-        <!-- Categories List -->
-        <div class="mt-16 bg-gray-50 p-6 rounded-lg shadow-sm">
-            <h3 class="text-xl font-bold text-gray-800 mb-6">همه دسته‌بندی‌ها</h3>
-            <div class="flex flex-wrap gap-3">
-                @foreach($allCategories as $cat)
-                    <a href="{{ route('blog.category', $cat->slug) }}"
-                       class="px-4 py-2 rounded-full text-sm {{ $cat->id == $category->id ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-indigo-50' }}
-                          transition shadow-sm">
-                        {{ $cat->name }}
-                        <span class="text-xs {{ $cat->id == $category->id ? 'text-indigo-200' : 'text-gray-500' }} ml-1">({{ $cat->posts_count }})</span>
-                    </a>
-                @endforeach
-            </div>
-        </div>
     </div>
 @endsection

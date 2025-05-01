@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('authors', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name', 1024); // Updating to 1024 characters
             $table->string('slug')->unique();
             $table->text('biography')->nullable();
             $table->string('photo')->nullable();

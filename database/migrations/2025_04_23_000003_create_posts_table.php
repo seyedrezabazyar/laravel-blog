@@ -19,20 +19,25 @@ return new class extends Migration
             $table->foreignId('author_id')->nullable()->constrained('authors')->nullOnDelete();
             $table->foreignId('publisher_id')->nullable()->constrained('publishers')->nullOnDelete();
 
-            // Book titles
-            $table->string('title'); // Persian title
-            $table->string('english_title')->nullable(); // English title
+            // Book titles - updating based on your requirements
+            $table->string('title', 1500); // Persian title - 1500 characters
+            $table->string('english_title', 1500)->nullable(); // English title - 1500 characters
             $table->string('slug')->unique();
 
-            // Book contents
-            $table->text('content'); // Persian content
-            $table->text('english_content')->nullable(); // English content
+            // Book contents - updating based on your requirements
+            $table->text('content', 90000); // Persian content - 90000 characters
+            $table->text('english_content', 90000)->nullable(); // English content - 90000 characters
 
-            // Book details
-            $table->string('language')->nullable(); // Language of the book
-            $table->year('publication_year')->nullable(); // Publication year
-            $table->string('format')->nullable(); // Book format (PDF, EPUB, etc.)
-            $table->text('book_codes')->nullable(); // ISBN codes (10 or 13 digits)
+            // Book details - updating based on your requirements
+            $table->string('language', 70)->nullable(); // Language of the book - 70 characters
+            $table->string('publication_year', 14)->nullable(); // Publication year - 14 characters (changing from year to string)
+            $table->string('format', 7)->nullable(); // Book format - 7 characters
+            $table->string('book_codes', 300)->nullable(); // ISBN codes - 300 characters
+
+            // Adding new fields based on your requirements
+            $table->string('edition', 60)->nullable(); // Book edition - 60 characters
+            $table->string('pages', 100)->nullable(); // Book pages - 100 characters (numeric)
+            $table->string('size', 10)->nullable(); // Book size - 10 characters (numeric)
 
             // Purchase information
             $table->string('purchase_link')->nullable(); // Link to purchase the book

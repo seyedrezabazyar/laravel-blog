@@ -38,11 +38,24 @@ class BlogController extends Controller
         $posts = Post::visibleToUser()
             ->with(['user', 'category', 'author', 'publisher', 'authors', 'featuredImage'])
             ->latest()
-            ->paginate(12);
+            ->take(12)  // به جای paginate(12) از take(12) استفاده کردیم
+            ->get();    // نیاز به متد get() برای اجرای کوئری
 
         $categories = Category::withCount(['posts' => function($query) {
             $query->visibleToUser();
-        }])->get();
+        }])
+            ->whereHas('posts', function($query) {
+                $query->visibleToUser();
+            })
+            ->orderBy(
+                Post::select('created_at')
+                    ->whereColumn('category_id', 'categories.id')
+                    ->visibleToUser()
+                    ->latest()
+                    ->limit(1)
+                , 'desc')
+            ->take(12)
+            ->get();
 
         return view('blog.index', compact('posts', 'categories'));
     }
