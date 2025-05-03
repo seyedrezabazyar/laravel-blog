@@ -1,4 +1,3 @@
-
 <?php
 
 use Illuminate\Foundation\Application;
@@ -18,11 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->web([
-            // اینجا میدل‌ویرهای دیگر را اضافه کنید
-            // میدل‌ویر DetectCountry حذف شده است
+            // میدلورهای استاندارد وب را می‌توانید در اینجا اضافه کنید
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        // اینجا تنظیمات استثناها را اضافه کنید
+        // تنظیمات مدیریت استثناها
     })
     ->create();

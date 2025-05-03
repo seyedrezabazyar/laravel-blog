@@ -130,19 +130,10 @@ class BlogController extends Controller
             }
         }
 
-        // حذف متغیرهای مربوط به IP و کشور
-        // دریافت IP ساده برای نمایش - بدون نیاز به سرویس GeoLocation
-        $userIp = request()->ip();
-
-        // مقدار پیش‌فرض برای isIranianIp
-        $isIranianIp = false;
-
-        // ارسال اطلاعات اضافی به view
+        // ارسال اطلاعات به view
         return view('blog.show', compact(
             'post',
             'relatedPosts',
-            'isIranianIp',
-            'userIp',
             'totalCategoryBooks'
         ));
     }
