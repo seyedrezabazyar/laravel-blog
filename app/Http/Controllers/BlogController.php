@@ -7,29 +7,11 @@ use App\Models\Category;
 use App\Models\Author;
 use App\Models\Tag;
 use App\Models\Publisher;
-use App\Services\GeoLocationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BlogController extends Controller
 {
-    /**
-     * سرویس موقعیت‌یابی IP
-     *
-     * @var GeoLocationService
-     */
-    protected $geoLocationService;
-
-    /**
-     * ایجاد نمونه جدید از کنترلر
-     *
-     * @param GeoLocationService $geoLocationService
-     */
-    public function __construct(GeoLocationService $geoLocationService)
-    {
-        $this->geoLocationService = $geoLocationService;
-    }
-
     /**
      * نمایش صفحه اصلی وبلاگ
      */
@@ -148,11 +130,12 @@ class BlogController extends Controller
             }
         }
 
-        // دریافت IP واقعی کاربر
-        $userIp = $this->geoLocationService->getRealIp();
+        // حذف متغیرهای مربوط به IP و کشور
+        // دریافت IP ساده برای نمایش - بدون نیاز به سرویس GeoLocation
+        $userIp = request()->ip();
 
-        // استفاده از سرویس جدید GeoLocationService برای تشخیص IP ایرانی
-        $isIranianIp = $this->geoLocationService->isIranianIp($userIp);
+        // مقدار پیش‌فرض برای isIranianIp
+        $isIranianIp = false;
 
         // ارسال اطلاعات اضافی به view
         return view('blog.show', compact(

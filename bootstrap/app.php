@@ -1,10 +1,10 @@
+
 <?php
 
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\IsAdmin;
-use App\Http\Middleware\DetectCountry;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -18,10 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->web([
-            // سایر میدل‌ویرها...
-            DetectCountry::class,
+            // اینجا میدل‌ویرهای دیگر را اضافه کنید
+            // میدل‌ویر DetectCountry حذف شده است
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
-    })->create();
+        // اینجا تنظیمات استثناها را اضافه کنید
+    })
+    ->create();
