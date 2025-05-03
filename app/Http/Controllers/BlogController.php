@@ -16,28 +16,31 @@ class BlogController extends Controller
     protected $cacheTtl = 86400;
 
     /**
-     * نمایش صفحه اصلی وبلاگ
+     * نمایش صفحه اصلی وبلاگ با حداقل کوئری به دیتابیس
      */
     public function index()
     {
+        // فقط 12 پست آخر را با فیلدهای مورد نیاز از دیتابیس می‌گیریم
         $posts = Cache::remember('home_latest_posts', 3600, function () {
-            return Post::visibleToUser()
-                ->with(['user', 'category', 'author', 'publisher', 'authors', 'featuredImage']) // همه رابطه‌های مورد نیاز
+            return Post::select('id', 'title', 'slug', 'publication_year', 'format')
+                ->where('is_published', true)
+                ->where('hide_content', false)
                 ->latest()
                 ->take(12)
                 ->get();
         });
 
-        $categories = Cache::remember('home_categories', 3600, function () {
-            return Category::withCount(['posts' => function($query) {
-                $query->visibleToUser();
-            }])
-                ->whereHas('posts', function($query) {
-                    $query->visibleToUser();
-                })
-                ->take(12)
-                ->get();
-        });
+        // دسته‌بندی‌های ثابت برای صفحه اصلی - بدون نیاز به کوئری دیتابیس
+        $categories = [
+            (object) ['name' => 'رمان', 'slug' => 'roman', 'icon' => 'book', 'description' => 'داستان‌های خیال‌انگیز'],
+            (object) ['name' => 'علمی', 'slug' => 'scientific', 'icon' => 'academic-cap', 'description' => 'دانش و پژوهش'],
+            (object) ['name' => 'تاریخی', 'slug' => 'historical', 'icon' => 'clock', 'description' => 'گذشته را بشناسید'],
+            (object) ['name' => 'فلسفه', 'slug' => 'philosophy', 'icon' => 'question-mark-circle', 'description' => 'اندیشه و تفکر'],
+            (object) ['name' => 'روانشناسی', 'slug' => 'psychology', 'icon' => 'user-group', 'description' => 'شناخت ذهن و رفتار'],
+            (object) ['name' => 'کودک', 'slug' => 'children', 'icon' => 'puzzle', 'description' => 'برای نسل آینده'],
+            (object) ['name' => 'موفقیت', 'slug' => 'success', 'icon' => 'chart-bar', 'description' => 'توسعه فردی و حرفه‌ای'],
+            (object) ['name' => 'هنر', 'slug' => 'art', 'icon' => 'pencil', 'description' => 'خلاقیت و زیبایی'],
+        ];
 
         return view('blog.index', compact('posts', 'categories'));
     }

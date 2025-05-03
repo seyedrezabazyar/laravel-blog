@@ -43,17 +43,14 @@ class AppServiceProvider extends ServiceProvider
         // استفاده از Bootstrap در Pagination
         Paginator::useBootstrap();
 
-        // بهینه‌سازی بارگذاری مدل‌ها
-//        Model::preventLazyLoading(!$this->app->isProduction());
-
         // ثبت اجزای Blade برای بهبود عملکرد
         $this->registerBladeComponents();
 
         // ثبت گوش دادن به کوئری‌های کند
         $this->listenToSlowQueries();
 
-        // اشتراک‌گذاری دیدهای عمومی با همه قالب‌ها
-        $this->shareGlobalViews();
+        // اشتراک‌گذاری دیدهای عمومی به صورت ثابت (بدون کوئری به دیتابیس)
+        $this->shareGlobalViewsWithoutQueries();
 
         // تنظیم کنترل کش برای پاسخ‌ها
         $this->setupResponseCaching();
@@ -68,6 +65,7 @@ class AppServiceProvider extends ServiceProvider
         Blade::component('components.preload', 'preload');
         Blade::component('components.critical-css', 'critical-css');
         Blade::component('components.blog-card', 'blog-card');
+        Blade::component('components.simple-blog-card', 'simple-blog-card');
         Blade::component('components.meta-component', 'meta');
 
         // دستورات مفید Blade را تعریف کنید
@@ -96,26 +94,27 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * اشتراک‌گذاری دیدهای عمومی با همه قالب‌ها
+     * اشتراک‌گذاری دیدهای عمومی با همه قالب‌ها - بدون کوئری
      */
-    protected function shareGlobalViews(): void
+    protected function shareGlobalViewsWithoutQueries(): void
     {
         // داده‌های مشترک را با تمام قالب‌ها به اشتراک بگذارید
         View::share('appName', config('app.name'));
 
-        // داده‌های کش شده را با تمام قالب‌ها به اشتراک بگذارید
-        View::composer('*', function ($view) {
-            $globalCategories = Cache::remember('global_categories', 3600, function () {
-                return \App\Models\Category::withCount(['posts' => function ($query) {
-                    $query->visibleToUser();
-                }])
-                    ->orderByDesc('posts_count')
-                    ->take(8)
-                    ->get();
-            });
+        // دسته‌بندی‌های ثابت - بدون نیاز به کش یا کوئری
+        $globalCategories = [
+            (object) ['name' => 'رمان', 'slug' => 'roman', 'posts_count' => 25],
+            (object) ['name' => 'علمی', 'slug' => 'scientific', 'posts_count' => 18],
+            (object) ['name' => 'تاریخی', 'slug' => 'historical', 'posts_count' => 15],
+            (object) ['name' => 'فلسفه', 'slug' => 'philosophy', 'posts_count' => 12],
+            (object) ['name' => 'روانشناسی', 'slug' => 'psychology', 'posts_count' => 20],
+            (object) ['name' => 'کودک', 'slug' => 'children', 'posts_count' => 10],
+            (object) ['name' => 'موفقیت', 'slug' => 'success', 'posts_count' => 22],
+            (object) ['name' => 'هنر', 'slug' => 'art', 'posts_count' => 15],
+        ];
 
-            $view->with('globalCategories', $globalCategories);
-        });
+        // مستقیماً به اشتراک بگذارید - بدون کوئری کش
+        View::share('globalCategories', $globalCategories);
     }
 
     /**
@@ -123,7 +122,7 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function setupResponseCaching(): void
     {
-        // پاسخ‌ها را برای پردازش بیشتر دستکاری کنید
+        // پاسخ‌ها را برای کش کردن بهتر پیکربندی می‌کنیم
         Response::macro('cache', function ($seconds = 60) {
             $response = $this;
 
