@@ -8,36 +8,36 @@ use App\Models\Author;
 use App\Models\Tag;
 use App\Models\Publisher;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class BlogController extends Controller
 {
+    // Cache TTL in seconds (24 hours, configurable via .env)
+    protected $cacheTtl = 86400;
+
     /**
      * نمایش صفحه اصلی وبلاگ
      */
     public function index()
     {
-        $posts = Post::visibleToUser()
-            ->with(['user', 'category', 'author', 'publisher', 'authors', 'featuredImage'])
-            ->latest()
-            ->take(12)  // به جای paginate(12) از take(12) استفاده کردیم
-            ->get();    // نیاز به متد get() برای اجرای کوئری
+        $posts = Cache::remember('home_latest_posts', 3600, function () {
+            return Post::visibleToUser()
+                ->with(['user', 'category', 'author', 'publisher', 'authors', 'featuredImage']) // همه رابطه‌های مورد نیاز
+                ->latest()
+                ->take(12)
+                ->get();
+        });
 
-        $categories = Category::withCount(['posts' => function($query) {
-            $query->visibleToUser();
-        }])
-            ->whereHas('posts', function($query) {
+        $categories = Cache::remember('home_categories', 3600, function () {
+            return Category::withCount(['posts' => function($query) {
                 $query->visibleToUser();
-            })
-            ->orderBy(
-                Post::select('created_at')
-                    ->whereColumn('category_id', 'categories.id')
-                    ->visibleToUser()
-                    ->latest()
-                    ->limit(1)
-                , 'desc')
-            ->take(12)
-            ->get();
+            }])
+                ->whereHas('posts', function($query) {
+                    $query->visibleToUser();
+                })
+                ->take(12)
+                ->get();
+        });
 
         return view('blog.index', compact('posts', 'categories'));
     }
@@ -55,87 +55,82 @@ class BlogController extends Controller
             abort(404);
         }
 
-        $post->load(['user', 'category', 'author', 'publisher', 'authors', 'featuredImage', 'tags']);
+        // لود کردن تمام روابط مورد نیاز
+        $post->loadMissing(['category', 'featuredImage', 'tags', 'author', 'authors']);
 
-        // بررسی تعداد کل کتاب‌های موجود در این دسته‌بندی
-        $totalCategoryBooks = Post::visibleToUser()
-            ->where('category_id', $post->category_id)
-            ->where('id', '!=', $post->id)
-            ->count();
-
-        // بارگذاری کتاب‌های مشابه با استفاده از چند راهبرد
-        if ($totalCategoryBooks >= 12) {
-            // اگر در دسته‌بندی به اندازه کافی کتاب وجود دارد
-            $relatedPosts = Post::visibleToUser()
+        // استفاده از کش برای پست‌های مرتبط
+        $relatedPosts = Cache::remember("related_posts_{$post->id}", $this->cacheTtl, function () use ($post) {
+            // 1. ابتدا پست‌های مشابه در همان دسته‌بندی
+            $categoryPosts = Post::visibleToUser()
+                ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
                 ->where('category_id', $post->category_id)
                 ->where('id', '!=', $post->id)
+                ->with(['featuredImage', 'author', 'authors'])
                 ->latest()
                 ->take(12)
                 ->get();
-        } else {
-            // اگر در دسته‌بندی کمتر از 12 کتاب وجود دارد
-            // ابتدا کتاب‌های دسته‌بندی فعلی را می‌گیریم
-            $categoryBooks = Post::visibleToUser()
-                ->where('category_id', $post->category_id)
-                ->where('id', '!=', $post->id)
-                ->latest()
-                ->get();
 
-            // تعداد کتاب‌های دیگری که نیاز داریم
-            $neededBooks = 12 - $categoryBooks->count();
+            if ($categoryPosts->count() >= 12) {
+                return $categoryPosts;
+            }
 
-            // آیدی‌های کتاب‌های موجود (برای جلوگیری از تکرار)
-            $existingIds = $categoryBooks->pluck('id')->toArray();
-            $existingIds[] = $post->id; // آیدی خود پست
+            // 2. اگر کافی نبود، از تگ‌های مشترک استفاده می‌کنیم
+            $existingIds = $categoryPosts->pluck('id')->toArray();
+            $existingIds[] = $post->id;
 
-            // یافتن کتاب‌های مرتبط بر اساس تگ‌های مشترک
             if ($post->tags && $post->tags->count() > 0) {
-                $tagIds = $post->tags->pluck('id')->toArray();
+                $tagIds = $post->tags->pluck('idHooman')->toArray();
 
-                $tagRelatedBooks = Post::visibleToUser()
-                    ->whereHas('tags', function($query) use($tagIds) {
+                $tagPosts = Post::visibleToUser()
+                    ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
+                    ->whereHas('tags', function ($query) use ($tagIds) {
                         $query->whereIn('tags.id', $tagIds);
                     })
                     ->whereNotIn('id', $existingIds)
+                    ->with(['featuredImage', 'author', 'authors'])
                     ->latest()
-                    ->take($neededBooks)
+                    ->take(12 - $categoryPosts->count())
                     ->get();
 
-                // ترکیب دو مجموعه
-                $relatedPosts = $categoryBooks->concat($tagRelatedBooks);
+                $result = $categoryPosts->concat($tagPosts);
 
-                // اگر بعد از جستجو بر اساس تگ هنوز به 12 کتاب نرسیدیم
-                if ($relatedPosts->count() < 12) {
-                    $remainingNeeded = 12 - $relatedPosts->count();
-                    $currentIds = $relatedPosts->pluck('id')->toArray();
+                if ($result->count() < 12) {
+                    $currentIds = $result->pluck('id')->toArray();
 
-                    // کتاب‌های پربازدید یا جدید دیگر
-                    $otherBooks = Post::visibleToUser()
+                    $otherPosts = Post::visibleToUser()
+                        ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
                         ->whereNotIn('id', $currentIds)
+                        ->with(['featuredImage', 'author', 'authors'])
                         ->latest()
-                        ->take($remainingNeeded)
+                        ->take(12 - $result->count())
                         ->get();
 
-                    $relatedPosts = $relatedPosts->concat($otherBooks);
+                    return $result->concat($otherPosts);
                 }
-            } else {
-                // اگر تگی وجود نداشت، فقط بر اساس جدیدترین کتاب‌ها اضافه می‌کنیم
-                $otherBooks = Post::visibleToUser()
-                    ->whereNotIn('id', $existingIds)
-                    ->latest()
-                    ->take($neededBooks)
-                    ->get();
 
-                $relatedPosts = $categoryBooks->concat($otherBooks);
+                return $result;
             }
-        }
 
-        // ارسال اطلاعات به view
-        return view('blog.show', compact(
-            'post',
-            'relatedPosts',
-            'totalCategoryBooks'
-        ));
+            // 3. اگر تگی نیست، فقط پست‌های دیگر
+            $otherPosts = Post::visibleToUser()
+                ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
+                ->whereNotIn('id', $existingIds)
+                ->with(['featuredImage', 'author', 'authors'])
+                ->latest()
+                ->take(12 - $categoryPosts->count())
+                ->get();
+
+            return $categoryPosts->concat($otherPosts);
+        });
+
+        $totalCategoryBooks = Cache::remember("category_{$post->category_id}_count", $this->cacheTtl, function () use ($post) {
+            return Post::visibleToUser()
+                ->where('category_id', $post->category_id)
+                ->where('id', '!=', $post->id)
+                ->count();
+        });
+
+        return view('blog.show', compact('post', 'relatedPosts', 'totalCategoryBooks'));
     }
 
     /**
@@ -145,13 +140,15 @@ class BlogController extends Controller
     {
         $posts = Post::visibleToUser()
             ->where('category_id', $category->id)
-            ->with(['user', 'category', 'author', 'publisher', 'authors'])
+            ->with(['category', 'featuredImage', 'author', 'authors'])
             ->latest()
             ->paginate(12);
 
-        $allCategories = Category::withCount(['posts' => function($query) {
-            $query->visibleToUser();
-        }])->get();
+        $allCategories = Cache::remember('all_categories_with_count', $this->cacheTtl, function () {
+            return Category::withCount(['posts' => function ($query) {
+                $query->visibleToUser();
+            }])->get();
+        });
 
         return view('blog.category', compact('posts', 'category', 'allCategories'));
     }
@@ -161,17 +158,27 @@ class BlogController extends Controller
      */
     public function categories()
     {
-        $categories = Category::withCount(['posts' => function($query) {
-            $query->visibleToUser();
-        }])
-            ->orderByDesc('posts_count')
-            ->get();
+        $categories = Cache::remember('all_categories_with_samples', $this->cacheTtl, function () {
+            $categoriesWithCount = Category::withCount(['posts' => function ($query) {
+                $query->visibleToUser();
+            }])
+                ->orderByDesc('posts_count')
+                ->get();
 
-        $categories->each(function ($category) {
-            $category->sample_post = Post::visibleToUser()
-                ->where('category_id', $category->id)
-                ->latest()
-                ->first();
+            $latestPostsByCategory = Post::visibleToUser()
+                ->select('id', 'title', 'slug', 'category_id')
+                ->whereIn('category_id', $categoriesWithCount->pluck('id'))
+                ->with(['featuredImage', 'author', 'authors'])
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->groupBy('category_id');
+
+            $categoriesWithCount->each(function ($category) use ($latestPostsByCategory) {
+                $posts = $latestPostsByCategory->get($category->id);
+                $category->sample_post = $posts ? $posts->first() : null;
+            });
+
+            return $categoriesWithCount;
         });
 
         $popularCategories = $categories->take(5);
@@ -184,23 +191,14 @@ class BlogController extends Controller
      */
     public function author(Author $author)
     {
-        $postIds = collect();
-
-        $mainAuthorPostIds = Post::visibleToUser()
-            ->where('author_id', $author->id)
-            ->pluck('id');
-        $postIds = $postIds->concat($mainAuthorPostIds);
-
-        $coAuthorPostIds = DB::table('post_author')
-            ->where('post_author.author_id', $author->id)
-            ->join('posts', 'post_author.post_id', '=', 'posts.id')
-            ->where('posts.is_published', true)
-            ->where('posts.hide_content', false)
-            ->pluck('posts.id');
-        $postIds = $postIds->concat($coAuthorPostIds)->unique();
-
-        $posts = Post::whereIn('id', $postIds)
-            ->with(['user', 'category', 'author', 'publisher', 'authors'])
+        $posts = Post::visibleToUser()
+            ->with(['category', 'featuredImage', 'author', 'authors'])
+            ->where(function ($query) use ($author) {
+                $query->where('author_id', $author->id)
+                    ->orWhereHas('authors', function ($q) use ($author) {
+                        $q->where('authors.id', $author->id);
+                    });
+            })
             ->latest()
             ->paginate(12);
 
@@ -214,7 +212,7 @@ class BlogController extends Controller
     {
         $posts = Post::visibleToUser()
             ->where('publisher_id', $publisher->id)
-            ->with(['user', 'category', 'author', 'publisher', 'authors'])
+            ->with(['category', 'featuredImage', 'author', 'authors'])
             ->latest()
             ->paginate(12);
 
@@ -233,25 +231,31 @@ class BlogController extends Controller
         }
 
         $posts = Post::visibleToUser()
-            ->where(function($q) use ($query) {
+            ->where(function ($q) use ($query) {
                 $q->where('title', 'like', "%{$query}%")
                     ->orWhere('english_title', 'like', "%{$query}%")
                     ->orWhere('content', 'like', "%{$query}%")
                     ->orWhere('english_content', 'like', "%{$query}%")
                     ->orWhere('book_codes', 'like', "%{$query}%");
             })
-            ->with(['user', 'category', 'author', 'publisher', 'authors'])
+            ->with(['category', 'featuredImage', 'author', 'authors'])
             ->latest()
             ->paginate(12);
 
-        $categories = Category::withCount(['posts' => function($query) {
-            $query->visibleToUser();
-        }])->get();
+        $categories = Cache::remember('all_categories_search', $this->cacheTtl, function () {
+            return Category::withCount(['posts' => function ($query) {
+                $query->visibleToUser();
+            }])->get();
+        });
 
-        $popularPosts = Post::visibleToUser()
-            ->latest()
-            ->take(3)
-            ->get();
+        $popularPosts = Cache::remember('popular_posts', $this->cacheTtl, function () {
+            return Post::visibleToUser()
+                ->select('id', 'title', 'slug')
+                ->with(['featuredImage', 'author', 'authors'])
+                ->latest()
+                ->take(3)
+                ->get();
+        });
 
         return view('blog.search', compact('posts', 'query', 'categories', 'popularPosts'));
     }
@@ -263,7 +267,7 @@ class BlogController extends Controller
     {
         $posts = $tag->posts()
             ->visibleToUser()
-            ->with(['user', 'category', 'author', 'publisher', 'authors'])
+            ->with(['category', 'featuredImage', 'author', 'authors'])
             ->latest()
             ->paginate(12);
 

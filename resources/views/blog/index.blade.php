@@ -64,7 +64,6 @@
                     </div>
                 @endforelse
             </div>
-
         </div>
     </section>
 
@@ -86,16 +85,13 @@
         </div>
     </section>
 
-    {{-- اسکریپت جاوااسکریپت برای بررسی وجود تصاویر --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // بررسی وجود تصاویر و جایگزینی با تصویر پیش‌فرض در صورت خطا
             function handleImageError(img) {
-                img.onerror = null; // برای جلوگیری از تکرار خطا
+                img.onerror = null;
                 img.src = '{{ asset('images/default-book.png') }}';
             }
 
-            // اضافه کردن ویژگی onerror به تمام تصاویر صفحه
             document.querySelectorAll('img').forEach(function(img) {
                 img.addEventListener('error', function() {
                     handleImageError(this);
@@ -104,9 +100,7 @@
         });
     </script>
 
-    <!-- استایل‌های اختصاصی برای بخش نقل قول -->
     <style>
-        /* استایل‌های بخش نقل قول کتاب */
         .book-quote-section {
             position: relative;
             overflow: hidden;

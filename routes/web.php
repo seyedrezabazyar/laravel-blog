@@ -82,5 +82,9 @@ Route::prefix('feed')->name('feed.')->group(function () {
     Route::get('/tag/{tag:slug}', [RssController::class, 'tag'])->name('tag');
 });
 
+Route::get('/api/footer-partial', function () {
+    return response()->view('partials.footer')->header('Cache-Control', 'public, max-age=3600');
+});
+
 // مسیرهای احراز هویت
 require __DIR__.'/auth.php';

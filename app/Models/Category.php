@@ -15,4 +15,11 @@ class Category extends Model
     {
         return $this->hasMany(Post::class);
     }
+
+    protected $withCount = ['visiblePosts'];
+
+    public function visiblePosts()
+    {
+        return $this->hasMany(Post::class)->visibleToUser();
+    }
 }

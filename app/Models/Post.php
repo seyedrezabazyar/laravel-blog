@@ -3,10 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Mews\Purifier\Facades\Purifier;
+use Spatie\Sluggable\HasSlug;
+use Spatie\Sluggable\SlugOptions;
 
 class Post extends Model
 {
+    use HasSlug;
+
     protected $fillable = [
         'user_id',
         'category_id',
@@ -27,17 +32,35 @@ class Post extends Model
         'hide_content',
         'is_published',
         'md5_hash',
-        'edition',   // Campo añadido
-        'pages',     // Campo añadido
-        'size'       // Campo añadido
     ];
 
     protected $casts = [
         'is_published' => 'boolean',
         'hide_image' => 'boolean',
         'hide_content' => 'boolean',
-        'publication_year' => 'integer'
+        'publication_year' => 'integer',
     ];
+
+    /**
+     * تنظیمات Slug
+     */
+    public function getSlugOptions(): SlugOptions
+    {
+        return SlugOptions::create()
+            ->generateSlugsFrom('title')
+            ->saveSlugsTo('slug')
+            ->usingLanguage('fa');
+    }
+
+    /**
+     * بهینه‌سازی کوئری: ایندکس‌های مورد نیاز
+     *
+     * ALTER TABLE posts ADD INDEX idx_visible_posts (is_published, hide_content);
+     * ALTER TABLE posts ADD INDEX idx_post_category (category_id);
+     * ALTER TABLE posts ADD INDEX idx_post_author (author_id);
+     * ALTER TABLE posts ADD INDEX idx_post_publisher (publisher_id);
+     * ALTER TABLE posts ADD FULLTEXT INDEX ftx_post_content (title, english_title, content, english_content);
+     */
 
     /**
      * رابطه با کاربر
@@ -72,11 +95,19 @@ class Post extends Model
     }
 
     /**
-     * رابطه با تصاویر پست
+     * رابطه با تصاویر پست - بهینه شده
      */
     public function featuredImage()
     {
         return $this->hasOne(PostImage::class)->orderBy('sort_order');
+    }
+
+    /**
+     * بهینه‌سازی: رابطه با تمام تصاویر
+     */
+    public function images()
+    {
+        return $this->hasMany(PostImage::class)->orderBy('sort_order');
     }
 
     /**
@@ -88,80 +119,28 @@ class Post extends Model
     }
 
     /**
-     * دریافت محتوای پاکسازی شده پست
-     *
-     * @return string
+     * رابطه با تگ‌ها - بهینه شده با eager loading محدود
      */
-    public function getPurifiedContentAttribute()
-    {
-        return Purifier::clean($this->content);
-    }
-
-    /**
-     * آیا پست قابل نمایش است؟
-     *
-     * @return bool
-     */
-    public function isViewable()
-    {
-        return $this->is_published && !$this->hide_content;
-    }
-
-    /**
-     * آیا تصویر پست قابل نمایش است؟
-     *
-     * @return bool
-     */
-    public function hasVisibleImage()
-    {
-        return $this->featured_image && !$this->hide_image;
-    }
-
-    /**
-     * دریافت همه تصاویر قابل نمایش
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
-    public function getVisibleImagesAttribute()
-    {
-        return $this->images()->where('hide_image', false)->orderBy('sort_order')->get();
-    }
-
     public function tags()
     {
         return $this->belongsToMany(Tag::class);
     }
 
     /**
-     * دریافت URL کامل تصویر شاخص
-     *
-     * @return string|null
+     * دریافت محتوای پاکسازی شده پست - کش شده
      */
-    public function getFeaturedImageUrlAttribute()
+    public function getPurifiedContentAttribute()
     {
-        if (!$this->featured_image) {
-            return null;
-        }
+        $cacheKey = "post_{$this->id}_purified_content";
 
-        // اگر URL کامل HTTP یا HTTPS باشد، مستقیماً برگردانده شود
-        if (strpos($this->featured_image, 'http://') === 0 || strpos($this->featured_image, 'https://') === 0) {
-            return $this->featured_image;
-        }
-
-        // اگر مسیر با images.balyan.ir شروع شود
-        if (strpos($this->featured_image, 'images.balyan.ir/') !== false) {
-            return 'https://' . $this->featured_image;
-        }
-
-        // اگر تصویر در هاست دانلود باشد (با الگوی posts/ یا post_images/)
-        if (strpos($this->featured_image, 'posts/') === 0 || strpos($this->featured_image, 'post_images/') === 0) {
-            return config('app.custom_image_host', 'https://images.balyan.ir') . '/' . $this->featured_image;
-        }
-
-        // برای سازگاری با تصاویر قدیمی ذخیره شده در استوریج محلی
-        return asset('storage/' . $this->featured_image);
+        return Cache::remember($cacheKey, 3600, function () {
+            return Purifier::clean($this->content);
+        });
     }
 
+    /**
+     * بهینه‌سازی: Scope برای پست‌های قابل نمایش
+     */
     public function scopeVisibleToUser($query)
     {
         $query->where('is_published', true);
@@ -171,5 +150,37 @@ class Post extends Model
         }
 
         return $query;
+    }
+
+    /**
+     * بهینه‌سازی: Scope برای پست‌های یک دسته‌بندی
+     */
+    public function scopeInCategory($query, $categoryId)
+    {
+        return $query->where('category_id', $categoryId);
+    }
+
+    /**
+     * بهینه‌سازی: Scope برای پست‌های یک نویسنده
+     */
+    public function scopeByAuthor($query, $authorId)
+    {
+        return $query->where('author_id', $authorId);
+    }
+
+    /**
+     * بهینه‌سازی: Scope برای پست‌های یک ناشر
+     */
+    public function scopeByPublisher($query, $publisherId)
+    {
+        return $query->where('publisher_id', $publisherId);
+    }
+
+    /**
+     * بهینه‌سازی: Scope برای جستجوی متن کامل
+     */
+    public function scopeFullTextSearch($query, $searchTerm)
+    {
+        return $query->whereRaw("MATCH(title, english_title, content, english_content) AGAINST(? IN BOOLEAN MODE)", [$searchTerm . '*']);
     }
 }

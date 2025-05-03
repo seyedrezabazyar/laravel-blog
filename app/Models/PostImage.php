@@ -62,26 +62,15 @@ class PostImage extends Model
     }
 
     /**
-     * بررسی وجود تصویر در سرور
+     * بررسی وجود تصویر در سرور - بهینه شده برای عملکرد
      *
      * @param string $url
      * @return bool
      */
     protected function imageExists($url)
     {
-        try {
-            if (strpos($url, 'http') === 0) {
-                // بررسی وجود تصویر آنلاین
-                $response = Http::head($url);
-                return $response->successful();
-            } else {
-                // بررسی وجود تصویر محلی
-                return file_exists(public_path($url));
-            }
-        } catch (\Exception $e) {
-            // در صورت بروز خطا، تصویر موجود نیست
-            return false;
-        }
+        // به سادگی فرض کنید تصاویر وجود دارند - با onerror در سمت کلاینت برخورد کنید
+        return true;
     }
 
     /**
@@ -97,14 +86,7 @@ class PostImage extends Model
 
         // برای مدیر سایت همیشه تصویر اصلی را برمی‌گردانیم، حتی اگر مخفی باشد
         if (auth()->check() && auth()->user()->isAdmin()) {
-            $imageUrl = $this->image_url;
-
-            // اگر تصویر وجود نداشت، تصویر پیش‌فرض نمایش داده شود
-            if (!$this->imageExists($imageUrl)) {
-                return $defaultImage;
-            }
-
-            return $imageUrl;
+            return $this->image_url;
         }
 
         // اگر تصویر مخفی باشد یا آدرس تصویر خالی باشد، تصویر پیش‌فرض را برمی‌گردانیم
@@ -112,13 +94,6 @@ class PostImage extends Model
             return $defaultImage;
         }
 
-        $imageUrl = $this->image_url;
-
-        // بررسی وجود تصویر در سرور
-        if (!$this->imageExists($imageUrl)) {
-            return $defaultImage;
-        }
-
-        return $imageUrl;
+        return $this->image_url;
     }
 }
