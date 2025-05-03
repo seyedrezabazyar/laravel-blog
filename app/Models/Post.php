@@ -26,7 +26,10 @@ class Post extends Model
         'hide_image',
         'hide_content',
         'is_published',
-        'md5_hash'
+        'md5_hash',
+        'edition',   // Campo añadido
+        'pages',     // Campo añadido
+        'size'       // Campo añadido
     ];
 
     protected $casts = [
