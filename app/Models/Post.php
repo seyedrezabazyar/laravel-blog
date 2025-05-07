@@ -42,7 +42,13 @@ class Post extends Model
     ];
 
     /**
-     * تنظیمات Slug
+     * Default relationships to eager load
+     * This reduces the N+1 query problem by loading common relationships by default
+     */
+    protected $with = ['featuredImage'];
+
+    /**
+     * SlugOptions configuration
      */
     public function getSlugOptions(): SlugOptions
     {
@@ -53,93 +59,91 @@ class Post extends Model
     }
 
     /**
-     * بهینه‌سازی کوئری: ایندکس‌های مورد نیاز
-     *
-     * ALTER TABLE posts ADD INDEX idx_visible_posts (is_published, hide_content);
-     * ALTER TABLE posts ADD INDEX idx_post_category (category_id);
-     * ALTER TABLE posts ADD INDEX idx_post_author (author_id);
-     * ALTER TABLE posts ADD INDEX idx_post_publisher (publisher_id);
-     * ALTER TABLE posts ADD FULLTEXT INDEX ftx_post_content (title, english_title, content, english_content);
-     */
-
-    /**
-     * رابطه با کاربر
+     * Relationship with user - optimized to select only needed fields
      */
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id')->select(['id', 'name', 'email']);
     }
 
     /**
-     * رابطه با دسته‌بندی
+     * Relationship with category - optimized
      */
     public function category()
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class, 'category_id')->select(['id', 'name', 'slug']);
     }
 
     /**
-     * رابطه با نویسنده اصلی
+     * Relationship with author - optimized
      */
     public function author()
     {
-        return $this->belongsTo(Author::class);
+        return $this->belongsTo(Author::class, 'author_id')->select(['id', 'name', 'slug']);
     }
 
     /**
-     * رابطه با ناشر
+     * Relationship with publisher - optimized
      */
     public function publisher()
     {
-        return $this->belongsTo(Publisher::class);
+        return $this->belongsTo(Publisher::class, 'publisher_id')->select(['id', 'name', 'slug']);
     }
 
     /**
-     * رابطه با تصاویر پست - بهینه شده
+     * Optimized featured image relationship
+     * Always selects only the needed columns and orders by sort_order
      */
     public function featuredImage()
     {
-        return $this->hasOne(PostImage::class)->orderBy('sort_order');
+        return $this->hasOne(PostImage::class)
+            ->select(['id', 'post_id', 'image_path', 'caption', 'hide_image', 'sort_order'])
+            ->orderBy('sort_order');
     }
 
     /**
-     * بهینه‌سازی: رابطه با تمام تصاویر
+     * Relationship with all images - optimized
      */
     public function images()
     {
-        return $this->hasMany(PostImage::class)->orderBy('sort_order');
+        return $this->hasMany(PostImage::class)
+            ->select(['id', 'post_id', 'image_path', 'caption', 'hide_image', 'sort_order'])
+            ->orderBy('sort_order');
     }
 
     /**
-     * رابطه با نویسندگان دیگر (چند به چند)
+     * Relationship with co-authors - optimized
      */
     public function authors()
     {
-        return $this->belongsToMany(Author::class, 'post_author');
+        return $this->belongsToMany(Author::class, 'post_author')
+            ->select(['authors.id', 'name', 'slug']);
     }
 
     /**
-     * رابطه با تگ‌ها - بهینه شده با eager loading محدود
+     * Relationship with tags - optimized
      */
     public function tags()
     {
-        return $this->belongsToMany(Tag::class);
+        return $this->belongsToMany(Tag::class)
+            ->select(['tags.id', 'name', 'slug']);
     }
 
     /**
-     * دریافت محتوای پاکسازی شده پست - کش شده
+     * Get purified content with caching
+     * Uses a longer cache time for better performance
      */
     public function getPurifiedContentAttribute()
     {
-        $cacheKey = "post_{$this->id}_purified_content";
+        $cacheKey = "post_{$this->id}_purified_content_" . md5($this->content);
 
-        return Cache::remember($cacheKey, 3600, function () {
+        return Cache::remember($cacheKey, 86400 * 7, function () {
             return Purifier::clean($this->content);
         });
     }
 
     /**
-     * بهینه‌سازی: Scope برای پست‌های قابل نمایش
+     * Scope for posts visible to the current user
      */
     public function scopeVisibleToUser($query)
     {
@@ -153,7 +157,7 @@ class Post extends Model
     }
 
     /**
-     * بهینه‌سازی: Scope برای پست‌های یک دسته‌بندی
+     * Scope for posts in a specific category - optimized
      */
     public function scopeInCategory($query, $categoryId)
     {
@@ -161,15 +165,18 @@ class Post extends Model
     }
 
     /**
-     * بهینه‌سازی: Scope برای پست‌های یک نویسنده
+     * Scope for posts by a specific author - optimized
      */
     public function scopeByAuthor($query, $authorId)
     {
-        return $query->where('author_id', $authorId);
+        return $query->where('author_id', $authorId)
+            ->orWhereHas('authors', function ($q) use ($authorId) {
+                $q->where('authors.id', $authorId);
+            });
     }
 
     /**
-     * بهینه‌سازی: Scope برای پست‌های یک ناشر
+     * Scope for posts by a specific publisher - optimized
      */
     public function scopeByPublisher($query, $publisherId)
     {
@@ -177,10 +184,14 @@ class Post extends Model
     }
 
     /**
-     * بهینه‌سازی: Scope برای جستجوی متن کامل
+     * Optimized fulltext search using MySQL's FULLTEXT indexes
      */
     public function scopeFullTextSearch($query, $searchTerm)
     {
-        return $query->whereRaw("MATCH(title, english_title, content, english_content) AGAINST(? IN BOOLEAN MODE)", [$searchTerm . '*']);
+        // Clean the search term to prevent SQL injection
+        $searchTerm = preg_replace('/[^\p{L}\p{N}_\s-]/u', '', $searchTerm);
+
+        return $query->whereRaw("MATCH(title, english_title, content, english_content) AGAINST(? IN BOOLEAN MODE)",
+            [$searchTerm . '*']);
     }
 }

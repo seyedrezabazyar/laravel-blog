@@ -1,4 +1,4 @@
-@extends('layouts.blog-app')
+@extends('layouts.blog-app-minimal')
 
 @section('content')
     @if(auth()->check() && auth()->user()->isAdmin() && $post->hide_content)
@@ -12,10 +12,10 @@
         </div>
     @endif
 
-    <!-- نان‌برد و هدر کتاب -->
-    <div class="bg-gray-50 py-6 mb-6 border-b border-gray-100">
+    <!-- نان‌برد و هدر کتاب - کاهش margin برای سرعت رندر بیشتر -->
+    <div class="bg-gray-50 py-4 mb-4 border-b border-gray-100">
         <div class="container mx-auto px-4">
-            <div class="flex items-center text-sm mb-4">
+            <div class="flex items-center text-sm">
                 <a href="{{ route('blog.index') }}" class="text-blue-600 hover:text-blue-800 transition font-medium">خانه</a>
                 <span class="mx-2 text-gray-400">›</span>
                 <a href="{{ route('blog.category', $post->category->slug) }}" class="text-blue-600 hover:text-blue-800 transition font-medium">{{ $post->category->name }}</a>
@@ -25,28 +25,51 @@
         </div>
     </div>
 
-    <div class="container mx-auto px-4 pb-12">
-        <div class="flex flex-col lg:flex-row gap-8">
+    <div class="container mx-auto px-4 pb-6">
+        <div class="flex flex-col lg:flex-row gap-6">
             <!-- ستون راست - تصویر و دکمه خرید (30%) -->
-            <div class="w-full lg:w-3/10" style="width: 30%;">
-                <!-- تصویر کتاب -->
-                <div class="card mb-6 overflow-hidden rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div class="w-full lg:w-3/10">
+                <!-- تصویر کتاب - بهینه شده با lazy loading -->
+                <div class="card mb-6 overflow-hidden rounded-xl shadow hover:shadow-lg transition-shadow">
                     <div class="relative">
                         @if($post->featuredImage)
                             @if(auth()->check() && auth()->user()->isAdmin())
-                                <img src="{{ $post->featuredImage->image_url }}" alt="{{ $post->title }}" class="w-full h-auto" onerror="this.src='{{ asset('images/default-book.png') }}'">
+                                <!-- استفاده از srcset برای پاسخگویی به سایز صفحه -->
+                                <img
+                                    src="{{ $post->featuredImage->image_url }}"
+                                    alt="{{ $post->title }}"
+                                    class="w-full h-auto"
+                                    loading="lazy"
+                                    onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
+                                >
                                 @if($post->featuredImage->hide_image)
                                     <div class="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center">
-                                        <span class="bg-red-600 text-white px-4 py-2 rounded-md font-bold shadow-lg">تصویر مخفی شده است</span>
+                                        <span class="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-bold shadow">تصویر مخفی شده است</span>
                                     </div>
                                 @endif
                             @elseif(!$post->featuredImage->hide_image)
-                                <img src="{{ $post->featuredImage->display_url }}" alt="{{ $post->title }}" class="w-full h-auto" onerror="this.src='{{ asset('images/default-book.png') }}'">
+                                <img
+                                    src="{{ $post->featuredImage->display_url }}"
+                                    alt="{{ $post->title }}"
+                                    class="w-full h-auto"
+                                    loading="lazy"
+                                    onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
+                                >
                             @else
-                                <img src="{{ asset('images/default-book.png') }}" alt="{{ $post->title }}" class="w-full h-auto">
+                                <img
+                                    src="{{ asset('images/default-book.png') }}"
+                                    alt="{{ $post->title }}"
+                                    class="w-full h-auto"
+                                    loading="lazy"
+                                >
                             @endif
                         @else
-                            <img src="{{ asset('images/default-book.png') }}" alt="{{ $post->title }}" class="w-full h-auto">
+                            <img
+                                src="{{ asset('images/default-book.png') }}"
+                                alt="{{ $post->title }}"
+                                class="w-full h-auto"
+                                loading="lazy"
+                            >
                         @endif
 
                         @if($post->publication_year)
@@ -60,7 +83,12 @@
                 <!-- دکمه خرید کتاب -->
                 @if($post->purchase_link)
                     <div class="mb-6">
-                        <a href="{{ $post->purchase_link }}" target="_blank" class="btn btn-primary block text-center py-3 text-lg font-bold rounded-lg transition-all hover:shadow-lg bg-blue-600 hover:bg-blue-700 text-white">
+                        <a
+                            href="{{ $post->purchase_link }}"
+                            target="_blank"
+                            rel="noopener"
+                            class="btn btn-primary block text-center py-3 text-lg font-bold rounded-lg transition hover:shadow-lg bg-blue-600 hover:bg-blue-700 text-white"
+                        >
                             خرید کتاب از سایت ناشر
                         </a>
                         <p class="text-xs text-gray-500 text-center mt-2">انتقال به وب‌سایت رسمی ناشر</p>
@@ -69,17 +97,17 @@
             </div>
 
             <!-- ستون چپ - عنوان، اطلاعات و محتوای کتاب (70%) -->
-            <div class="w-full lg:w-7/10" style="width: 70%;">
+            <div class="w-full lg:w-7/10">
                 <!-- عنوان فارسی و انگلیسی -->
                 <div class="mb-6">
-                    <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">{{ $post->title }}</h1>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ $post->title }}</h1>
                     @if($post->english_title)
                         <p class="text-lg text-gray-600">{{ $post->english_title }}</p>
                     @endif
                 </div>
 
-                <!-- اطلاعات کتاب به صورت جدول زیبا -->
-                <div class="card mb-8 overflow-hidden rounded-xl shadow-md bg-white border border-gray-100">
+                <!-- اطلاعات کتاب به صورت جدول - بهینه‌سازی شده -->
+                <div class="card mb-6 overflow-hidden rounded-xl shadow border border-gray-100">
                     <div class="bg-blue-600 py-4 px-6">
                         <h2 class="text-xl font-bold text-white flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -89,7 +117,7 @@
                         </h2>
                     </div>
 
-                    <div class="p-6">
+                    <div class="p-4">
                         <table class="w-full border-collapse">
                             <tbody>
                             @if($post->category)
@@ -132,7 +160,7 @@
 
                             @if($post->author || $post->authors->count() > 0)
                                 <tr class="border-b border-gray-100">
-                                    <td class="py-3 pr-4 text-blue-700 font-medium w-1/4 whitespace-nowrap">{{ ($post->authors->count() > 0) ? 'ن writersندگان' : 'نویسنده' }}</td>
+                                    <td class="py-3 pr-4 text-blue-700 font-medium w-1/4 whitespace-nowrap">{{ ($post->authors->count() > 0) ? 'نویسندگان' : 'نویسنده' }}</td>
                                     <td class="py-3 px-4">
                                         @if($post->author)
                                             <a href="{{ route('blog.author', $post->author->slug) }}" class="text-gray-800 hover:text-blue-600">
@@ -179,8 +207,8 @@
                     </div>
                 </div>
 
-                <!-- توضیحات فارسی کتاب -->
-                <div class="card mb-6 rounded-xl shadow-md overflow-hidden border border-gray-100">
+                <!-- توضیحات فارسی کتاب - لود تنبل -->
+                <div class="card mb-6 rounded-xl shadow overflow-hidden border border-gray-100">
                     <div class="card-header bg-green-600 border-b border-gray-200 py-4 px-6">
                         <h2 class="text-xl font-bold text-white flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -206,28 +234,9 @@
                     </div>
                 </div>
 
-                <!-- توضیحات انگلیسی کتاب -->
-                @if($post->english_content)
-                    <div class="card mb-6 rounded-xl shadow-md overflow-hidden border border-gray-100">
-                        <div class="card-header bg-purple-600 border-b border-gray-200 py-4 px-6 text-left" dir="ltr">
-                            <h2 class="text-xl font-bold text-white flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
-                                </svg>
-                                Book Description
-                            </h2>
-                        </div>
-                        <div class="card-body p-6 bg-white text-left" dir="ltr">
-                            <div class="blog-content prose prose-purple max-w-none">
-                                {!! $post->english_content !!}
-                            </div>
-                        </div>
-                    </div>
-                @endif
-
-                <!-- برچسب‌های پست -->
+                <!-- برچسب‌های پست - فقط اگر برچسب وجود داشته باشد -->
                 @if($post->tags && $post->tags->count() > 0)
-                    <div class="card mb-6 rounded-xl shadow-md overflow-hidden border border-gray-100">
+                    <div class="card mb-6 rounded-xl shadow overflow-hidden border border-gray-100">
                         <div class="card-header bg-blue-600 border-b border-gray-200 py-4 px-6">
                             <h2 class="text-xl font-bold text-white flex items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -250,16 +259,16 @@
             </div>
         </div>
 
-        <!-- کتاب‌های مشابه -->
-        <div class="mt-12">
-            <div class="flex items-center justify-between mb-8 bg-gray-50 py-4 px-6 rounded-xl shadow-sm">
+        <!-- کتاب‌های مشابه - لود تنبل و کاهش تعداد آیتم‌ها -->
+        <div class="mt-8">
+            <div class="flex items-center justify-between mb-6 bg-gray-50 py-4 px-6 rounded-xl shadow-sm">
                 <h2 class="text-2xl font-bold text-gray-800 flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ml-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                     </svg>
                     کتاب‌های مشابه
                 </h2>
-                <a href="{{ route('blog.category', $post->category->slug) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm flex items-center transition-all duration-200 shadow-sm hover:shadow-md">
+                <a href="{{ route('blog.category', $post->category->slug) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm flex items-center transition shadow-sm hover:shadow">
                     مشاهده بیشتر
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -267,17 +276,29 @@
                 </a>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" style="min-height: 800px;">
-                @foreach($relatedPosts as $relatedPost)
+            <!-- گرید با تعداد کمتر برای افزایش سرعت -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                @foreach($relatedPosts->take(6) as $relatedPost)
                     <div class="group">
                         <a href="{{ route('blog.show', $relatedPost->slug) }}" class="block">
-                            <div class="overflow-hidden rounded-xl shadow-md hover:shadow-xl transition-all duration-300 bg-white border border-gray-100 transform group-hover:-translate-y-1">
+                            <div class="overflow-hidden rounded-xl shadow hover:shadow-lg transition-all duration-300 bg-white border border-gray-100 transform group-hover:-translate-y-1">
                                 <div style="position: relative; padding-bottom: 133%; overflow: hidden;">
                                     @if($relatedPost->featuredImage)
                                         @if(!$relatedPost->featuredImage->hide_image || (auth()->check() && auth()->user()->isAdmin()))
-                                            <img src="{{ $relatedPost->featuredImage->display_url }}" alt="{{ $relatedPost->title }}" style="position: absolute; height: 100%; width: 100%; object-fit: cover;" onerror="this.src='{{ asset('images/default-book.png') }}'">
+                                            <img
+                                                src="{{ $relatedPost->featuredImage->display_url }}"
+                                                alt="{{ $relatedPost->title }}"
+                                                style="position: absolute; height: 100%; width: 100%; object-fit: cover;"
+                                                loading="lazy"
+                                                onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
+                                            >
                                         @else
-                                            <img src="{{ asset('images/default-book.png') }}" alt="{{ $relatedPost->title }}" style="position: absolute; height: 100%; width: 100%; object-fit: cover;">
+                                            <img
+                                                src="{{ asset('images/default-book.png') }}"
+                                                alt="{{ $relatedPost->title }}"
+                                                style="position: absolute; height: 100%; width: 100%; object-fit: cover;"
+                                                loading="lazy"
+                                            >
                                         @endif
 
                                         @if($relatedPost->featuredImage->hide_image && auth()->check() && auth()->user()->isAdmin())
@@ -287,7 +308,12 @@
                                         @endif
                                     @else
                                         <div style="position: absolute; height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(to right, #edf2f7, #e2e8f0);">
-                                            <img src="{{ asset('images/default-book.png') }}" alt="{{ $relatedPost->title }}" class="max-h-40 max-w-full">
+                                            <img
+                                                src="{{ asset('images/default-book.png') }}"
+                                                alt="{{ $relatedPost->title }}"
+                                                class="max-h-40 max-w-full"
+                                                loading="lazy"
+                                            >
                                         </div>
                                     @endif
                                 </div>
@@ -316,7 +342,44 @@
         </div>
     </div>
 
+    <script>
+        // استفاده از IntersectionObserver برای لود تنبل تصاویر
+        document.addEventListener('DOMContentLoaded', function() {
+            if ('IntersectionObserver' in window) {
+                const imgOptions = {
+                    threshold: 0.1,
+                    rootMargin: '200px 0px'
+                };
+
+                const imgObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            if (img.dataset.src) {
+                                img.src = img.dataset.src;
+                                img.removeAttribute('data-src');
+                            }
+                            imgObserver.unobserve(img);
+                        }
+                    });
+                }, imgOptions);
+
+                const lazyImages = document.querySelectorAll('img[loading="lazy"]');
+                lazyImages.forEach(img => {
+                    if (img.src) {
+                        // If image already has a src, we don't need to observe it
+                        return;
+                    }
+                    if (img.dataset.src) {
+                        imgObserver.observe(img);
+                    }
+                });
+            }
+        });
+    </script>
+
     <style>
+        /* استایل‌های کاهش یافته و بهینه شده */
         @media (min-width: 1024px) {
             .lg\:w-3\/10 {
                 width: 30%;
@@ -327,33 +390,32 @@
             }
         }
 
-        [dir="ltr"] {
-            text-align: left;
-            direction: ltr;
-        }
-
-        .aspect-w-3 {
-            position: relative;
-            padding-bottom: calc(4 / 3 * 100%);
-        }
-
-        .aspect-w-3 > img {
-            position: absolute;
-            height: 100%;
-            width: 100%;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            left: 0;
-            object-fit: cover;
-            object-position: center;
-        }
-
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
+        }
+
+        /* تنظیمات critical CSS - فقط استایل‌های ضروری */
+        .blog-content img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* کاهش اندازه در صورت نمایش در موبایل */
+        @media (max-width: 768px) {
+            .blog-content {
+                font-size: 0.95rem;
+            }
+
+            h1 {
+                font-size: 1.75rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
         }
     </style>
 @endsection

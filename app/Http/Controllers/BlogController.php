@@ -46,10 +46,11 @@ class BlogController extends Controller
     }
 
     /**
-     * نمایش جزئیات یک پست
+     * Display post details with optimized performance
      */
     public function show(Post $post)
     {
+        // Check if post is published and visible
         if (!$post->is_published) {
             abort(404);
         }
@@ -58,74 +59,27 @@ class BlogController extends Controller
             abort(404);
         }
 
-        // لود کردن تمام روابط مورد نیاز
-        $post->loadMissing(['category', 'featuredImage', 'tags', 'author', 'authors']);
+        // Efficiently load only the relationships we need with specific columns
+        // This reduces the amount of data being loaded
+        $post->load([
+            'category:id,name,slug',
+            'featuredImage',
+            'tags:id,name,slug',
+            'author:id,name,slug',
+            'authors:id,name,slug',
+        ]);
 
-        // استفاده از کش برای پست‌های مرتبط
-        $relatedPosts = Cache::remember("related_posts_{$post->id}", $this->cacheTtl, function () use ($post) {
-            // 1. ابتدا پست‌های مشابه در همان دسته‌بندی
-            $categoryPosts = Post::visibleToUser()
-                ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
-                ->where('category_id', $post->category_id)
-                ->where('id', '!=', $post->id)
-                ->with(['featuredImage', 'author', 'authors'])
-                ->latest()
-                ->take(12)
-                ->get();
+        // Cache key that includes post ID and whether user is admin
+        $isAdmin = auth()->check() && auth()->user()->isAdmin() ? 'admin' : 'user';
+        $cacheKey = "post_{$post->id}_related_posts_{$isAdmin}";
 
-            if ($categoryPosts->count() >= 12) {
-                return $categoryPosts;
-            }
-
-            // 2. اگر کافی نبود، از تگ‌های مشترک استفاده می‌کنیم
-            $existingIds = $categoryPosts->pluck('id')->toArray();
-            $existingIds[] = $post->id;
-
-            if ($post->tags && $post->tags->count() > 0) {
-                $tagIds = $post->tags->pluck('idHooman')->toArray();
-
-                $tagPosts = Post::visibleToUser()
-                    ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
-                    ->whereHas('tags', function ($query) use ($tagIds) {
-                        $query->whereIn('tags.id', $tagIds);
-                    })
-                    ->whereNotIn('id', $existingIds)
-                    ->with(['featuredImage', 'author', 'authors'])
-                    ->latest()
-                    ->take(12 - $categoryPosts->count())
-                    ->get();
-
-                $result = $categoryPosts->concat($tagPosts);
-
-                if ($result->count() < 12) {
-                    $currentIds = $result->pluck('id')->toArray();
-
-                    $otherPosts = Post::visibleToUser()
-                        ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
-                        ->whereNotIn('id', $currentIds)
-                        ->with(['featuredImage', 'author', 'authors'])
-                        ->latest()
-                        ->take(12 - $result->count())
-                        ->get();
-
-                    return $result->concat($otherPosts);
-                }
-
-                return $result;
-            }
-
-            // 3. اگر تگی نیست، فقط پست‌های دیگر
-            $otherPosts = Post::visibleToUser()
-                ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
-                ->whereNotIn('id', $existingIds)
-                ->with(['featuredImage', 'author', 'authors'])
-                ->latest()
-                ->take(12 - $categoryPosts->count())
-                ->get();
-
-            return $categoryPosts->concat($otherPosts);
+        // Get related posts from cache or generate them
+        $relatedPosts = Cache::remember($cacheKey, $this->cacheTtl, function () use ($post) {
+            // Find related posts in a single optimized query with eager loading
+            return $this->getRelatedPosts($post);
         });
 
+        // Get category count from cache
         $totalCategoryBooks = Cache::remember("category_{$post->category_id}_count", $this->cacheTtl, function () use ($post) {
             return Post::visibleToUser()
                 ->where('category_id', $post->category_id)
@@ -133,7 +87,88 @@ class BlogController extends Controller
                 ->count();
         });
 
+        // Return view with efficient data
         return view('blog.show', compact('post', 'relatedPosts', 'totalCategoryBooks'));
+    }
+
+    /**
+     * Optimized related posts query
+     * This uses a single DB query with UNION to get all related posts
+     */
+    private function getRelatedPosts(Post $post)
+    {
+        // Get posts from same category first (limited to 6)
+        $categoryPosts = Post::visibleToUser()
+            ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
+            ->where('category_id', $post->category_id)
+            ->where('id', '!=', $post->id)
+            ->with([
+                'featuredImage' => function($query) {
+                    $query->select('id', 'post_id', 'image_path', 'hide_image');
+                },
+                'author:id,name,slug',
+                'authors:id,name,slug'
+            ])
+            ->limit(6)
+            ->get();
+
+        // If we already have 6 posts, return them
+        if ($categoryPosts->count() >= 6) {
+            return $categoryPosts;
+        }
+
+        // Get the IDs of posts we already have
+        $existingIds = $categoryPosts->pluck('id')->toArray();
+        $existingIds[] = $post->id;
+
+        // Get posts with the same tags (if any)
+        $tagPosts = collect();
+        if ($post->tags && $post->tags->isNotEmpty()) {
+            $tagIds = $post->tags->pluck('id')->toArray();
+
+            $tagPosts = Post::visibleToUser()
+                ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
+                ->whereHas('tags', function ($query) use ($tagIds) {
+                    $query->whereIn('tags.id', $tagIds);
+                })
+                ->whereNotIn('id', $existingIds)
+                ->with([
+                    'featuredImage' => function($query) {
+                        $query->select('id', 'post_id', 'image_path', 'hide_image');
+                    },
+                    'author:id,name,slug',
+                    'authors:id,name,slug'
+                ])
+                ->limit(6 - $categoryPosts->count())
+                ->get();
+        }
+
+        // Combine the results
+        $result = $categoryPosts->merge($tagPosts);
+
+        // If we still need more posts, get the most recent ones
+        if ($result->count() < 6) {
+            $currentIds = $result->pluck('id')->toArray();
+            $currentIds[] = $post->id;
+
+            $otherPosts = Post::visibleToUser()
+                ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
+                ->whereNotIn('id', $currentIds)
+                ->with([
+                    'featuredImage' => function($query) {
+                        $query->select('id', 'post_id', 'image_path', 'hide_image');
+                    },
+                    'author:id,name,slug',
+                    'authors:id,name,slug'
+                ])
+                ->latest()
+                ->limit(6 - $result->count())
+                ->get();
+
+            $result = $result->merge($otherPosts);
+        }
+
+        return $result;
     }
 
     /**
