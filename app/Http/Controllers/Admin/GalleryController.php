@@ -24,16 +24,49 @@ class GalleryController extends Controller
     {
         $images = PostImage::whereNull('hide_image')
             ->with('post:id,title')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'asc') // ترتیب صعودی بر اساس ID
             ->paginate(100);
-        
-        // افزودن ویژگی‌های محاسبه شده به هر تصویر
+
+        // افزودن ویژگی‌های محاسبه شده و برگرداندن مسیر اصلی تصویر
         $images->getCollection()->transform(function ($image) {
-            $image->makeVisible(['image_url']);
+            // استفاده مستقیم از image_path به جای image_url
+            $image->makeVisible(['image_path']);
+
+            // اضافه کردن مسیر کامل تصویر به عنوان یک ویژگی جدید
+            $image->raw_image_url = $this->getFullImageUrl($image->image_path);
+
             return $image;
         });
-            
+
         return response()->json($images);
+    }
+
+    /**
+     * تبدیل مسیر تصویر به URL کامل
+     */
+    private function getFullImageUrl($imagePath)
+    {
+        if (empty($imagePath)) {
+            return asset('images/default-book.png');
+        }
+
+        // Direct URL for HTTP/HTTPS paths
+        if (strpos($imagePath, 'http://') === 0 || strpos($imagePath, 'https://') === 0) {
+            return $imagePath;
+        }
+
+        // Handle images.balyan.ir domain
+        if (strpos($imagePath, 'images.balyan.ir/') !== false) {
+            return 'https://' . $imagePath;
+        }
+
+        // Handle download host images
+        if (strpos($imagePath, 'post_images/') === 0 || strpos($imagePath, 'posts/') === 0) {
+            return config('app.custom_image_host', 'https://images.balyan.ir') . '/' . $imagePath;
+        }
+
+        // Local storage fallback
+        return asset('storage/' . $imagePath);
     }
 
     /**
@@ -47,7 +80,7 @@ class GalleryController extends Controller
         ]);
 
         $image = PostImage::findOrFail($request->image_id);
-        
+
         // تبدیل مقدار boolean به enum
         $image->hide_image = $request->hide_image ? 'hidden' : 'visible';
         $image->save();
