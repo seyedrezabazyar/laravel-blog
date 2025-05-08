@@ -1,40 +1,65 @@
 @props(['post'])
 
 <div class="bg-white rounded-lg overflow-hidden shadow hover:shadow-md transition duration-300 flex flex-col h-full">
-    {{-- نمایش تصویر با نسبت ثابت - ساده شده --}}
+    <!-- Image with fixed aspect ratio -->
     <div class="w-full relative aspect-[4/3]">
-        <img src="{{ asset('images/default-book.png') }}" alt="{{ $post->title }}" class="w-full h-full object-cover"
-            loading="lazy">
+        @if($post->featuredImage && !$post->featuredImage->hide_image)
+            <img
+                src="{{ $post->featuredImage->display_url }}"
+                alt="{{ $post->title }}"
+                class="w-full h-full object-cover"
+                loading="lazy"
+                onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
+            >
+        @else
+            <img
+                src="{{ asset('images/default-book.png') }}"
+                alt="{{ $post->title }}"
+                class="w-full h-full object-cover"
+                loading="lazy"
+            >
+        @endif
     </div>
 
-    {{-- محتوای کارت با فاصله مناسب از تصویر --}}
+    <!-- Card content -->
     <div class="p-4 text-right flex-grow flex flex-col">
-        {{-- عنوان کتاب --}}
-        <h3 class="text-xl font-bold mb-2 mt-1 relative z-10">
-            <a href="{{ route('blog.show', $post->slug) }}" class="text-gray-800 hover:text-indigo-600 block">
+        <!-- Book title -->
+        <h3 class="text-xl font-bold mb-2 mt-1 line-clamp-2">
+            <a href="{{ route('blog.show', $post->slug) }}" class="text-gray-800 hover:text-blue-600 block">
                 {{ $post->title }}
             </a>
         </h3>
 
-        {{-- اطلاعات نویسنده - نمایش ساده شده --}}
+        <!-- Author info - simplified for performance -->
         <div class="text-sm text-gray-600 mb-4 flex-grow">
-            <div>
-                نویسنده: <span class="text-indigo-600">ناشر</span>
-            </div>
+            @if($post->author)
+                <div>
+                    نویسنده:
+                    <a href="{{ route('blog.author', $post->author->slug) }}" class="text-blue-600">
+                        {{ $post->author->name }}
+                    </a>
+                </div>
+            @endif
         </div>
 
-        {{-- دکمه مشاهده کتاب --}}
+        <!-- View button -->
         <div class="mt-auto">
             <a href="{{ route('blog.show', $post->slug) }}"
-                class="block w-full text-white text-center py-2 px-4 rounded transition duration-300 font-medium green-button">
+               class="block w-full text-white text-center py-2 px-4 rounded transition duration-300 font-medium bg-green-500 hover:bg-green-600">
                 مشاهده کتاب
             </a>
 
-            {{-- فرمت و سال انتشار --}}
+            <!-- Format and publication year -->
             <div class="flex items-center justify-between text-sm text-gray-500 mt-3">
-                <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                    {{ $post->format ?? 'PDF' }}
-                </span>
+                @if($post->format)
+                    <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                        {{ $post->format }}
+                    </span>
+                @else
+                    <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                        PDF
+                    </span>
+                @endif
                 <span>{{ $post->publication_year ?? date('Y') }}</span>
             </div>
         </div>
@@ -42,21 +67,14 @@
 </div>
 
 <style>
-    .green-button {
-        background-color: #10B981 !important;
-        background-image: linear-gradient(to right, #10B981, #059669) !important;
-        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
-        border: none !important;
-    }
-
-    .green-button:hover {
-        background-color: #059669 !important;
-        background-image: linear-gradient(to right, #059669, #047857) !important;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
-    }
-
-    /* استایل برای نسبت تصویر */
+    /* Critical styles for the blog card */
     .aspect-\[4\/3\] {
         aspect-ratio: 4/3;
+    }
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
 </style>

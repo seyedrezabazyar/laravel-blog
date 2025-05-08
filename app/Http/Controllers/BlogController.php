@@ -60,7 +60,6 @@ class BlogController extends Controller
         }
 
         // Efficiently load only the relationships we need with specific columns
-        // This reduces the amount of data being loaded
         $post->load([
             'category:id,name,slug',
             'featuredImage',
@@ -79,16 +78,8 @@ class BlogController extends Controller
             return $this->getRelatedPosts($post);
         });
 
-        // Get category count from cache
-        $totalCategoryBooks = Cache::remember("category_{$post->category_id}_count", $this->cacheTtl, function () use ($post) {
-            return Post::visibleToUser()
-                ->where('category_id', $post->category_id)
-                ->where('id', '!=', $post->id)
-                ->count();
-        });
-
-        // Return view with efficient data
-        return view('blog.show', compact('post', 'relatedPosts', 'totalCategoryBooks'));
+        // Return the view with required data
+        return view('blog.show', compact('post', 'relatedPosts'));
     }
 
     /**

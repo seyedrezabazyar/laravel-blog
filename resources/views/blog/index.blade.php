@@ -19,7 +19,7 @@
                 </div>
                 <div class="md:w-1/2 mt-10 md:mt-0 fade-in" style="animation-delay: 0.3s;">
                     <div class="relative">
-                        <img src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+                        <img src="/images/default-hero.jpg"
                             alt="کتابخانه" class="rounded-lg shadow-xl w-full h-auto"
                             onerror="this.onerror=null; this.src='{{ asset('images/default-hero.png') }}'; if(!this.src.includes('default-hero.png')) this.src='{{ asset('images/default-book.png') }}';">
                     </div>

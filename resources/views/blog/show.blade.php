@@ -1,4 +1,4 @@
-@extends('layouts.blog-app-minimal')
+@extends('layouts.blog-app')
 
 @section('content')
     @if(auth()->check() && auth()->user()->isAdmin() && $post->hide_content)
@@ -12,7 +12,7 @@
         </div>
     @endif
 
-    <!-- نان‌برد و هدر کتاب - کاهش margin برای سرعت رندر بیشتر -->
+    <!-- Breadcrumb -->
     <div class="bg-gray-50 py-4 mb-4 border-b border-gray-100">
         <div class="container mx-auto px-4">
             <div class="flex items-center text-sm">
@@ -27,14 +27,13 @@
 
     <div class="container mx-auto px-4 pb-6">
         <div class="flex flex-col lg:flex-row gap-6">
-            <!-- ستون راست - تصویر و دکمه خرید (30%) -->
+            <!-- Right column - Image and purchase button (30%) -->
             <div class="w-full lg:w-3/10">
-                <!-- تصویر کتاب - بهینه شده با lazy loading -->
+                <!-- Book image with lazy loading -->
                 <div class="card mb-6 overflow-hidden rounded-xl shadow hover:shadow-lg transition-shadow">
                     <div class="relative">
                         @if($post->featuredImage)
                             @if(auth()->check() && auth()->user()->isAdmin())
-                                <!-- استفاده از srcset برای پاسخگویی به سایز صفحه -->
                                 <img
                                     src="{{ $post->featuredImage->image_url }}"
                                     alt="{{ $post->title }}"
@@ -80,25 +79,25 @@
                     </div>
                 </div>
 
-                <!-- دکمه خرید کتاب -->
+                <!-- Purchase button -->
                 @if($post->purchase_link)
                     <div class="mb-6">
-                        <a
-                            href="{{ $post->purchase_link }}"
-                            target="_blank"
-                            rel="noopener"
-                            class="btn btn-primary block text-center py-3 text-lg font-bold rounded-lg transition hover:shadow-lg bg-blue-600 hover:bg-blue-700 text-white"
+
+                        href="{{ $post->purchase_link }}"
+                        target="_blank"
+                        rel="noopener"
+                        class="btn btn-primary block text-center py-3 text-lg font-bold rounded-lg transition hover:shadow-lg bg-blue-600 hover:bg-blue-700 text-white"
                         >
-                            خرید کتاب از سایت ناشر
+                        خرید کتاب از سایت ناشر
                         </a>
                         <p class="text-xs text-gray-500 text-center mt-2">انتقال به وب‌سایت رسمی ناشر</p>
                     </div>
                 @endif
             </div>
 
-            <!-- ستون چپ - عنوان، اطلاعات و محتوای کتاب (70%) -->
+            <!-- Left column - Title, info, and content (70%) -->
             <div class="w-full lg:w-7/10">
-                <!-- عنوان فارسی و انگلیسی -->
+                <!-- Title section -->
                 <div class="mb-6">
                     <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ $post->title }}</h1>
                     @if($post->english_title)
@@ -106,7 +105,7 @@
                     @endif
                 </div>
 
-                <!-- اطلاعات کتاب به صورت جدول - بهینه‌سازی شده -->
+                <!-- Book information table -->
                 <div class="card mb-6 overflow-hidden rounded-xl shadow border border-gray-100">
                     <div class="bg-blue-600 py-4 px-6">
                         <h2 class="text-xl font-bold text-white flex items-center">
@@ -207,7 +206,7 @@
                     </div>
                 </div>
 
-                <!-- توضیحات فارسی کتاب - لود تنبل -->
+                <!-- Book description -->
                 <div class="card mb-6 rounded-xl shadow overflow-hidden border border-gray-100">
                     <div class="card-header bg-green-600 border-b border-gray-200 py-4 px-6">
                         <h2 class="text-xl font-bold text-white flex items-center">
@@ -234,7 +233,7 @@
                     </div>
                 </div>
 
-                <!-- برچسب‌های پست - فقط اگر برچسب وجود داشته باشد -->
+                <!-- Tags section - show only if tags exist -->
                 @if($post->tags && $post->tags->count() > 0)
                     <div class="card mb-6 rounded-xl shadow overflow-hidden border border-gray-100">
                         <div class="card-header bg-blue-600 border-b border-gray-200 py-4 px-6">
@@ -259,7 +258,7 @@
             </div>
         </div>
 
-        <!-- کتاب‌های مشابه - لود تنبل و کاهش تعداد آیتم‌ها -->
+        <!-- Related books section with fewer items for faster loading -->
         <div class="mt-8">
             <div class="flex items-center justify-between mb-6 bg-gray-50 py-4 px-6 rounded-xl shadow-sm">
                 <h2 class="text-2xl font-bold text-gray-800 flex items-center">
@@ -276,19 +275,19 @@
                 </a>
             </div>
 
-            <!-- گرید با تعداد کمتر برای افزایش سرعت -->
+            <!-- Related books grid with only 3 items for faster loading -->
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                @foreach($relatedPosts->take(6) as $relatedPost)
+                @foreach($relatedPosts->take(3) as $relatedPost)
                     <div class="group">
                         <a href="{{ route('blog.show', $relatedPost->slug) }}" class="block">
                             <div class="overflow-hidden rounded-xl shadow hover:shadow-lg transition-all duration-300 bg-white border border-gray-100 transform group-hover:-translate-y-1">
-                                <div style="position: relative; padding-bottom: 133%; overflow: hidden;">
+                                <div class="aspect-[2/3] relative overflow-hidden">
                                     @if($relatedPost->featuredImage)
                                         @if(!$relatedPost->featuredImage->hide_image || (auth()->check() && auth()->user()->isAdmin()))
                                             <img
                                                 src="{{ $relatedPost->featuredImage->display_url }}"
                                                 alt="{{ $relatedPost->title }}"
-                                                style="position: absolute; height: 100%; width: 100%; object-fit: cover;"
+                                                class="w-full h-full object-cover"
                                                 loading="lazy"
                                                 onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
                                             >
@@ -296,18 +295,12 @@
                                             <img
                                                 src="{{ asset('images/default-book.png') }}"
                                                 alt="{{ $relatedPost->title }}"
-                                                style="position: absolute; height: 100%; width: 100%; object-fit: cover;"
+                                                class="w-full h-full object-cover"
                                                 loading="lazy"
                                             >
                                         @endif
-
-                                        @if($relatedPost->featuredImage->hide_image && auth()->check() && auth()->user()->isAdmin())
-                                            <div class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                                                <span class="bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium">تصویر مخفی شده است</span>
-                                            </div>
-                                        @endif
                                     @else
-                                        <div style="position: absolute; height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(to right, #edf2f7, #e2e8f0);">
+                                        <div class="w-full h-full flex items-center justify-center bg-gradient-to-r from-gray-100 to-gray-200">
                                             <img
                                                 src="{{ asset('images/default-book.png') }}"
                                                 alt="{{ $relatedPost->title }}"
@@ -341,55 +334,20 @@
             </div>
         </div>
     </div>
+@endsection
 
-    <script>
-        // استفاده از IntersectionObserver برای لود تنبل تصاویر
-        document.addEventListener('DOMContentLoaded', function() {
-            if ('IntersectionObserver' in window) {
-                const imgOptions = {
-                    threshold: 0.1,
-                    rootMargin: '200px 0px'
-                };
-
-                const imgObserver = new IntersectionObserver((entries, observer) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            const img = entry.target;
-                            if (img.dataset.src) {
-                                img.src = img.dataset.src;
-                                img.removeAttribute('data-src');
-                            }
-                            imgObserver.unobserve(img);
-                        }
-                    });
-                }, imgOptions);
-
-                const lazyImages = document.querySelectorAll('img[loading="lazy"]');
-                lazyImages.forEach(img => {
-                    if (img.src) {
-                        // If image already has a src, we don't need to observe it
-                        return;
-                    }
-                    if (img.dataset.src) {
-                        imgObserver.observe(img);
-                    }
-                });
-            }
-        });
-    </script>
-
+@push('styles')
     <style>
-        /* استایل‌های کاهش یافته و بهینه شده */
-        @media (min-width: 1024px) {
-            .lg\:w-3\/10 {
-                width: 30%;
-            }
-
-            .lg\:w-7\/10 {
-                width: 70%;
-            }
+        /* Critical CSS - essential styles for above-the-fold content */
+        .lg\:w-3\/10 {
+            width: 30%;
         }
-
+        .lg\:w-7\/10 {
+            width: 70%;
+        }
+        .aspect-\[2\/3\] {
+            aspect-ratio: 2/3;
+        }
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -397,25 +355,67 @@
             overflow: hidden;
         }
 
-        /* تنظیمات critical CSS - فقط استایل‌های ضروری */
+        /* Blog content styles */
         .blog-content img {
             max-width: 100%;
             height: auto;
         }
 
-        /* کاهش اندازه در صورت نمایش در موبایل */
+        /* Mobile responsiveness */
         @media (max-width: 768px) {
             .blog-content {
                 font-size: 0.95rem;
             }
-
             h1 {
                 font-size: 1.75rem;
             }
-
             h2 {
                 font-size: 1.5rem;
             }
         }
     </style>
-@endsection
+@endpush
+
+@push('scripts')
+    <script>
+        // Use Intersection Observer for lazy loading
+        document.addEventListener('DOMContentLoaded', function() {
+            // Only use IntersectionObserver if it's supported
+            if ('IntersectionObserver' in window) {
+                const imageObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            const src = img.getAttribute('data-src');
+                            if (src) {
+                                img.src = src;
+                                img.removeAttribute('data-src');
+                            }
+                            imageObserver.unobserve(img);
+                        }
+                    });
+                }, {
+                    rootMargin: '300px 0px', // Load images when they're within 300px of viewport
+                    threshold: 0.01
+                });
+
+                // Select all images with 'loading="lazy"' attribute
+                document.querySelectorAll('img[loading="lazy"]').forEach(img => {
+                    // Only observe images with data-src attribute
+                    if (img.getAttribute('data-src')) {
+                        imageObserver.observe(img);
+                    }
+                });
+            }
+
+            // Error handling for images
+            document.querySelectorAll('img').forEach(img => {
+                img.addEventListener('error', function() {
+                    if (!this.src.includes('default-book.png')) {
+                        this.src = '{{ asset("images/default-book.png") }}';
+                    }
+                });
+            });
+        });
+    </script>
+@endpush
