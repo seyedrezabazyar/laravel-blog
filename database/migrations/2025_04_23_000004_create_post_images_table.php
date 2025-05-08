@@ -1,5 +1,3 @@
-// database/migrations/2025_04_23_000004_create_post_images_table.php
-
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -16,8 +14,9 @@ return new class extends Migration{
             $table->id();
             $table->foreignId('post_id')->constrained()->onDelete('cascade');
             $table->string('image_path');
-            $table->string('caption')->nullable();
-            $table->boolean('hide_image')->default(false); // Flag to hide the image from users
+            $table->string('caption', 1500)->nullable(); // تغییر طول به 1500 کاراکتر
+            // تغییر به enum با سه حالت NULL، visible و hidden. پیش‌فرض NULL
+            $table->enum('hide_image', ['visible', 'hidden'])->nullable()->default(null);
             $table->integer('sort_order')->default(0);
             $table->timestamps();
         });

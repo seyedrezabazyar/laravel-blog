@@ -87,11 +87,12 @@ class PostSeeder extends Seeder
                     $randomTags = $tagCollection->random($randomTagCount);
                     $post->tags()->attach($randomTags->pluck('id')->toArray());
 
+                    // تغییر مقدار hide_image از false/0 به 'visible'
                     PostImage::create([
                         'post_id' => $post->id,
                         'image_path' => $this->getRandomImageUrl($post->id),
                         'caption' => 'تصویر اصلی برای کتاب ' . $title,
-                        'hide_image' => false,
+                        'hide_image' => 'visible', // تغییر به 'visible' به جای false یا 0
                         'sort_order' => 0
                     ]);
 
@@ -113,11 +114,12 @@ class PostSeeder extends Seeder
                 }
 
                 if ($post->images()->count() == 0) {
+                    // تغییر مقدار hide_image از false/0 به 'visible'
                     PostImage::create([
                         'post_id' => $post->id,
                         'image_path' => $this->getRandomImageUrl($post->id),
                         'caption' => 'تصویر اصلی برای کتاب ' . $post->title,
-                        'hide_image' => false,
+                        'hide_image' => 'visible', // تغییر به 'visible' به جای false یا 0
                         'sort_order' => 0
                     ]);
                 }

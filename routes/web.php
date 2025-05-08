@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\PublisherController;
+use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\RssController;
 
@@ -38,6 +39,11 @@ Route::middleware('auth')->group(function () {
 
         Route::delete('post-images/{image}', [PostController::class, 'destroyImage'])->name('post-images.destroy');
         Route::post('post-images/reorder', [PostController::class, 'reorderImages'])->name('post-images.reorder');
+        
+        // گالری تصاویر - مسیرهای جدید
+        Route::get('/gallery', [GalleryController::class, 'index'])->name('gallery');
+        Route::get('/api/gallery/images', [GalleryController::class, 'getImages']);
+        Route::post('/api/gallery/categorize', [GalleryController::class, 'categorizeImage']);
     });
 });
 

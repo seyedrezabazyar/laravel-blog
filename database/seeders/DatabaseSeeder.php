@@ -14,10 +14,10 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UserSeeder::class,
             CategorySeeder::class,
-            AuthorSeeder::class,
-            PublisherSeeder::class,
-            TagSeeder::class,
-            PostSeeder::class,
+//            AuthorSeeder::class,
+//            PublisherSeeder::class,
+//            TagSeeder::class,
+//            PostSeeder::class,
         ]);
     }
 }

@@ -13,43 +13,140 @@ return new class extends Migration
     public function up(): void
     {
         // شاخص‌های جدول posts
-        DB::statement('CREATE INDEX idx_posts_published_hidden_created ON posts(is_published, hide_content, created_at)');
-        DB::statement('CREATE INDEX idx_posts_category_published ON posts(category_id, is_published)');
-        DB::statement('CREATE INDEX idx_posts_author_published ON posts(author_id, is_published)');
-        DB::statement('CREATE INDEX idx_posts_format_year ON posts(format, publication_year)');
-        DB::statement('CREATE INDEX idx_posts_publisher ON posts(publisher_id)');
-        DB::statement('CREATE INDEX idx_posts_slug ON posts(slug)');
+        try {
+            DB::statement('CREATE INDEX idx_posts_published_hidden_created ON posts(is_published, hide_content, created_at)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
+
+        try {
+            DB::statement('CREATE INDEX idx_posts_category_published ON posts(category_id, is_published)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
+
+        try {
+            DB::statement('CREATE INDEX idx_posts_author_published ON posts(author_id, is_published)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
+
+        try {
+            DB::statement('CREATE INDEX idx_posts_format_year ON posts(format, publication_year)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
+
+        try {
+            DB::statement('CREATE INDEX idx_posts_publisher ON posts(publisher_id)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
+
+        try {
+            DB::statement('CREATE INDEX idx_posts_slug ON posts(slug)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
 
         // شاخص جستجوی متنی کامل
-        DB::statement('ALTER TABLE posts ADD FULLTEXT INDEX ftx_posts_content (title, english_title, content, english_content)');
+        try {
+            DB::statement('ALTER TABLE posts ADD FULLTEXT INDEX ftx_posts_content (title, english_title, content, english_content)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
 
         // شاخص‌های جدول post_images
-        DB::statement('CREATE INDEX idx_post_images_post_id_sort ON post_images(post_id, sort_order)');
-        DB::statement('CREATE INDEX idx_post_images_visibility ON post_images(hide_image)');
+        try {
+            DB::statement('CREATE INDEX idx_post_images_post_id_sort ON post_images(post_id, sort_order)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
+
+        try {
+            DB::statement('CREATE INDEX idx_post_images_visibility ON post_images(hide_image)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
 
         // شاخص‌های جدول post_author
-        DB::statement('CREATE INDEX idx_post_author_post ON post_author(post_id)');
-        DB::statement('CREATE INDEX idx_post_author_author ON post_author(author_id)');
+        try {
+            DB::statement('CREATE INDEX idx_post_author_post ON post_author(post_id)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
+
+        try {
+            DB::statement('CREATE INDEX idx_post_author_author ON post_author(author_id)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
 
         // شاخص‌های جدول post_tag
-        DB::statement('CREATE INDEX idx_post_tag_post ON post_tag(post_id)');
-        DB::statement('CREATE INDEX idx_post_tag_tag ON post_tag(tag_id)');
+        try {
+            DB::statement('CREATE INDEX idx_post_tag_post ON post_tag(post_id)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
+
+        try {
+            DB::statement('CREATE INDEX idx_post_tag_tag ON post_tag(tag_id)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
 
         // شاخص‌های جدول categories
-        DB::statement('CREATE INDEX idx_categories_slug ON categories(slug)');
-        DB::statement('CREATE INDEX idx_categories_name ON categories(name)');
+        try {
+            DB::statement('CREATE INDEX idx_categories_slug ON categories(slug)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
+
+        try {
+            DB::statement('CREATE INDEX idx_categories_name ON categories(name)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
 
         // شاخص‌های جدول authors
-        DB::statement('CREATE INDEX idx_authors_slug ON authors(slug)');
-        DB::statement('CREATE INDEX idx_authors_name ON authors(name)');
+        try {
+            DB::statement('CREATE INDEX idx_authors_slug ON authors(slug)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
+
+        try {
+            // استفاده از محدودیت طول برای ستون name در جدول authors
+            DB::statement('CREATE INDEX idx_authors_name ON authors(name(768))');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
 
         // شاخص‌های جدول publishers
-        DB::statement('CREATE INDEX idx_publishers_slug ON publishers(slug)');
-        DB::statement('CREATE INDEX idx_publishers_name ON publishers(name)');
+        try {
+            DB::statement('CREATE INDEX idx_publishers_slug ON publishers(slug)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
+
+        try {
+            DB::statement('CREATE INDEX idx_publishers_name ON publishers(name)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
 
         // شاخص‌های جدول tags
-        DB::statement('CREATE INDEX idx_tags_slug ON tags(slug)');
-        DB::statement('CREATE INDEX idx_tags_name ON tags(name)');
+        try {
+            DB::statement('CREATE INDEX idx_tags_slug ON tags(slug)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
+
+        try {
+            DB::statement('CREATE INDEX idx_tags_name ON tags(name)');
+        } catch (\Exception $e) {
+            // اگر شاخص از قبل وجود داشته باشد، خطا را نادیده بگیر
+        }
     }
 
     /**

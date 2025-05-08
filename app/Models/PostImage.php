@@ -15,9 +15,10 @@ class PostImage extends Model
         'sort_order',
     ];
 
-    protected $casts = [
-        'hide_image' => 'boolean',
-    ];
+    // حذف کست boolean
+    // protected $casts = [
+    //     'hide_image' => 'boolean',
+    // ];
 
     /**
      * Cache TTL for image URLs - 7 days
@@ -37,7 +38,23 @@ class PostImage extends Model
      */
     public function isHidden()
     {
-        return $this->hide_image;
+        return $this->hide_image === 'hidden';
+    }
+
+    /**
+     * Check if image is visible
+     */
+    public function isVisible()
+    {
+        return $this->hide_image === 'visible';
+    }
+
+    /**
+     * Check if image is not categorized yet
+     */
+    public function isNotCategorized()
+    {
+        return $this->hide_image === null;
     }
 
     /**
@@ -95,7 +112,7 @@ class PostImage extends Model
             }
 
             // Show default image if hidden or empty
-            if ($this->hide_image || empty($this->image_path)) {
+            if ($this->hide_image === 'hidden' || empty($this->image_path)) {
                 return $defaultImage;
             }
 
