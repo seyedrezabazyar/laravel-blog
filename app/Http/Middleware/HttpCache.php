@@ -15,7 +15,7 @@ class HttpCache
     protected $cacheable = [
         'blog.show' => 60, // 1 hour cache for blog post pages
         'blog.index' => 30, // 30 minutes for the blog index
-        'blog.category' => 30, // 30 minutes for category pages
+        'blog.category' => 60, // 60 minutes for category pages
         'blog.author' => 30, // 30 minutes for author pages
         'blog.publisher' => 30, // 30 minutes for publisher pages
         'blog.tag' => 30, // 30 minutes for tag pages
@@ -28,31 +28,23 @@ class HttpCache
     {
         $response = $next($request);
 
-        // Only apply caching to GET requests
+        // فقط برای درخواست‌های GET کش می‌کنیم
         if (!$request->isMethod('GET')) {
             return $response;
         }
 
-        // Don't cache for authenticated users
+        // برای کاربران احراز هویت شده کش نمی‌کنیم
         if (auth()->check()) {
             return $response->header('Cache-Control', 'no-store, private');
         }
 
         $routeName = $request->route()?->getName();
 
-        // If the current route should be cached
-        if (isset($this->cacheable[$routeName])) {
-            $minutes = $this->cacheable[$routeName];
-
-            // Set cache headers
-            $response->header('Cache-Control', 'public, max-age=' . ($minutes * 60));
-            $response->header('Expires', Carbon::now()->addMinutes($minutes)->format('D, d M Y H:i:s').' GMT');
-
-            // Add a cache tag (useful for cache invalidation)
-            $response->header('X-Cache-Tag', $routeName);
-        } else {
-            // Default cache policy for other pages
-            $response->header('Cache-Control', 'no-cache, must-revalidate');
+        // اگر مسیر فعلی باید کش شود
+        if ($routeName === 'blog.category') {
+            // کش ۶۰ دقیقه‌ای برای صفحه دسته‌بندی
+            $response->header('Cache-Control', 'public, max-age=3600');
+            $response->header('Expires', now()->addMinutes(60)->format('D, d M Y H:i:s').' GMT');
         }
 
         return $response;

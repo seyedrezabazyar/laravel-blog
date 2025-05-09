@@ -20,6 +20,8 @@ class Category extends Model
 
     public function visiblePosts()
     {
-        return $this->hasMany(Post::class)->visibleToUser();
+        return $this->hasMany(Post::class)
+            ->where('is_published', true)
+            ->where('hide_content', false);
     }
 }

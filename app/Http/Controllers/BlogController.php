@@ -163,23 +163,37 @@ class BlogController extends Controller
     }
 
     /**
-     * نمایش پست‌های یک دسته‌بندی خاص
+     * نمایش پست‌های یک دسته‌بندی خاص - نسخه نهایی بهینه‌شده
      */
     public function category(Category $category)
     {
-        $posts = Post::visibleToUser()
-            ->where('category_id', $category->id)
-            ->with(['category', 'featuredImage', 'author', 'authors'])
-            ->latest()
-            ->paginate(12);
+        // کلید کش منحصر به فرد با توجه به شماره صفحه و نوع کاربر
+        $page = request()->get('page', 1);
+        $isAdmin = auth()->check() && auth()->user()->isAdmin();
+        $cacheKey = "category_posts_{$category->id}_page_{$page}_" . ($isAdmin ? 'admin' : 'user');
 
-        $allCategories = Cache::remember('all_categories_with_count', $this->cacheTtl, function () {
-            return Category::withCount(['posts' => function ($query) {
-                $query->visibleToUser();
-            }])->get();
+        // فقط داده‌ها را کش می‌کنیم، نه view را
+        $posts = Cache::remember($cacheKey, 12 * 60 * 60, function () use ($category, $isAdmin) {
+            return Post::where('is_published', true)
+                ->when(!$isAdmin, function ($query) {
+                    $query->where('hide_content', false);
+                })
+                ->where('category_id', $category->id)
+                ->select(['id', 'title', 'slug', 'category_id', 'author_id', 'publication_year', 'format'])
+                ->with([
+                    'featuredImage' => function($query) {
+                        $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
+                    },
+                    'author:id,name,slug'
+                ])
+                ->latest()
+                ->simplePaginate(12);
         });
 
-        return view('blog.category', compact('posts', 'category', 'allCategories'));
+        // $allCategories حذف شد
+
+        // view را با حداقل متغیرها بازگشت می‌دهیم
+        return view('blog.category', compact('posts', 'category'));
     }
 
     /**

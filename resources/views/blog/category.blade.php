@@ -5,7 +5,6 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center">
                 <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ $category->name }}</h1>
-                <p class="text-gray-600">{{ $posts->total() }} کتاب در این دسته‌بندی</p>
             </div>
         </div>
     </div>
