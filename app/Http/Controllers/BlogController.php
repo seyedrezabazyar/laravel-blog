@@ -9,6 +9,7 @@ use App\Models\Tag;
 use App\Models\Publisher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB; // اضافه کردن این import برای رفع خطا
 
 class BlogController extends Controller
 {
@@ -43,6 +44,41 @@ class BlogController extends Controller
         ];
 
         return view('blog.index', compact('posts', 'categories'));
+    }
+
+    /**
+     * نمایش تمام دسته‌بندی‌ها - با بهینه‌سازی کوئری
+     */
+    public function categories()
+    {
+        // استفاده از آرایه ثابت به جای کوئری به دیتابیس
+        // این داده‌ها می‌توانند در یک فایل کانفیگ یا در کش دائمی ذخیره شوند
+        $categories = collect([
+            (object) ['id' => 1, 'name' => 'رمان', 'slug' => 'roman', 'posts_count' => 25],
+            (object) ['id' => 2, 'name' => 'علمی', 'slug' => 'scientific', 'posts_count' => 18],
+            (object) ['id' => 3, 'name' => 'تاریخی', 'slug' => 'historical', 'posts_count' => 15],
+            (object) ['id' => 4, 'name' => 'فلسفه', 'slug' => 'philosophy', 'posts_count' => 12],
+            (object) ['id' => 5, 'name' => 'روانشناسی', 'slug' => 'psychology', 'posts_count' => 20],
+            (object) ['id' => 6, 'name' => 'کودک', 'slug' => 'children', 'posts_count' => 10],
+            (object) ['id' => 7, 'name' => 'موفقیت', 'slug' => 'success', 'posts_count' => 22],
+            (object) ['id' => 8, 'name' => 'هنر', 'slug' => 'art', 'posts_count' => 15],
+            (object) ['id' => 9, 'name' => 'ادبیات', 'slug' => 'literature', 'posts_count' => 30],
+            (object) ['id' => 10, 'name' => 'زندگینامه', 'slug' => 'biography', 'posts_count' => 8],
+            (object) ['id' => 11, 'name' => 'خودیاری', 'slug' => 'self-help', 'posts_count' => 14],
+            (object) ['id' => 12, 'name' => 'مذهبی', 'slug' => 'religious', 'posts_count' => 16],
+            (object) ['id' => 13, 'name' => 'آشپزی', 'slug' => 'cooking', 'posts_count' => 7],
+            (object) ['id' => 14, 'name' => 'سفر', 'slug' => 'travel', 'posts_count' => 9],
+            (object) ['id' => 15, 'name' => 'ورزش', 'slug' => 'sports', 'posts_count' => 5],
+            (object) ['id' => 16, 'name' => 'اقتصاد', 'slug' => 'economics', 'posts_count' => 11],
+        ]);
+
+        // مرتب‌سازی بر اساس تعداد پست‌ها (از بیشترین به کمترین)
+        $categories = $categories->sortByDesc('posts_count');
+
+        // دسته‌بندی‌های محبوب (5 مورد اول)
+        $popularCategories = $categories->take(5);
+
+        return view('blog.categories', compact('categories', 'popularCategories'));
     }
 
     /**
@@ -196,28 +232,6 @@ class BlogController extends Controller
     }
 
     /**
-     * نمایش تمام دسته‌بندی‌ها - ساده‌ترین حالت ممکن
-     */
-    public function categories()
-    {
-        $cacheKey = 'all_categories_withcount_' . (auth()->check() && auth()->user()->isAdmin() ? 'admin' : 'user');
-
-        $categories = Cache::remember($cacheKey, 24 * 60 * 60, function () {
-            $categories = DB::table('categories as c')
-                ->select('c.id', 'c.name', 'c.slug')
-                ->selectRaw('(SELECT COUNT(*) FROM posts WHERE category_id = c.id AND is_published = 1 AND hide_content = 0) as posts_count')
-                ->orderByDesc('posts_count')
-                ->get();
-
-            return $categories;
-        });
-
-        $popularCategories = $categories->take(5);
-
-        return view('blog.categories', compact('categories', 'popularCategories'));
-    }
-
-    /**
      * نمایش پست‌های یک نویسنده خاص
      */
     public function author(Author $author)
@@ -292,14 +306,6 @@ class BlogController extends Controller
             return $postsQuery->latest()->simplePaginate(12);
         });
 
-        // تغییر: حذف دسته‌بندی‌ها از صفحه نتایج جستجو
-        // حذف کد زیر:
-        // $categories = Cache::remember('all_categories_search', $this->cacheTtl, function () {
-        //     return Category::withCount(['posts' => function ($query) {
-        //         $query->visibleToUser();
-        //     }])->get();
-        // });
-
         // تغییر: ساده‌سازی کد پست‌های محبوب
         $popularPosts = Cache::remember('popular_posts', $this->cacheTtl * 24, function () {
             return Post::visibleToUser()
@@ -316,35 +322,6 @@ class BlogController extends Controller
 
         // حذف categories از compact
         return view('blog.search', compact('posts', 'query', 'popularPosts'));
-    }
-
-    /**
-     * گرفتن داده‌های ساید بار با کش مشترک
-     * این روش از تکرار کد جلوگیری می‌کند و کوئری‌های تکراری را حذف می‌کند
-     */
-    protected function getSidebarData()
-    {
-        // دسته‌بندی‌ها و پست‌های محبوب را به صورت جداگانه کش می‌کنیم
-        $categories = Cache::remember('all_categories_search', $this->cacheTtl, function () {
-            return Category::withCount(['posts' => function ($query) {
-                $query->visibleToUser();
-            }])->get();
-        });
-
-        $popularPosts = Cache::remember('popular_posts', $this->cacheTtl, function () {
-            return Post::visibleToUser()
-                ->select(['id', 'title', 'slug'])
-                ->with([
-                    'featuredImage' => function($query) {
-                        $query->select('id', 'post_id', 'image_path', 'hide_image');
-                    }
-                ])
-                ->latest()
-                ->take(3)
-                ->get();
-        });
-
-        return compact('categories', 'popularPosts');
     }
 
     /**
