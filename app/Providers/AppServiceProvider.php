@@ -2,12 +2,14 @@
 
 namespace App\Providers;
 
+use App\Models\Publisher;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
@@ -39,6 +41,13 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
         }
+
+// بارگذاری بهینه مدل‌های رایج در مسیرها
+        Route::bind('publisher', function (string $value) {
+            return Publisher::select(['id', 'name', 'slug', 'description', 'logo'])
+                ->where('slug', $value)
+                ->firstOrFail();
+        });
 
         // Usar Bootstrap para paginación
         Paginator::useBootstrap();

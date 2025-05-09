@@ -251,17 +251,52 @@ class BlogController extends Controller
     }
 
     /**
-     * نمایش پست‌های یک ناشر خاص
+     * نمایش پست‌های یک ناشر خاص - نسخه نهایی بهینه‌سازی شده
      */
     public function publisher(Publisher $publisher)
     {
-        $posts = Post::visibleToUser()
-            ->where('publisher_id', $publisher->id)
-            ->with(['category', 'featuredImage', 'author', 'authors'])
-            ->latest()
-            ->paginate(12);
+        // کلید کش بر اساس شناسه ناشر و پارامترهای مهم
+        $page = request()->get('page', 1);
+        $isAdmin = auth()->check() && auth()->user()->isAdmin();
+        $cacheKey = "publisher_posts_{$publisher->id}_page_{$page}_" . ($isAdmin ? 'admin' : 'user');
 
-        return view('blog.publisher', compact('posts', 'publisher'));
+        // ذخیره نتایج در کش به مدت ۱ ساعت
+        $posts = Cache::remember($cacheKey, 3600, function () use ($publisher, $isAdmin) {
+            return Post::where('is_published', true)
+                ->when(!$isAdmin, function ($query) {
+                    $query->where('hide_content', false);
+                })
+                ->where('publisher_id', $publisher->id)
+                // انتخاب فقط فیلدهای مورد نیاز
+                ->select([
+                    'id', 'title', 'slug', 'category_id', 'author_id',
+                    'publication_year', 'format'
+                ])
+                // بارگذاری روابط با انتخاب ستون‌های مشخص
+                ->with([
+                    'featuredImage' => function($query) {
+                        $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
+                    },
+                    'author' => function($query) {
+                        $query->select(['id', 'name', 'slug'])->without(['posts', 'coAuthoredPosts']);
+                    }
+                ])
+                ->latest()
+                ->simplePaginate(12);
+        });
+
+        // حذف این خط که باعث دوباره کاری می‌شود
+        // $posts->load(['author' => function($query) {
+        //     $query->select(['id', 'name', 'slug'])->without(['posts', 'coAuthoredPosts']);
+        // }]);
+
+        // افزودن هدرهای کش برای کش مرورگر
+        $etag = md5($publisher->id . $page . $isAdmin . time() / 3600); // زمان را به ساعت گرد می‌کنیم
+        $response = response()->view('blog.publisher', compact('posts', 'publisher'));
+        $response->header('Cache-Control', 'public, max-age=300'); // کش به مدت ۵ دقیقه
+        $response->header('ETag', $etag);
+
+        return $response;
     }
 
     /**

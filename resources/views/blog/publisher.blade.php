@@ -4,8 +4,7 @@
     <div class="bg-gradient-to-r from-indigo-50 to-purple-50 py-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center">
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ $publisher->name }}</h1>
-                <p class="text-gray-600">{{ $posts->total() }} کتاب از این ناشر</p>
+                <p class="text-gray-600">{{ $postsCount ?? $posts->count() }} کتاب از این ناشر</p>
             </div>
         </div>
     </div>
@@ -68,15 +67,6 @@
                         <p class="text-gray-500 italic mb-6">اطلاعات توضیحات برای این ناشر ثبت نشده است.</p>
                     @endif
 
-                    <!-- آمار کتاب‌ها -->
-                    <div class="flex items-center text-sm text-gray-500 mt-4">
-                        <div class="flex items-center ml-6">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                            </svg>
-                            <span>{{ $posts->total() }} کتاب</span>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -93,8 +83,46 @@
                 </div>
 
                 <!-- صفحه‌بندی -->
-                <div class="mt-10">
-                    {{ $posts->links() }}
+                <div class="mt-10 flex justify-between">
+                    @if($posts->previousPageUrl())
+                        <a href="{{ $posts->previousPageUrl() }}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition">
+            <span class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                صفحه قبلی
+            </span>
+                        </a>
+                    @else
+                        <span class="px-4 py-2 bg-indigo-300 text-white rounded-md cursor-not-allowed">
+            <span class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                صفحه قبلی
+            </span>
+        </span>
+                    @endif
+
+                    @if($posts->hasMorePages())
+                        <a href="{{ $posts->nextPageUrl() }}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition">
+            <span class="flex items-center">
+                صفحه بعدی
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </span>
+                        </a>
+                    @else
+                        <span class="px-4 py-2 bg-indigo-300 text-white rounded-md cursor-not-allowed">
+            <span class="flex items-center">
+                صفحه بعدی
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </span>
+        </span>
+                    @endif
                 </div>
             @else
                 <div class="bg-white p-12 rounded-lg shadow-sm text-center">

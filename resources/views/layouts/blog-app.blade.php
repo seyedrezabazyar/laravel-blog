@@ -8,8 +8,8 @@
 
     <!-- پیش‌بارگذاری منابع ضروری -->
     <link rel="preload" href="{{ asset('images/default-book.png') }}" as="image">
-    <link rel="dns-prefetch" href="{{ config('app.custom_image_host') }}">
-    <link rel="preconnect" href="{{ config('app.custom_image_host') }}" crossorigin>
+    <link rel="preconnect" href="{{ config('app.url') }}">
+    <link rel="preconnect" href="{{ config('app.custom_image_host', 'https://images.balyan.ir') }}" crossorigin>
 
     <!-- فونت وزیرمتن - بهینه‌شده -->
     <style>
@@ -86,46 +86,55 @@
 
 <!-- اسکریپت‌ها -->
 <script>
-    // اسکریپت برای تاخیر در بارگذاری تصاویر
+    // اسکریپت برای لیزی‌لود تصاویر
     document.addEventListener('DOMContentLoaded', function() {
-        // بررسی وجود تصاویر و جایگزینی با تصویر پیش‌فرض در صورت خطا
-        function handleImageError(img) {
-            img.onerror = null; // برای جلوگیری از تکرار خطا
-            img.src = '{{ asset('images/default-book.png') }}';
-        }
+        const lazyloadImages = document.querySelectorAll("img.lazyload");
 
-        // اضافه کردن ویژگی onerror به تمام تصاویر صفحه
-        document.querySelectorAll('img').forEach(function(img) {
-            img.addEventListener('error', function() {
-                handleImageError(this);
+        if ('IntersectionObserver' in window) {
+            let imageObserver = new IntersectionObserver(function(entries, observer) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        let image = entry.target;
+                        if (image.dataset.src) {
+                            image.src = image.dataset.src;
+                            image.classList.remove("lazyload");
+                            imageObserver.unobserve(image);
+                        }
+                    }
+                });
             });
-        });
 
-        // نمایش نقل قول با تاخیر
-        const quoteText = document.getElementById('quote-text');
-        if (quoteText) {
-            setTimeout(() => {
-                quoteText.style.opacity = '1';
-            }, 300);
-        }
-
-        // تنظیم منوی موبایل
-        const mobileMenuToggle = document.getElementById('mobile-menu-button');
-        const closeMobileMenu = document.getElementById('close-mobile-menu');
-        const mobileMenu = document.getElementById('mobile-menu');
-
-        if (mobileMenuToggle && mobileMenu) {
-            mobileMenuToggle.addEventListener('click', function() {
-                mobileMenu.classList.toggle('hidden');
-                document.body.classList.toggle('overflow-hidden');
+            lazyloadImages.forEach(function(image) {
+                imageObserver.observe(image);
             });
-        }
+        } else {
+            // برای مرورگرهای قدیمی که از IntersectionObserver پشتیبانی نمی‌کنند
+            let lazyloadThrottleTimeout;
 
-        if (closeMobileMenu && mobileMenu) {
-            closeMobileMenu.addEventListener('click', function() {
-                mobileMenu.classList.add('hidden');
-                document.body.classList.remove('overflow-hidden');
-            });
+            function lazyload() {
+                if(lazyloadThrottleTimeout) {
+                    clearTimeout(lazyloadThrottleTimeout);
+                }
+
+                lazyloadThrottleTimeout = setTimeout(function() {
+                    let scrollTop = window.pageYOffset;
+                    lazyloadImages.forEach(function(img) {
+                        if(img.offsetTop < (window.innerHeight + scrollTop)) {
+                            img.src = img.dataset.src;
+                            img.classList.remove('lazyload');
+                        }
+                    });
+                    if(lazyloadImages.length == 0) {
+                        document.removeEventListener("scroll", lazyload);
+                        window.removeEventListener("resize", lazyload);
+                        window.removeEventListener("orientationChange", lazyload);
+                    }
+                }, 20);
+            }
+
+            document.addEventListener("scroll", lazyload);
+            window.addEventListener("resize", lazyload);
+            window.addEventListener("orientationChange", lazyload);
         }
     });
 </script>

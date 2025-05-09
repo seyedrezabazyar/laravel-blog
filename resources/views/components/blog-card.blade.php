@@ -5,9 +5,10 @@
     <div class="w-full relative aspect-[4/3]">
         @if($post->featuredImage && !$post->featuredImage->hide_image)
             <img
-                src="{{ $post->featuredImage->display_url }}"
+                src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                data-src="{{ $post->featuredImage->display_url }}"
                 alt="{{ $post->title }}"
-                class="w-full h-full object-cover"
+                class="lazyload w-full h-full object-cover"
                 loading="lazy"
                 onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
             >

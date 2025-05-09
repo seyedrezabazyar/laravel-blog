@@ -47,11 +47,14 @@ return new class extends Migration
             $table->boolean('hide_content')->default(false); // Flag to hide the content
             $table->boolean('is_published')->default(false);
 
-            // Índices optimizados
+            // شاخص‌های بهینه‌سازی شده
             $table->index(['is_published', 'hide_content', 'created_at']);
 
-            // Índice principal para consultas de categorías - optimizado para la consulta lenta
-            $table->index(['category_id', 'is_published', 'hide_content']); // Mejora index específico para categorías
+            // شاخص اصلی برای کوئری‌های دسته‌بندی - بهینه‌سازی شده برای کوئری کند
+            $table->index(['category_id', 'is_published', 'hide_content']); // بهبود شاخص مخصوص دسته‌بندی‌ها
+
+            // افزودن شاخص بهینه برای صفحه ناشر
+            $table->index(['publisher_id', 'is_published', 'hide_content', 'created_at'], 'idx_publisher_posts');
 
             $table->index(['author_id', 'is_published']);
             $table->index(['publisher_id', 'is_published']);

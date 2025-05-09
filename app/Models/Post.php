@@ -84,11 +84,12 @@ class Post extends Model
     }
 
     /**
-     * Relationship with publisher - optimized
+     * رابطه با ناشر - بهینه‌سازی شده
      */
     public function publisher()
     {
-        return $this->belongsTo(Publisher::class, 'publisher_id')->select(['id', 'name', 'slug']);
+        return $this->belongsTo(Publisher::class, 'publisher_id')
+            ->select(['id', 'name', 'slug', 'logo']); // انتخاب فقط فیلدهای مورد نیاز
     }
 
     /**
