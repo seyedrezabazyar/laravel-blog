@@ -249,7 +249,7 @@ class BlogController extends Controller
     }
 
     /**
-     * جستجو در وبلاگ
+     * جستجو در وبلاگ - نسخه بسیار ساده شده فقط با نتایج جستجو
      */
     public function search(Request $request)
     {
@@ -264,46 +264,44 @@ class BlogController extends Controller
 
         // نتایج جستجو را از کش بخوان یا محاسبه کن
         $posts = Cache::remember($cacheKey, $this->cacheTtl, function () use ($query, $request) {
-            // ایجاد کوئری پایه با select محدود به فیلدهای مورد نیاز
+            // کد قبلی بدون تغییر
             $postsQuery = Post::visibleToUser()
                 ->select(['id', 'title', 'slug', 'category_id', 'author_id', 'publisher_id', 'publication_year', 'format'])
                 ->with([
                     'category:id,name,slug',
                     'featuredImage' => function($query) {
-                        $query->select('id', 'post_id', 'image_path', 'caption', 'hide_image', 'sort_order');
+                        $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
                     },
                     'author:id,name,slug',
                     'authors:id,name,slug'
                 ]);
 
-            // اولویت با FULLTEXT جستجو اگر تعریف شده باشد
+            // کد جستجو بدون تغییر
             if (method_exists(Post::class, 'scopeFullTextSearch')) {
-                // استفاده از متد fullTextSearch که در مدل تعریف شده
                 $postsQuery->fullTextSearch($query);
             } else {
-                // جستجوی LIKE محدود به فیلدهای کلیدی برای عملکرد بهتر
                 $postsQuery->where(function ($q) use ($query) {
                     $q->where('title', 'like', "%{$query}%")
                         ->orWhere('english_title', 'like', "%{$query}%")
                         ->orWhere('book_codes', 'like', "%{$query}%");
-                    // جستجو در محتوا را محدود می‌کنیم چون بسیار سنگین است
                 });
             }
 
-            return $postsQuery->latest()->paginate(12);
+            return $postsQuery->latest()->simplePaginate(12);
         });
 
-        // دسته‌بندی‌ها و پست‌های محبوب را به صورت جداگانه کش می‌کنیم
-        // تا حتی اگر کلید جستجو تغییر کند، این موارد دوباره محاسبه نشوند
-        $categories = Cache::remember('all_categories_search', $this->cacheTtl, function () {
-            return Category::withCount(['posts' => function ($query) {
-                $query->visibleToUser();
-            }])->get();
-        });
+        // تغییر: حذف دسته‌بندی‌ها از صفحه نتایج جستجو
+        // حذف کد زیر:
+        // $categories = Cache::remember('all_categories_search', $this->cacheTtl, function () {
+        //     return Category::withCount(['posts' => function ($query) {
+        //         $query->visibleToUser();
+        //     }])->get();
+        // });
 
-        $popularPosts = Cache::remember('popular_posts', $this->cacheTtl, function () {
+        // تغییر: ساده‌سازی کد پست‌های محبوب
+        $popularPosts = Cache::remember('popular_posts', $this->cacheTtl * 24, function () {
             return Post::visibleToUser()
-                ->select(['id', 'title', 'slug', 'content'])
+                ->select(['id', 'title', 'slug'])
                 ->with([
                     'featuredImage' => function($query) {
                         $query->select('id', 'post_id', 'image_path', 'hide_image');
@@ -314,8 +312,37 @@ class BlogController extends Controller
                 ->get();
         });
 
-        // از دستور compact استفاده می‌کنیم تا مطابق با بلید باشد
-        return view('blog.search', compact('posts', 'query', 'categories', 'popularPosts'));
+        // حذف categories از compact
+        return view('blog.search', compact('posts', 'query', 'popularPosts'));
+    }
+
+    /**
+     * گرفتن داده‌های ساید بار با کش مشترک
+     * این روش از تکرار کد جلوگیری می‌کند و کوئری‌های تکراری را حذف می‌کند
+     */
+    protected function getSidebarData()
+    {
+        // دسته‌بندی‌ها و پست‌های محبوب را به صورت جداگانه کش می‌کنیم
+        $categories = Cache::remember('all_categories_search', $this->cacheTtl, function () {
+            return Category::withCount(['posts' => function ($query) {
+                $query->visibleToUser();
+            }])->get();
+        });
+
+        $popularPosts = Cache::remember('popular_posts', $this->cacheTtl, function () {
+            return Post::visibleToUser()
+                ->select(['id', 'title', 'slug'])
+                ->with([
+                    'featuredImage' => function($query) {
+                        $query->select('id', 'post_id', 'image_path', 'hide_image');
+                    }
+                ])
+                ->latest()
+                ->take(3)
+                ->get();
+        });
+
+        return compact('categories', 'popularPosts');
     }
 
     /**

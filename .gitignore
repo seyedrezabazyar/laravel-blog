@@ -23,4 +23,5 @@ yarn-error.log
 /.zed
 **/.DS_Store
 lib_import.php
+import_progress.txt
 categories.php

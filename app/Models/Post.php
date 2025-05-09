@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB; // اضافه کردن DB Facade
 use Mews\Purifier\Facades\Purifier;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
@@ -184,14 +185,34 @@ class Post extends Model
     }
 
     /**
-     * Optimized fulltext search using MySQL's FULLTEXT indexes
+     * جستجوی متنی بهینه شده با استفاده از ایندکس FULLTEXT یا LIKE
      */
     public function scopeFullTextSearch($query, $searchTerm)
     {
         // پاکسازی عبارت جستجو برای جلوگیری از SQL Injection
         $searchTerm = preg_replace('/[^\p{L}\p{N}_\s-]/u', '', $searchTerm);
 
-        return $query->whereRaw("MATCH(title, english_title, content, english_content) AGAINST(? IN BOOLEAN MODE)",
-            [$searchTerm . '*']);
+        // بررسی وجود ایندکس FULLTEXT - با استفاده از try-catch برای امنیت بیشتر
+        $fullTextEnabled = false;
+
+        try {
+            // جستجوی ساده با LIKE را استفاده می‌کنیم
+            return $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', "%{$searchTerm}%")
+                    ->orWhere('english_title', 'like', "%{$searchTerm}%")
+                    ->orWhere('book_codes', 'like', "%{$searchTerm}%");
+
+                // محدود کردن جستجو در محتوا فقط برای کلمات کلیدی بلندتر از 3 حرف
+                if (mb_strlen($searchTerm) > 3) {
+                    $q->orWhere('content', 'like', "%{$searchTerm}%")
+                        ->orWhere('english_content', 'like', "%{$searchTerm}%");
+                }
+            });
+        } catch (\Exception $e) {
+            \Log::error('Search error: ' . $e->getMessage());
+
+            // در صورت خطا، فقط در عنوان جستجو می‌کنیم
+            return $query->where('title', 'like', "%{$searchTerm}%");
+        }
     }
 }
