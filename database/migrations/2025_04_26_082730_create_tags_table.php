@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('slug')->unique();
+            $table->index('name'); // ایندکس برای جستجو
             $table->timestamps();
         });
 
@@ -22,6 +23,10 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['post_id', 'tag_id']);
+
+            // ایندکس‌های اضافی برای بهبود عملکرد
+            $table->index('post_id');
+            $table->index('tag_id');
         });
     }
 

@@ -259,18 +259,42 @@ class BlogController extends Controller
             return redirect()->route('blog.index');
         }
 
-        $posts = Post::visibleToUser()
-            ->where(function ($q) use ($query) {
-                $q->where('title', 'like', "%{$query}%")
-                    ->orWhere('english_title', 'like', "%{$query}%")
-                    ->orWhere('content', 'like', "%{$query}%")
-                    ->orWhere('english_content', 'like', "%{$query}%")
-                    ->orWhere('book_codes', 'like', "%{$query}%");
-            })
-            ->with(['category', 'featuredImage', 'author', 'authors'])
-            ->latest()
-            ->paginate(12);
+        // کلید کش منحصر به فرد برای این جستجو و صفحه
+        $cacheKey = 'search_results_' . md5($query . '_page_' . $request->get('page', 1));
 
+        // نتایج جستجو را از کش بخوان یا محاسبه کن
+        $posts = Cache::remember($cacheKey, $this->cacheTtl, function () use ($query, $request) {
+            // ایجاد کوئری پایه با select محدود به فیلدهای مورد نیاز
+            $postsQuery = Post::visibleToUser()
+                ->select(['id', 'title', 'slug', 'category_id', 'author_id', 'publisher_id', 'publication_year', 'format'])
+                ->with([
+                    'category:id,name,slug',
+                    'featuredImage' => function($query) {
+                        $query->select('id', 'post_id', 'image_path', 'caption', 'hide_image', 'sort_order');
+                    },
+                    'author:id,name,slug',
+                    'authors:id,name,slug'
+                ]);
+
+            // اولویت با FULLTEXT جستجو اگر تعریف شده باشد
+            if (method_exists(Post::class, 'scopeFullTextSearch')) {
+                // استفاده از متد fullTextSearch که در مدل تعریف شده
+                $postsQuery->fullTextSearch($query);
+            } else {
+                // جستجوی LIKE محدود به فیلدهای کلیدی برای عملکرد بهتر
+                $postsQuery->where(function ($q) use ($query) {
+                    $q->where('title', 'like', "%{$query}%")
+                        ->orWhere('english_title', 'like', "%{$query}%")
+                        ->orWhere('book_codes', 'like', "%{$query}%");
+                    // جستجو در محتوا را محدود می‌کنیم چون بسیار سنگین است
+                });
+            }
+
+            return $postsQuery->latest()->paginate(12);
+        });
+
+        // دسته‌بندی‌ها و پست‌های محبوب را به صورت جداگانه کش می‌کنیم
+        // تا حتی اگر کلید جستجو تغییر کند، این موارد دوباره محاسبه نشوند
         $categories = Cache::remember('all_categories_search', $this->cacheTtl, function () {
             return Category::withCount(['posts' => function ($query) {
                 $query->visibleToUser();
@@ -279,13 +303,18 @@ class BlogController extends Controller
 
         $popularPosts = Cache::remember('popular_posts', $this->cacheTtl, function () {
             return Post::visibleToUser()
-                ->select('id', 'title', 'slug')
-                ->with(['featuredImage', 'author', 'authors'])
+                ->select(['id', 'title', 'slug', 'content'])
+                ->with([
+                    'featuredImage' => function($query) {
+                        $query->select('id', 'post_id', 'image_path', 'hide_image');
+                    }
+                ])
                 ->latest()
                 ->take(3)
                 ->get();
         });
 
+        // از دستور compact استفاده می‌کنیم تا مطابق با بلید باشد
         return view('blog.search', compact('posts', 'query', 'categories', 'popularPosts'));
     }
 

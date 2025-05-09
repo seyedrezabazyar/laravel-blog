@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name', 500); // Updating to 500 characters
             $table->string('slug')->unique();
+            $table->index('name'); // ایندکس برای جستجو بر اساس نام
             $table->timestamps();
         });
     }

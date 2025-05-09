@@ -18,6 +18,8 @@ return new class extends Migration{
             // تغییر به enum با سه حالت NULL، visible و hidden. پیش‌فرض NULL
             $table->enum('hide_image', ['visible', 'hidden'])->nullable()->default(null);
             $table->integer('sort_order')->default(0);
+            $table->index(['post_id', 'sort_order']); // ایندکس برای مرتب‌سازی تصاویر
+            $table->index('hide_image'); // ایندکس برای فیلتر تصاویر مخفی
             $table->timestamps();
         });
     }

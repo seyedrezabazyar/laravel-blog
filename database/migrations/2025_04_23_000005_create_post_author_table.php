@@ -20,6 +20,10 @@ return new class extends Migration
 
             // Make sure a book can't have the same author twice
             $table->unique(['post_id', 'author_id']);
+
+            // ایندکس‌های اضافی برای بهبود عملکرد
+            $table->index('post_id');
+            $table->index('author_id');
         });
     }
 

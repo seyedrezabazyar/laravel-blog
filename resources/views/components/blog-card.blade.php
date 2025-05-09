@@ -30,18 +30,6 @@
             </a>
         </h3>
 
-        <!-- Author info - simplified for performance -->
-        <div class="text-sm text-gray-600 mb-4 flex-grow">
-            @if($post->author)
-                <div>
-                    نویسنده:
-                    <a href="{{ route('blog.author', $post->author->slug) }}" class="text-blue-600">
-                        {{ $post->author->name }}
-                    </a>
-                </div>
-            @endif
-        </div>
-
         <!-- View button -->
         <div class="mt-auto">
             <a href="{{ route('blog.show', $post->slug) }}"

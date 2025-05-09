@@ -188,7 +188,7 @@ class Post extends Model
      */
     public function scopeFullTextSearch($query, $searchTerm)
     {
-        // Clean the search term to prevent SQL injection
+        // پاکسازی عبارت جستجو برای جلوگیری از SQL Injection
         $searchTerm = preg_replace('/[^\p{L}\p{N}_\s-]/u', '', $searchTerm);
 
         return $query->whereRaw("MATCH(title, english_title, content, english_content) AGAINST(? IN BOOLEAN MODE)",

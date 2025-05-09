@@ -9,12 +9,12 @@
                     <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">اکتشاف دنیای کتاب‌ها</h1>
                     <p class="text-xl text-gray-600 mb-8">با کتابستان، دنیایی از دانش و الهام را کشف کنید. ما برترین کتاب‌ها
                         را به شما معرفی می‌کنیم.</p>
-                    <div class="flex flex-row-reverse gap-4">
+                    <div class="flex justify-start gap-4">
                         <a href="#latest-posts"
-                            class="bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-6 rounded-lg text-lg font-medium transition duration-150">جدیدترین
+                           class="bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-6 rounded-lg text-lg font-medium transition duration-150">جدیدترین
                             کتاب‌ها</a>
                         <a href="{{ route('blog.categories') }}"
-                            class="bg-white hover:bg-gray-100 text-indigo-600 py-3 px-6 rounded-lg text-lg font-medium transition duration-150 border border-indigo-200">دسته‌بندی‌ها</a>
+                           class="bg-white hover:bg-gray-100 text-indigo-600 py-3 px-6 rounded-lg text-lg font-medium transition duration-150 border border-indigo-200">دسته‌بندی‌ها</a>
                     </div>
                 </div>
                 <div class="md:w-1/2 mt-10 md:mt-0 fade-in" style="animation-delay: 0.3s;">

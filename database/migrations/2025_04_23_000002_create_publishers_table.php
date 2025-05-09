@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->text('description')->nullable();
             $table->string('logo')->nullable();
+            $table->index('name'); // ایندکس برای جستجو بر اساس نام
             $table->timestamps();
         });
     }

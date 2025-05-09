@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -24,30 +25,43 @@ return new class extends Migration
             $table->string('english_title', 1500)->nullable(); // English title - 1500 characters
             $table->string('slug')->unique();
 
-            // Book contents - updating based on your requirements
-            $table->text('content', 90000); // Persian content - 90000 characters
-            $table->text('english_content', 90000)->nullable(); // English content - 90000 characters
+            // Book contents
+            $table->text('content'); // Persian content
+            $table->text('english_content')->nullable(); // English content
 
-            // Book details - updating based on your requirements
-            $table->string('language', 70)->nullable(); // Language of the book - 70 characters
-            $table->string('publication_year', 14)->nullable(); // Publication year - 14 characters (changing from year to string)
-            $table->string('format', 7)->nullable(); // Book format - 7 characters
-            $table->string('book_codes', 300)->nullable(); // ISBN codes - 300 characters
+            // Book details
+            $table->string('language', 70)->nullable(); // Language of the book
+            $table->string('publication_year', 14)->nullable(); // Publication year
+            $table->string('format', 7)->nullable(); // Book format
+            $table->string('book_codes', 300)->nullable(); // ISBN codes
 
-            // Adding new fields based on your requirements
-            $table->string('edition', 60)->nullable(); // Book edition - 60 characters
-            $table->string('pages', 100)->nullable(); // Book pages - 100 characters (numeric)
-            $table->string('size', 10)->nullable(); // Book size - 10 characters (numeric)
+            // Additional fields
+            $table->string('edition', 60)->nullable(); // Book edition
+            $table->string('pages', 100)->nullable(); // Book pages
+            $table->string('size', 10)->nullable(); // Book size
 
             // Purchase information
             $table->string('purchase_link')->nullable(); // Link to purchase the book
 
             // Publication status
-            $table->boolean('hide_content')->default(false); // Flag to hide the content from users
+            $table->boolean('hide_content')->default(false); // Flag to hide the content
             $table->boolean('is_published')->default(false);
+
+            // ایندکس‌های پرکاربرد
+            $table->index(['is_published', 'hide_content', 'created_at']);
+            $table->index(['category_id', 'is_published']);
+            $table->index(['author_id', 'is_published']);
+            $table->index(['publisher_id', 'is_published']);
+            $table->index(['format', 'publication_year']);
+            $table->index('book_codes');
+            $table->index('slug');
 
             $table->timestamps();
         });
+
+        // ایندکس‌های FULLTEXT برای جستجوی متنی سریع
+        DB::statement('ALTER TABLE posts ADD FULLTEXT posts_title_fulltext (title, english_title)');
+        DB::statement('ALTER TABLE posts ADD FULLTEXT posts_content_fulltext (content, english_content)');
     }
 
     /**

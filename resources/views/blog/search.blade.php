@@ -75,9 +75,15 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         @foreach($popularPosts as $post)
                             <div class="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition duration-300">
-                                @if($post->featured_image)
+                                @if($post->featuredImage && !$post->featuredImage->hide_image)
                                     <div class="h-40 overflow-hidden">
-                                        <img src="{{ asset('storage/' . $post->featured_image) }}" alt="{{ $post->title }}" class="w-full h-full object-cover hover:scale-105 transition duration-500">
+                                        <img
+                                            src="{{ $post->featuredImage->display_url }}"
+                                            alt="{{ $post->title }}"
+                                            class="w-full h-full object-cover hover:scale-105 transition duration-500"
+                                            loading="lazy"
+                                            onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
+                                        >
                                     </div>
                                 @else
                                     <div class="h-40 bg-gradient-to-r from-indigo-100 to-purple-100 flex items-center justify-center">
@@ -97,6 +103,5 @@
                 </div>
             @endif
         @endif
-
     </div>
 @endsection

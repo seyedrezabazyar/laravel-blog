@@ -18,6 +18,7 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->string('role')->default('user'); // فیلد نقش با مقدار پیش‌فرض 'user'
+            $table->index('role'); // ایندکس برای جستجوی سریع بر اساس نقش
             $table->rememberToken();
             $table->timestamps();
         });

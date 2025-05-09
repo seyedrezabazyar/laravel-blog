@@ -206,7 +206,7 @@
                     </div>
                 </div>
 
-                <!-- Book description -->
+                <!-- Book description (Persian) -->
                 <div class="card mb-6 rounded-xl shadow overflow-hidden border border-gray-100">
                     <div class="card-header bg-green-600 border-b border-gray-200 py-4 px-6">
                         <h2 class="text-xl font-bold text-white flex items-center">
@@ -232,6 +232,35 @@
                         @endif
                     </div>
                 </div>
+
+                <!-- Book description (English) -->
+                @if($post->english_content)
+                    <div class="card mb-6 rounded-xl shadow overflow-hidden border border-gray-100">
+                        <div class="card-header bg-blue-600 border-b border-gray-200 py-4 px-6" dir="ltr">
+                            <h2 class="text-xl font-bold text-white flex items-center justify-end">
+                                Book Description
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
+                                </svg>
+                            </h2>
+                        </div>
+                        <div class="card-body p-6 bg-white">
+                            @if(strip_tags($post->english_content))
+                                <div class="blog-content-english prose prose-blue max-w-none" dir="ltr" lang="en">
+                                    {!! $post->english_content !!}
+                                </div>
+                            @else
+                                <div class="text-center py-12 flex flex-col items-center justify-center" dir="ltr" lang="en">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                    </svg>
+                                    <h3 class="text-xl font-bold text-gray-700 mb-2">No English description available</h3>
+                                    <p class="text-gray-500 max-w-md text-center">Please contact the publisher for more information about this book.</p>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endif
 
                 <!-- Tags section - show only if tags exist -->
                 @if($post->tags && $post->tags->count() > 0)
@@ -275,9 +304,9 @@
                 </a>
             </div>
 
-            <!-- Related books grid with only 3 items for faster loading -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                @foreach($relatedPosts->take(3) as $relatedPost)
+            <!-- Related books grid with 4 items -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                @foreach($relatedPosts->take(4) as $relatedPost)
                     <div class="group">
                         <a href="{{ route('blog.show', $relatedPost->slug) }}" class="block">
                             <div class="overflow-hidden rounded-xl shadow hover:shadow-lg transition-all duration-300 bg-white border border-gray-100 transform group-hover:-translate-y-1">
@@ -359,6 +388,34 @@
         .blog-content img {
             max-width: 100%;
             height: auto;
+        }
+
+        /* English content specific styles */
+        .blog-content-english {
+            text-align: left;
+            direction: ltr;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .blog-content-english h1,
+        .blog-content-english h2,
+        .blog-content-english h3,
+        .blog-content-english h4,
+        .blog-content-english h5,
+        .blog-content-english h6 {
+            text-align: left;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+
+        .blog-content-english p {
+            margin-bottom: 1em;
+        }
+
+        .blog-content-english ul,
+        .blog-content-english ol {
+            padding-left: 1.5em;
+            margin-bottom: 1em;
         }
 
         /* Mobile responsiveness */
