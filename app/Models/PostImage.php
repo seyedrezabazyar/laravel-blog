@@ -15,18 +15,11 @@ class PostImage extends Model
         'sort_order',
     ];
 
-    // حذف کست boolean
-    // protected $casts = [
-    //     'hide_image' => 'boolean',
-    // ];
-
-    /**
-     * Cache TTL for image URLs - 7 days
-     */
+    // TTL de caché para URLs de imágenes - 7 días
     protected $imageCacheTtl = 604800;
 
     /**
-     * Relationship with post - optimized
+     * Relación con el post - optimizada
      */
     public function post()
     {
@@ -34,7 +27,7 @@ class PostImage extends Model
     }
 
     /**
-     * Check if image is hidden
+     * Verificar si la imagen está oculta
      */
     public function isHidden()
     {
@@ -42,7 +35,7 @@ class PostImage extends Model
     }
 
     /**
-     * Check if image is visible
+     * Verificar si la imagen es visible
      */
     public function isVisible()
     {
@@ -50,17 +43,9 @@ class PostImage extends Model
     }
 
     /**
-     * Check if image is not categorized yet
-     */
-    public function isNotCategorized()
-    {
-        return $this->hide_image === null;
-    }
-
-    /**
-     * Get cached image URL
+     * Obtener URL de imagen en caché
      *
-     * This reduces the processing needed for each image request
+     * Esto reduce el procesamiento necesario para cada solicitud de imagen
      */
     public function getImageUrlAttribute()
     {
@@ -71,47 +56,47 @@ class PostImage extends Model
                 return asset('images/default-book.png');
             }
 
-            // Direct URL for HTTP/HTTPS paths
+            // URL directa para rutas HTTP/HTTPS
             if (strpos($this->image_path, 'http://') === 0 || strpos($this->image_path, 'https://') === 0) {
                 return $this->image_path;
             }
 
-            // Handle images.balyan.ir domain
+            // Manejar dominio images.balyan.ir
             if (strpos($this->image_path, 'images.balyan.ir/') !== false) {
                 return 'https://' . $this->image_path;
             }
 
-            // Handle download host images
+            // Manejar imágenes del host de descarga
             if (strpos($this->image_path, 'post_images/') === 0 || strpos($this->image_path, 'posts/') === 0) {
                 return config('app.custom_image_host', 'https://images.balyan.ir') . '/' . $this->image_path;
             }
 
-            // Local storage fallback
+            // Fallback al almacenamiento local
             return asset('storage/' . $this->image_path);
         });
     }
 
     /**
-     * Get display URL for the image
+     * Obtener URL para mostrar la imagen
      *
-     * Takes into account user permissions and image visibility
+     * Tiene en cuenta los permisos de usuario y la visibilidad de la imagen
      */
     public function getDisplayUrlAttribute()
     {
-        // Generate cache key including admin status
+        // Generar clave de caché incluyendo el estado de admin
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
         $cacheKey = "post_image_{$this->id}_display_url_" . ($isAdmin ? 'admin' : 'user');
 
         return Cache::remember($cacheKey, $this->imageCacheTtl, function () use ($isAdmin) {
-            // Default image
+            // Imagen predeterminada
             $defaultImage = asset('images/default-book.png');
 
-            // Always show actual image to admins
+            // Siempre mostrar la imagen real a los administradores
             if ($isAdmin) {
                 return $this->image_url;
             }
 
-            // Show default image if hidden or empty
+            // Mostrar imagen predeterminada si está oculta o vacía
             if ($this->hide_image === 'hidden' || empty($this->image_path)) {
                 return $defaultImage;
             }

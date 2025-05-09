@@ -215,4 +215,23 @@ class Post extends Model
             return $query->where('title', 'like', "%{$searchTerm}%");
         }
     }
+
+    /**
+     * تنظیم رویدادهای مدل
+     */
+    protected static function booted()
+    {
+        // رویداد ایجاد پست جدید
+        static::created(function ($post) {
+            // فقط اگر پست منتشر شده و غیر مخفی باشد، شمارنده را به‌روزرسانی می‌کنیم
+            if ($post->is_published && !$post->hide_content) {
+                if ($post->category) {
+                    $post->category->updatePostCount();
+                }
+            }
+        });
+
+        // سایر رویدادها...
+        // بقیه کد ارائه شده را اینجا قرار دهید
+    }
 }

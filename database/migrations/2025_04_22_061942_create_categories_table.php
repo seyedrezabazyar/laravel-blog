@@ -15,7 +15,11 @@ return new class extends Migration
             $table->id();
             $table->string('name', 500); // Updating to 500 characters
             $table->string('slug')->unique();
-            $table->index('name'); // ایندکس برای جستجو بر اساس نام
+            $table->index('name'); // Índice para búsqueda por nombre
+
+            // Añadir contador en caché de posts (para evitar consultas lentas)
+            $table->unsignedInteger('posts_count')->default(0);
+
             $table->timestamps();
         });
     }

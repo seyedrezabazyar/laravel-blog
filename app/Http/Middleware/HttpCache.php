@@ -10,15 +10,15 @@ use Carbon\Carbon;
 class HttpCache
 {
     /**
-     * Pages that should be cached with their expiry times in minutes
+     * Páginas que deben cachearse con sus tiempos de expiración en minutos
      */
     protected $cacheable = [
-        'blog.show' => 60, // 1 hour cache for blog post pages
-        'blog.index' => 30, // 30 minutes for the blog index
-        'blog.category' => 60, // 60 minutes for category pages
-        'blog.author' => 30, // 30 minutes for author pages
-        'blog.publisher' => 30, // 30 minutes for publisher pages
-        'blog.tag' => 30, // 30 minutes for tag pages
+        'blog.show' => 60, // 1 hora de caché para páginas de posts
+        'blog.index' => 30, // 30 minutos para el índice del blog
+        'blog.category' => 60, // 60 minutos para páginas de categorías
+        'blog.author' => 30, // 30 minutos para páginas de autor
+        'blog.publisher' => 30, // 30 minutos para páginas de publishers
+        'blog.tag' => 30, // 30 minutos para páginas de tags
     ];
 
     /**
@@ -28,21 +28,21 @@ class HttpCache
     {
         $response = $next($request);
 
-        // فقط برای درخواست‌های GET کش می‌کنیم
+        // Solo cacheamos peticiones GET
         if (!$request->isMethod('GET')) {
             return $response;
         }
 
-        // برای کاربران احراز هویت شده کش نمی‌کنیم
+        // No cacheamos para usuarios autenticados
         if (auth()->check()) {
             return $response->header('Cache-Control', 'no-store, private');
         }
 
         $routeName = $request->route()?->getName();
 
-        // اگر مسیر فعلی باید کش شود
+        // Si la ruta actual debe cachearse
         if ($routeName === 'blog.category') {
-            // کش ۶۰ دقیقه‌ای برای صفحه دسته‌بندی
+            // Caché de 60 minutos para páginas de categorías
             $response->header('Cache-Control', 'public, max-age=3600');
             $response->header('Expires', now()->addMinutes(60)->format('D, d M Y H:i:s').' GMT');
         }

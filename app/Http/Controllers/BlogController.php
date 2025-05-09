@@ -167,12 +167,12 @@ class BlogController extends Controller
      */
     public function category(Category $category)
     {
-        // کلید کش منحصر به فرد با توجه به شماره صفحه و نوع کاربر
+        // Clave de caché única basada en la categoría y parámetros importantes
         $page = request()->get('page', 1);
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
         $cacheKey = "category_posts_{$category->id}_page_{$page}_" . ($isAdmin ? 'admin' : 'user');
 
-        // فقط داده‌ها را کش می‌کنیم، نه view را
+        // Caché de datos por 12 horas
         $posts = Cache::remember($cacheKey, 12 * 60 * 60, function () use ($category, $isAdmin) {
             return Post::where('is_published', true)
                 ->when(!$isAdmin, function ($query) {
@@ -187,41 +187,29 @@ class BlogController extends Controller
                     'author:id,name,slug'
                 ])
                 ->latest()
-                ->simplePaginate(12);
+                ->simplePaginate(12); // Usar simplePaginate en lugar de paginate
         });
 
-        // $allCategories حذف شد
+        // No cargar categorías adicionales - ya estamos en una página de categoría específica
 
-        // view را با حداقل متغیرها بازگشت می‌دهیم
         return view('blog.category', compact('posts', 'category'));
     }
 
     /**
-     * نمایش تمام دسته‌بندی‌ها
+     * نمایش تمام دسته‌بندی‌ها - ساده‌ترین حالت ممکن
      */
     public function categories()
     {
-        $categories = Cache::remember('all_categories_with_samples', $this->cacheTtl, function () {
-            $categoriesWithCount = Category::withCount(['posts' => function ($query) {
-                $query->visibleToUser();
-            }])
+        $cacheKey = 'all_categories_withcount_' . (auth()->check() && auth()->user()->isAdmin() ? 'admin' : 'user');
+
+        $categories = Cache::remember($cacheKey, 24 * 60 * 60, function () {
+            $categories = DB::table('categories as c')
+                ->select('c.id', 'c.name', 'c.slug')
+                ->selectRaw('(SELECT COUNT(*) FROM posts WHERE category_id = c.id AND is_published = 1 AND hide_content = 0) as posts_count')
                 ->orderByDesc('posts_count')
                 ->get();
 
-            $latestPostsByCategory = Post::visibleToUser()
-                ->select('id', 'title', 'slug', 'category_id')
-                ->whereIn('category_id', $categoriesWithCount->pluck('id'))
-                ->with(['featuredImage', 'author', 'authors'])
-                ->orderBy('created_at', 'desc')
-                ->get()
-                ->groupBy('category_id');
-
-            $categoriesWithCount->each(function ($category) use ($latestPostsByCategory) {
-                $posts = $latestPostsByCategory->get($category->id);
-                $category->sample_post = $posts ? $posts->first() : null;
-            });
-
-            return $categoriesWithCount;
+            return $categories;
         });
 
         $popularCategories = $categories->take(5);

@@ -21,7 +21,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // اگر در محیط تولید هستیم، ردیابی SQL را غیرفعال می‌کنیم
+        // Si estamos en producción, deshabilitamos el log de consultas SQL
         if ($this->app->environment('production')) {
             DB::disableQueryLog();
         }
@@ -32,58 +32,58 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // برای اطمینان از اینکه طول رشته‌ها در مهاجرت‌ها مشکلی ایجاد نمی‌کند
+        // Para asegurar que la longitud de las cadenas en las migraciones no cause problemas
         Schema::defaultStringLength(191);
 
-        // برای ترجیح URL های HTTPS در محیط تولید
+        // Preferir URLs HTTPS en producción
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
         }
 
-        // استفاده از Bootstrap در Pagination
+        // Usar Bootstrap para paginación
         Paginator::useBootstrap();
 
-        // ثبت اجزای Blade برای بهبود عملکرد
+        // Registrar componentes Blade para mejora de rendimiento
         $this->registerBladeComponents();
 
-        // ثبت گوش دادن به کوئری‌های کند
+        // Escuchar consultas lentas
         $this->listenToSlowQueries();
 
-        // اشتراک‌گذاری دیدهای عمومی به صورت ثابت (بدون کوئری به دیتابیس)
+        // Compartir vistas globales estáticas (sin consultas a la BD)
         $this->shareGlobalViewsWithoutQueries();
 
-        // تنظیم کنترل کش برای پاسخ‌ها
+        // Configurar caché de respuestas
         $this->setupResponseCaching();
     }
 
     /**
-     * ثبت اجزای Blade برای بهبود عملکرد
+     * Registrar componentes Blade para mejora de rendimiento
      */
     protected function registerBladeComponents(): void
     {
-        // اجزای مهم Blade را ثبت کنید
+        // Registrar componentes Blade importantes
         Blade::component('components.preload', 'preload');
         Blade::component('components.critical-css', 'critical-css');
         Blade::component('components.blog-card', 'blog-card');
         Blade::component('components.simple-blog-card', 'simple-blog-card');
         Blade::component('components.meta-component', 'meta');
 
-        // دستورات مفید Blade را تعریف کنید
+        // Definir directivas Blade útiles
         Blade::directive('cacheBuster', function ($expression) {
             return "<?php echo 'v=' . filemtime(public_path($expression)); ?>";
         });
     }
 
     /**
-     * گوش دادن به کوئری‌های کند
+     * Escuchar consultas lentas
      */
     protected function listenToSlowQueries(): void
     {
-        // فقط در محیط غیر تولیدی
+        // Solo en entorno no productivo
         if (!$this->app->isProduction()) {
             DB::listen(function ($query) {
-                if ($query->time > 100) { // کوئری‌های کندتر از 100 میلی‌ثانیه را ثبت کنید
-                    Log::info('کوئری کند', [
+                if ($query->time > 100) { // Consultas más lentas que 100ms
+                    Log::info('Consulta lenta', [
                         'query' => $query->sql,
                         'bindings' => $query->bindings,
                         'time' => $query->time,
@@ -94,35 +94,35 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * اشتراک‌گذاری دیدهای عمومی با همه قالب‌ها - بدون کوئری
+     * Compartir vistas globales con todas las plantillas - sin consultas
      */
     protected function shareGlobalViewsWithoutQueries(): void
     {
-        // داده‌های مشترک را با تمام قالب‌ها به اشتراک بگذارید
+        // Compartir datos comunes con todas las plantillas
         View::share('appName', config('app.name'));
 
-        // دسته‌بندی‌های ثابت - بدون نیاز به کش یا کوئری
+        // Categorías estáticas - sin necesidad de caché o consultas
         $globalCategories = [
-            (object) ['name' => 'رمان', 'slug' => 'roman', 'posts_count' => 25],
-            (object) ['name' => 'علمی', 'slug' => 'scientific', 'posts_count' => 18],
-            (object) ['name' => 'تاریخی', 'slug' => 'historical', 'posts_count' => 15],
-            (object) ['name' => 'فلسفه', 'slug' => 'philosophy', 'posts_count' => 12],
-            (object) ['name' => 'روانشناسی', 'slug' => 'psychology', 'posts_count' => 20],
-            (object) ['name' => 'کودک', 'slug' => 'children', 'posts_count' => 10],
-            (object) ['name' => 'موفقیت', 'slug' => 'success', 'posts_count' => 22],
-            (object) ['name' => 'هنر', 'slug' => 'art', 'posts_count' => 15],
+            (object) ['name' => 'Novela', 'slug' => 'novel', 'posts_count' => 25],
+            (object) ['name' => 'Ciencia', 'slug' => 'science', 'posts_count' => 18],
+            (object) ['name' => 'Historia', 'slug' => 'history', 'posts_count' => 15],
+            (object) ['name' => 'Filosofía', 'slug' => 'philosophy', 'posts_count' => 12],
+            (object) ['name' => 'Psicología', 'slug' => 'psychology', 'posts_count' => 20],
+            (object) ['name' => 'Infantil', 'slug' => 'children', 'posts_count' => 10],
+            (object) ['name' => 'Éxito', 'slug' => 'success', 'posts_count' => 22],
+            (object) ['name' => 'Arte', 'slug' => 'art', 'posts_count' => 15],
         ];
 
-        // مستقیماً به اشتراک بگذارید - بدون کوئری کش
+        // Compartir directamente - sin consulta caché
         View::share('globalCategories', $globalCategories);
     }
 
     /**
-     * تنظیم کنترل کش برای پاسخ‌ها
+     * Configurar caché de respuestas
      */
     protected function setupResponseCaching(): void
     {
-        // پاسخ‌ها را برای کش کردن بهتر پیکربندی می‌کنیم
+        // Configuramos las respuestas para mejor caché
         Response::macro('cache', function ($seconds = 60) {
             $response = $this;
 
