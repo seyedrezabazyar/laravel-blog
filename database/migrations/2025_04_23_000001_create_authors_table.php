@@ -14,10 +14,12 @@ return new class extends Migration
     {
         Schema::create('authors', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 1024); // Updating to 1024 characters
+            $table->string('name', 1024);
             $table->string('slug')->unique();
             $table->text('biography')->nullable();
-            $table->string('image')->nullable(); // تغییر نام از photo به image برای سازگاری
+            $table->string('image')->nullable();
+            $table->unsignedInteger('posts_count')->default(0); // شمارنده پست‌های اصلی
+            $table->unsignedInteger('coauthored_count')->default(0); // شمارنده پست‌های همکاری
             $table->timestamps();
         });
 

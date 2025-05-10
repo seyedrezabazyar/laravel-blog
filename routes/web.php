@@ -39,7 +39,7 @@ Route::middleware('auth')->group(function () {
 
         Route::delete('post-images/{image}', [PostController::class, 'destroyImage'])->name('post-images.destroy');
         Route::post('post-images/reorder', [PostController::class, 'reorderImages'])->name('post-images.reorder');
-        
+
         // گالری تصاویر - مسیرهای جدید
         Route::get('/gallery', [GalleryController::class, 'index'])->name('gallery');
         Route::get('/api/gallery/images', [GalleryController::class, 'getImages']);
@@ -71,13 +71,47 @@ Route::get('/category/{category:slug}', [BlogController::class, 'category'])->na
 Route::get('/search', [BlogController::class, 'search'])->name('blog.search');
 
 // مسیرهای نقشه سایت
-Route::prefix('sitemap')->name('sitemap.')->group(function () {
-    Route::get('/', [SitemapController::class, 'index'])->name('index');
-    Route::get('/posts', [SitemapController::class, 'posts'])->name('posts');
-    Route::get('/categories', [SitemapController::class, 'categories'])->name('categories');
-    Route::get('/authors', [SitemapController::class, 'authors'])->name('authors');
-    Route::get('/publishers', [SitemapController::class, 'publishers'])->name('publishers');
-    Route::get('/tags', [SitemapController::class, 'tags'])->name('tags');
+Route::prefix('sitemap')->group(function () {
+    // شاخص اصلی سایت‌مپ
+    Route::get('index.xml', [SitemapController::class, 'index'])->name('sitemap.index');
+
+    // سایت‌مپ صفحه اصلی
+    Route::get('sitemap-home.xml', [SitemapController::class, 'home'])->name('sitemap.home');
+
+    // سایت‌مپ‌های پست‌ها
+    Route::get('sitemap-posts-{page}.xml', [SitemapController::class, 'posts'])
+        ->where('page', '[0-9]+')
+        ->name('sitemap.posts');
+
+    // سایت‌مپ‌های دسته‌بندی‌ها
+    Route::get('sitemap-categories-{page}.xml', [SitemapController::class, 'categories'])
+        ->where('page', '[0-9]+')
+        ->name('sitemap.categories');
+
+    // سایت‌مپ‌های نویسندگان
+    Route::get('sitemap-authors-{page}.xml', [SitemapController::class, 'authors'])
+        ->where('page', '[0-9]+')
+        ->name('sitemap.authors');
+
+    // سایت‌مپ‌های ناشران
+    Route::get('sitemap-publishers-{page}.xml', [SitemapController::class, 'publishers'])
+        ->where('page', '[0-9]+')
+        ->name('sitemap.publishers');
+
+    // سایت‌مپ‌های تگ‌ها
+    Route::get('sitemap-tags-{page}.xml', [SitemapController::class, 'tags'])
+        ->where('page', '[0-9]+')
+        ->name('sitemap.tags');
+});
+
+// ریدایرکت از URL پایه به فایل اصلی سایت‌مپ
+Route::get('sitemap.xml', function () {
+    return redirect('sitemap/index.xml');
+});
+
+// ریدایرکت از URL پایه به فایل اصلی سایت‌مپ
+Route::get('sitemap.xml', function () {
+    return redirect('sitemap/index.xml');
 });
 
 // مسیرهای فید RSS

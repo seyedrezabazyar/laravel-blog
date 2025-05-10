@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class Author extends Model
 {
@@ -12,6 +13,8 @@ class Author extends Model
         'slug',
         'biography',
         'image',
+        'posts_count',
+        'coauthored_count',
     ];
 
     /**
@@ -31,65 +34,6 @@ class Author extends Model
     }
 
     /**
-     * دریافت همه پست‌هایی که این نویسنده در آن‌ها نقش دارد - نسخه کش شده
-     * (چه به عنوان نویسنده اصلی و چه به عنوان یکی از نویسندگان)
-     *
-     * @param bool $isAdmin آیا کاربر مدیر است؟
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
-    public function getAllPostsCached($isAdmin = false)
-    {
-        $cacheKey = "author_{$this->id}_all_posts_" . ($isAdmin ? 'admin' : 'user');
-
-        return Cache::remember($cacheKey, 3600, function () use ($isAdmin) {
-            return Post::select(['id', 'title', 'slug', 'category_id', 'publication_year', 'format'])
-                ->where('is_published', true)
-                ->when(!$isAdmin, function ($query) {
-                    $query->where('hide_content', false);
-                })
-                ->where(function ($query) {
-                    $query->where('author_id', $this->id)
-                        ->orWhereHas('authors', function ($q) {
-                            $q->where('authors.id', $this->id);
-                        });
-                })
-                ->with([
-                    'featuredImage' => function($query) {
-                        $query->select('id', 'post_id', 'image_path', 'hide_image');
-                    },
-                    'category:id,name,slug'
-                ])
-                ->latest()
-                ->get();
-        });
-    }
-
-    /**
-     * دریافت تعداد پست‌های این نویسنده - نسخه کش شده
-     *
-     * @param bool $isAdmin آیا کاربر مدیر است؟
-     * @return int
-     */
-    public function getPostsCountCached($isAdmin = false)
-    {
-        $cacheKey = "author_{$this->id}_posts_count_" . ($isAdmin ? 'admin' : 'user');
-
-        return Cache::remember($cacheKey, 3600, function () use ($isAdmin) {
-            return Post::where('is_published', true)
-                ->when(!$isAdmin, function ($query) {
-                    $query->where('hide_content', false);
-                })
-                ->where(function ($query) {
-                    $query->where('author_id', $this->id)
-                        ->orWhereHas('authors', function ($q) {
-                            $q->where('authors.id', $this->id);
-                        });
-                })
-                ->count();
-        });
-    }
-
-    /**
      * دریافت همه پست‌های این نویسنده
      * (چه به عنوان نویسنده اصلی و چه به عنوان یکی از نویسندگان)
      *
@@ -101,6 +45,64 @@ class Author extends Model
         $coAuthoredPosts = $this->coAuthoredPosts;
 
         return $mainPosts->merge($coAuthoredPosts)->unique('id');
+    }
+
+    /**
+     * دریافت تعداد کل پست‌های نویسنده
+     * از فیلدهای شمارنده به جای کوئری استفاده می‌کند
+     *
+     * @return int
+     */
+    public function getTotalPostsCountAttribute()
+    {
+        return $this->posts_count + $this->coauthored_count;
+    }
+
+    /**
+     * به‌روزرسانی شمارنده‌های پست
+     * این متد بعد از ایجاد، به‌روزرسانی یا حذف پست‌های مرتبط فراخوانی می‌شود
+     */
+    public function updatePostCounts()
+    {
+        $postsCount = Post::where('author_id', $this->id)
+            ->where('is_published', true)
+            ->where('hide_content', false)
+            ->count();
+
+        $coAuthoredCount = DB::table('post_author')
+            ->join('posts', 'posts.id', '=', 'post_author.post_id')
+            ->where('post_author.author_id', $this->id)
+            ->where('posts.is_published', true)
+            ->where('posts.hide_content', false)
+            ->count();
+
+        $this->posts_count = $postsCount;
+        $this->coauthored_count = $coAuthoredCount;
+
+        // به‌روزرسانی بدون تغییر زمان به‌روزرسانی
+        $this->timestamps = false;
+        $this->save();
+        $this->timestamps = true;
+
+        // پاک کردن کش‌های مرتبط
+        $this->clearCache();
+    }
+
+    /**
+     * پاک کردن کش‌های مرتبط با این نویسنده
+     */
+    public function clearCache()
+    {
+        $cacheKeys = [
+            "author_{$this->id}_all_posts_admin",
+            "author_{$this->id}_all_posts_user",
+            "author_posts_{$this->id}_page_1_admin",
+            "author_posts_{$this->id}_page_1_user"
+        ];
+
+        foreach ($cacheKeys as $key) {
+            Cache::forget($key);
+        }
     }
 
     /**

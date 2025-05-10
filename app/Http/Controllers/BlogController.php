@@ -232,7 +232,7 @@ class BlogController extends Controller
     }
 
     /**
-     * نمایش پست‌های یک نویسنده خاص - نسخه بهینه‌سازی شده
+     * نمایش پست‌های یک نویسنده خاص - نسخه کاملاً بهینه‌شده
      */
     public function author(Author $author)
     {
@@ -241,34 +241,46 @@ class BlogController extends Controller
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
         $cacheKey = "author_posts_{$author->id}_page_{$page}_" . ($isAdmin ? 'admin' : 'user');
 
-        // ذخیره نتایج در کش به مدت ۱ ساعت
-        $cacheTtl = 3600;
+        // ذخیره نتایج در کش به مدت 1 ساعت
+        $posts = Cache::remember($cacheKey, 3600, function () use ($author, $isAdmin) {
+            // استفاده از شمارنده‌ها برای بهینه‌سازی - اگر هیچ پستی نیست، کوئری ساده برگردان
+            if ($author->total_posts_count == 0) {
+                return Post::where('id', '<', 0)->paginate(12); // پاگینیشن خالی
+            }
 
-        // گرفتن پست‌ها از کش یا دیتابیس
-        $posts = Cache::remember($cacheKey, $cacheTtl, function () use ($author, $isAdmin) {
-            // استفاده از اسکوپ visibleToUser برای فیلتر کردن پست‌ها
-            return Post::visibleToUser()
-                ->select(['id', 'title', 'slug', 'category_id', 'author_id', 'publication_year', 'format'])
-                ->where(function ($query) use ($author) {
-                    $query->where('author_id', $author->id)
-                        ->orWhereHas('authors', function ($q) use ($author) {
-                            $q->where('authors.id', $author->id);
-                        });
+            // استفاده از یک کوئری بهینه با انتخاب فیلدهای مشخص
+            $query = Post::select(['id', 'title', 'slug', 'category_id', 'author_id', 'publication_year', 'format'])
+                ->where('is_published', true)
+                ->when(!$isAdmin, function ($q) {
+                    $q->where('hide_content', false);
                 })
-                // بارگذاری روابط با انتخاب فیلدهای مشخص برای کاهش حجم داده
-                ->with([
-                    'category:id,name,slug',
-                    'featuredImage' => function($query) {
-                        $query->select('id', 'post_id', 'image_path', 'hide_image');
-                    },
-                    'author:id,name,slug'
-                ])
+                ->where(function ($q) use ($author) {
+                    $q->where('author_id', $author->id) // استفاده از ایندکس author_id
+                    ->orWhereExists(function ($subq) use ($author) {
+                        $subq->select(DB::raw(1))
+                            ->from('post_author')
+                            ->whereRaw('post_author.post_id = posts.id')
+                            ->where('post_author.author_id', $author->id);
+                    });
+                });
+
+            // بارگذاری روابط با انتخاب فیلدهای مشخص برای کاهش حجم داده
+            return $query->with([
+                'category:id,name,slug',
+                'featuredImage' => function($q) {
+                    $q->select('id', 'post_id', 'image_path', 'hide_image');
+                },
+                'author:id,name,slug'
+            ])
                 ->latest()
                 ->paginate(12);
         });
 
-        // برگرداندن نما با داده‌ها
-        return view('blog.author', compact('posts', 'author'));
+        // افزودن هدرهای کش برای کش مرورگر
+        return response()
+            ->view('blog.author', compact('posts', 'author'))
+            ->header('Cache-Control', 'public, max-age=300')
+            ->header('ETag', md5($author->id . $page . $isAdmin . time() / 3600));
     }
 
     /**

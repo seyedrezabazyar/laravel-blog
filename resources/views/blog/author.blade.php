@@ -5,7 +5,11 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center">
                 <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ $author->name }}</h1>
-                <p class="text-gray-600">{{ $posts->total() }} {{ $posts->total() > 1 ? 'کتاب' : 'کتاب' }}</p>
+                @php
+                    // استفاده از فیلدهای شمارنده به جای کوئری اضافی
+                    $postsCount = $author->total_posts_count;
+                @endphp
+                <p class="text-gray-600">{{ $postsCount }} {{ $postsCount > 1 ? 'کتاب' : 'کتاب' }}</p>
             </div>
         </div>
     </div>
@@ -43,10 +47,17 @@
         <!-- معرفی نویسنده -->
         <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-12">
             <div class="md:flex">
-                <!-- تصویر نویسنده -->
+                <!-- تصویر نویسنده - با lazy loading -->
                 <div class="md:w-1/3 p-6">
                     @if($author->image)
-                        <img src="{{ asset('storage/' . $author->image) }}" alt="{{ $author->name }}" class="w-full h-auto rounded-lg shadow-md mx-auto max-w-xs">
+                        <img
+                            src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                            data-src="{{ asset('storage/' . $author->image) }}"
+                            alt="{{ $author->name }}"
+                            class="w-full h-auto rounded-lg shadow-md mx-auto max-w-xs lazyload"
+                            loading="lazy"
+                            onload="this.onload=null; if(this.dataset.src) {this.src=this.dataset.src; delete this.dataset.src;}"
+                        >
                     @else
                         <div class="w-full h-64 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg shadow-md flex items-center justify-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -68,13 +79,31 @@
                         <p class="text-gray-500 italic mb-6">اطلاعات بیوگرافی برای این نویسنده ثبت نشده است.</p>
                     @endif
 
-                    <!-- آمار کتاب‌ها -->
+                    <!-- آمار کتاب‌ها - استفاده از شمارنده‌ها -->
                     <div class="flex items-center text-sm text-gray-500 mt-4">
-                        <div class="flex items-center ml-6">
+                        @if($author->posts_count > 0)
+                            <div class="flex items-center ml-6">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                                <span>{{ $author->posts_count }} کتاب اصلی</span>
+                            </div>
+                        @endif
+
+                        @if($author->coauthored_count > 0)
+                            <div class="flex items-center ml-6">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                                <span>{{ $author->coauthored_count }} کتاب همکاری</span>
+                            </div>
+                        @endif
+
+                        <div class="flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14-10v2m-14 0v2" />
                             </svg>
-                            <span>{{ $posts->total() }} کتاب</span>
+                            <span>{{ $postsCount }} مجموع کتاب</span>
                         </div>
                     </div>
                 </div>
@@ -92,7 +121,7 @@
                     @endforeach
                 </div>
 
-                <!-- صفحه‌بندی -->
+                <!-- صفحه‌بندی - بدون اجرای کوئری اضافی -->
                 <div class="mt-10">
                     {{ $posts->links() }}
                 </div>
@@ -108,3 +137,32 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <!-- اسکریپت برای lazy loading تصاویر -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // اگر اینترسکشن آبزرور پشتیبانی شود
+            if ('IntersectionObserver' in window) {
+                const imageObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const lazyImage = entry.target;
+                            const src = lazyImage.getAttribute('data-src');
+                            if (src) {
+                                lazyImage.src = src;
+                                lazyImage.removeAttribute('data-src');
+                            }
+                            imageObserver.unobserve(lazyImage);
+                        }
+                    });
+                });
+
+                const lazyImages = document.querySelectorAll('img.lazyload');
+                lazyImages.forEach(image => {
+                    imageObserver.observe(image);
+                });
+            }
+        });
+    </script>
+@endpush

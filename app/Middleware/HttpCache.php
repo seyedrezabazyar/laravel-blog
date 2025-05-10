@@ -14,11 +14,11 @@ class HttpCache
      */
     protected $cacheable = [
         'blog.show' => 60, // ۱ ساعت کش برای صفحات پست‌ها
-        'blog.index' => 30, // ۳۰ دقیقه برای صفحه اصلی بلاگ
+        'blog.index' => 60, // ۳۰ دقیقه برای صفحه اصلی بلاگ
         'blog.category' => 60, // ۶۰ دقیقه برای صفحات دسته‌بندی
-        'blog.author' => 30, // ۳۰ دقیقه برای صفحات نویسنده
-        'blog.publisher' => 30, // ۳۰ دقیقه برای صفحات ناشر
-        'blog.tag' => 30, // ۳۰ دقیقه برای صفحات تگ
+        'blog.author' => 60, // ۳۰ دقیقه برای صفحات نویسنده
+        'blog.publisher' => 60, // ۳۰ دقیقه برای صفحات ناشر
+        'blog.tag' => 60, // ۳۰ دقیقه برای صفحات تگ
     ];
 
     /**
@@ -45,6 +45,13 @@ class HttpCache
             $minutes = $this->cacheable[$routeName];
             $response->header('Cache-Control', 'public, max-age=' . ($minutes * 60));
             $response->header('Expires', now()->addMinutes($minutes)->format('D, d M Y H:i:s') . ' GMT');
+
+            // اضافه کردن ETag برای کش بهتر
+            $etag = md5($request->fullUrl() . time() / 3600); // زمان را به ساعت گرد می‌کنیم
+            $response->header('ETag', $etag);
+
+            // اضافه کردن Last-Modified
+            $response->header('Last-Modified', now()->format('D, d M Y H:i:s') . ' GMT');
         }
 
         return $response;

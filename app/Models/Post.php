@@ -145,12 +145,16 @@ class Post extends Model
     }
 
     /**
-     * Scope for posts visible to the current user
+     * اسکوپ برای پست‌های قابل مشاهده برای کاربر فعلی
+     * این اسکوپ به جای استفاده از چندین کوئری جداگانه در هر بار فراخوانی،
+     * یک کوئری ساده و بهینه ایجاد می‌کند
      */
     public function scopeVisibleToUser($query)
     {
+        // همه پست‌ها باید منتشر شده باشند
         $query->where('is_published', true);
 
+        // اگر کاربر مدیر نیست، فقط پست‌های غیر مخفی را نشان می‌دهیم
         if (!auth()->check() || !auth()->user()->isAdmin()) {
             $query->where('hide_content', false);
         }
