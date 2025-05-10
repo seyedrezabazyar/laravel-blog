@@ -26,52 +26,38 @@
                         </div>
                     @endif
 
-                    <div class="mb-6 flex items-center justify-between">
-                        <div>
-                            <form action="{{ route('admin.posts.index') }}" method="GET" class="flex flex-wrap gap-2">
-                                <div class="relative">
-                                    <input type="text" name="search" value="{{ request('search') }}" placeholder="جستجو..." class="pr-8 rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
-                                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
-                                    </div>
-                                </div>
+                    <div class="mb-6 flex flex-wrap gap-4">
+                        <form action="{{ route('admin.posts.index') }}" method="GET" class="w-full flex flex-wrap items-center gap-2">
+                            <div class="flex-grow md:flex-grow-0">
+                                <input type="text" name="search" value="{{ request('search') }}" placeholder="جستجو..." class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 w-full">
+                            </div>
 
-                                <select name="category" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                                    <option value="">همه دسته‌بندی‌ها</option>
-                                    @foreach(\App\Models\Category::all() as $category)
-                                        <option value="{{ $category->id }}" {{ request('category') == $category->id ? 'selected' : '' }}>{{ $category->name }}</option>
-                                    @endforeach
-                                </select>
+                            <select name="category" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="">همه دسته‌بندی‌ها</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->id }}" {{ request('category') == $category->id ? 'selected' : '' }}>{{ $category->name }}</option>
+                                @endforeach
+                            </select>
 
-                                <select name="author" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                                    <option value="">همه نویسندگان</option>
-                                    @foreach(\App\Models\Author::all() as $author)
-                                        <option value="{{ $author->id }}" {{ request('author') == $author->id ? 'selected' : '' }}>{{ $author->name }}</option>
-                                    @endforeach
-                                </select>
+                            <select name="author" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="">همه نویسندگان</option>
+                                @foreach($authors as $author)
+                                    <option value="{{ $author->id }}" {{ request('author') == $author->id ? 'selected' : '' }}>{{ $author->name }}</option>
+                                @endforeach
+                            </select>
 
-                                <select name="publisher" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                                    <option value="">همه ناشران</option>
-                                    @foreach(\App\Models\Publisher::all() as $publisher)
-                                        <option value="{{ $publisher->id }}" {{ request('publisher') == $publisher->id ? 'selected' : '' }}>{{ $publisher->name }}</option>
-                                    @endforeach
-                                </select>
+                            <select name="status" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="">همه وضعیت‌ها</option>
+                                <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>منتشر شده</option>
+                                <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>پیش‌نویس</option>
+                            </select>
 
-                                <select name="status" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                                    <option value="">همه وضعیت‌ها</option>
-                                    <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>منتشر شده</option>
-                                    <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>پیش‌نویس</option>
-                                </select>
+                            <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">فیلتر</button>
 
-                                <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">فیلتر</button>
-
-                                @if(request('search') || request('category') || request('status') || request('author') || request('publisher'))
-                                    <a href="{{ route('admin.posts.index') }}" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300">حذف فیلترها</a>
-                                @endif
-                            </form>
-                        </div>
+                            @if(request('search') || request('category') || request('status') || request('author') || request('publisher'))
+                                <a href="{{ route('admin.posts.index') }}" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300">حذف فیلترها</a>
+                            @endif
+                        </form>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -91,39 +77,39 @@
                             @forelse($posts as $post)
                                 <tr class="hover:bg-gray-50 transition">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        @if($post->featured_image && !$post->hide_image)
+                                        @if($post->featuredImage && !$post->featuredImage->hide_image)
                                             <div class="flex items-center">
-                                                <img src="{{ asset('storage/' . $post->featured_image) }}" alt="{{ $post->title }}" class="w-10 h-14 object-cover rounded ml-2">
-                                                <span>{{ $post->title }}</span>
+                                                <img src="{{ $post->featuredImage->image_url }}" alt="{{ $post->title }}" class="w-10 h-14 object-cover rounded ml-2 lazyload" loading="lazy">
+                                                <span>{{ \Illuminate\Support\Str::limit($post->title, 50) }}</span>
                                             </div>
                                         @else
-                                            {{ $post->title }}
+                                            {{ \Illuminate\Support\Str::limit($post->title, 50) }}
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        <a href="{{ route('blog.category', $post->category->slug) }}" class="text-indigo-600 hover:text-indigo-900">
-                                            {{ $post->category->name }}
-                                        </a>
+                                        @if($post->category)
+                                            <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                                                {{ $post->category->name }}
+                                            </span>
+                                        @else
+                                            <span class="text-gray-400">-</span>
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         @if($post->author)
-                                            <a href="{{ route('admin.authors.show', $post->author) }}" class="text-indigo-600 hover:text-indigo-900">
-                                                {{ $post->author->name }}
-                                            </a>
+                                            <span>{{ $post->author->name }}</span>
                                             @if($post->authors->count() > 0)
                                                 <span class="text-xs text-gray-500"> و {{ $post->authors->count() }} نویسنده دیگر</span>
                                             @endif
                                         @else
-                                            <span class="text-gray-400">تعیین نشده</span>
+                                            <span class="text-gray-400">-</span>
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         @if($post->publisher)
-                                            <a href="{{ route('admin.publishers.show', $post->publisher) }}" class="text-indigo-600 hover:text-indigo-900">
-                                                {{ $post->publisher->name }}
-                                            </a>
+                                            <span>{{ $post->publisher->name }}</span>
                                         @else
-                                            <span class="text-gray-400">تعیین نشده</span>
+                                            <span class="text-gray-400">-</span>
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -188,4 +174,57 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // لیزی لود کردن تصاویر برای بهبود سرعت لود صفحه
+        document.addEventListener("DOMContentLoaded", function() {
+            const lazyImages = document.querySelectorAll("img.lazyload");
+
+            if ("IntersectionObserver" in window) {
+                const imageObserver = new IntersectionObserver(function(entries, observer) {
+                    entries.forEach(function(entry) {
+                        if (entry.isIntersecting) {
+                            const image = entry.target;
+                            image.src = image.dataset.src;
+                            image.classList.remove("lazyload");
+                            imageObserver.unobserve(image);
+                        }
+                    });
+                });
+
+                lazyImages.forEach(function(image) {
+                    imageObserver.observe(image);
+                });
+            } else {
+                // برای مرورگرهای قدیمی که IntersectionObserver را پشتیبانی نمی‌کنند
+                let lazyLoadThrottleTimeout;
+
+                function lazyLoad() {
+                    if (lazyLoadThrottleTimeout) {
+                        clearTimeout(lazyLoadThrottleTimeout);
+                    }
+
+                    lazyLoadThrottleTimeout = setTimeout(function() {
+                        const scrollTop = window.pageYOffset;
+                        lazyImages.forEach(function(img) {
+                            if (img.offsetTop < window.innerHeight + scrollTop) {
+                                img.src = img.dataset.src;
+                                img.classList.remove("lazyload");
+                            }
+                        });
+
+                        if (lazyImages.length === 0) {
+                            document.removeEventListener("scroll", lazyLoad);
+                            window.removeEventListener("resize", lazyLoad);
+                            window.removeEventListener("orientationChange", lazyLoad);
+                        }
+                    }, 20);
+                }
+
+                document.addEventListener("scroll", lazyLoad);
+                window.addEventListener("resize", lazyLoad);
+                window.addEventListener("orientationChange", lazyLoad);
+            }
+        });
+    </script>
 </x-app-layout>
