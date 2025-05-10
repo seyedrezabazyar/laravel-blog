@@ -79,11 +79,5 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true,
-    "repositories": {
-        "packagist": {
-            "type": "composer",
-            "url": "https://packagist.ir"
-        }
-    }
+    "prefer-stable": true
 }
