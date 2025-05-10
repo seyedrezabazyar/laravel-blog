@@ -24,6 +24,9 @@ return new class extends Migration
             // ایندکس‌های اضافی برای بهبود عملکرد
             $table->index('post_id');
             $table->index('author_id');
+
+            // شاخص مرکب برای جستجوی سریع‌تر بر اساس نویسنده در جدول پیوت
+            $table->index(['author_id', 'post_id'], 'post_author_author_post_index');
         });
     }
 

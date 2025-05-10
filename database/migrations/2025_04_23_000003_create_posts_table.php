@@ -56,6 +56,10 @@ return new class extends Migration
             // افزودن شاخص بهینه برای صفحه ناشر
             $table->index(['publisher_id', 'is_published', 'hide_content', 'created_at'], 'idx_publisher_posts');
 
+            // شاخص بهینه‌سازی شده برای صفحه نویسنده
+            $table->index(['author_id', 'is_published', 'hide_content'], 'posts_author_visibility_index');
+            $table->index(['is_published', 'hide_content', 'created_at'], 'posts_published_created_index');
+
             $table->index(['author_id', 'is_published']);
             $table->index(['publisher_id', 'is_published']);
             $table->index(['format', 'publication_year']);

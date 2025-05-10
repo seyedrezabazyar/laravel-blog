@@ -232,21 +232,42 @@ class BlogController extends Controller
     }
 
     /**
-     * نمایش پست‌های یک نویسنده خاص
+     * نمایش پست‌های یک نویسنده خاص - نسخه بهینه‌سازی شده
      */
     public function author(Author $author)
     {
-        $posts = Post::visibleToUser()
-            ->with(['category', 'featuredImage', 'author', 'authors'])
-            ->where(function ($query) use ($author) {
-                $query->where('author_id', $author->id)
-                    ->orWhereHas('authors', function ($q) use ($author) {
-                        $q->where('authors.id', $author->id);
-                    });
-            })
-            ->latest()
-            ->paginate(12);
+        // کلید کش منحصر به فرد بر اساس شناسه نویسنده، شماره صفحه، و وضعیت مدیر بودن کاربر
+        $page = request()->get('page', 1);
+        $isAdmin = auth()->check() && auth()->user()->isAdmin();
+        $cacheKey = "author_posts_{$author->id}_page_{$page}_" . ($isAdmin ? 'admin' : 'user');
 
+        // ذخیره نتایج در کش به مدت ۱ ساعت
+        $cacheTtl = 3600;
+
+        // گرفتن پست‌ها از کش یا دیتابیس
+        $posts = Cache::remember($cacheKey, $cacheTtl, function () use ($author, $isAdmin) {
+            // استفاده از اسکوپ visibleToUser برای فیلتر کردن پست‌ها
+            return Post::visibleToUser()
+                ->select(['id', 'title', 'slug', 'category_id', 'author_id', 'publication_year', 'format'])
+                ->where(function ($query) use ($author) {
+                    $query->where('author_id', $author->id)
+                        ->orWhereHas('authors', function ($q) use ($author) {
+                            $q->where('authors.id', $author->id);
+                        });
+                })
+                // بارگذاری روابط با انتخاب فیلدهای مشخص برای کاهش حجم داده
+                ->with([
+                    'category:id,name,slug',
+                    'featuredImage' => function($query) {
+                        $query->select('id', 'post_id', 'image_path', 'hide_image');
+                    },
+                    'author:id,name,slug'
+                ])
+                ->latest()
+                ->paginate(12);
+        });
+
+        // برگرداندن نما با داده‌ها
         return view('blog.author', compact('posts', 'author'));
     }
 
