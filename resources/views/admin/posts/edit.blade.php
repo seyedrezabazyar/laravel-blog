@@ -127,8 +127,7 @@
                         <div class="mt-4">
                             <label for="tags" class="block text-sm font-medium text-gray-700 mb-1">برچسب‌های کتاب</label>
                             <input type="text" name="tags" id="tags"
-                                   value="{{ old('tags', $tags_list) }}"
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                                   value="{{ old('tags', $tags_list ?? '') }}"                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
                                    placeholder="برچسب‌ها را با کاما جدا کنید (مثال: رمان، ادبیات معاصر، فانتزی)">
                             <p class="text-xs text-gray-500 mt-1">برچسب‌های مرتبط با کتاب را وارد کنید و آن‌ها را با کاما از هم جدا کنید.</p>
                         </div>

@@ -64,12 +64,16 @@ class PostController extends Controller
         DB::connection()->disableQueryLog();
 
         try {
-            // کش کردن داده‌های فرم ویرایش برای بهبود عملکرد
-            $cacheKey = "post_edit_{$post->id}_data";
+            // ذخیره ID پست
+            $postId = $post->id;
+
+            // استفاده از کش برای کاهش فشار روی دیتابیس
+            $cacheKey = "post_edit_{$postId}_data";
+            $cacheTtl = 60; // 1 ساعت
 
             // بارگذاری داده‌های پست با کوئری خام بهینه‌سازی شده
             $postData = DB::table('posts')
-                ->where('id', $post->id)
+                ->where('id', $postId)
                 ->select([
                     'id', 'title', 'english_title', 'slug', 'content', 'english_content',
                     'category_id', 'author_id', 'publisher_id', 'language',
@@ -83,7 +87,7 @@ class PostController extends Controller
 
             // لود تصویر شاخص
             $featuredImage = DB::table('post_images')
-                ->where('post_id', $post->id)
+                ->where('post_id', $postId)
                 ->orderBy('sort_order')
                 ->first();
 
@@ -99,11 +103,13 @@ class PostController extends Controller
                 }
             }
 
-            // بازیابی تمام نویسندگان برای نمایش در لیست انتخاب
-            $authors = DB::table('authors')
-                ->select(['id', 'name'])
-                ->orderBy('name')
-                ->get();
+            // استفاده از کش برای دریافت لیست نویسندگان
+            $authors = Cache::remember('all_authors_list', 3600, function() {
+                return DB::table('authors')
+                    ->select(['id', 'name'])
+                    ->orderBy('name')
+                    ->get();
+            });
 
             // بازیابی نویسندگان همکار فعلی این کتاب
             $post_authors = DB::table('post_author')
@@ -111,11 +117,13 @@ class PostController extends Controller
                 ->pluck('author_id')
                 ->toArray();
 
-            // بازیابی لیست ناشران
-            $publishers = DB::table('publishers')
-                ->select(['id', 'name'])
-                ->orderBy('name')
-                ->get();
+            // بازیابی لیست ناشران با کش
+            $publishers = Cache::remember('all_publishers_list', 3600, function() {
+                return DB::table('publishers')
+                    ->select(['id', 'name'])
+                    ->orderBy('name')
+                    ->get();
+            });
 
             // دریافت نام ناشر (برای نمایش در فیلد جداگانه اگر لازم باشد)
             $publisher_name = null;
@@ -129,25 +137,30 @@ class PostController extends Controller
                 }
             }
 
-            // دریافت تگ‌های پست و تبدیل آن‌ها به رشته‌ای با کاما
+            // دریافت تگ‌های پست و تبدیل آن‌ها به رشته‌ای با کاما - با کوئری بهینه
             $tags_list = "";
-            $tags = DB::table('post_tag')
-                ->where('post_id', $post->id)
-                ->join('tags', 'post_tag.tag_id', '=', 'tags.id')
-                ->select('tags.name')
-                ->get()
+
+            // استفاده از subquery به جای join برای بهبود عملکرد
+            $tagNames = DB::table('tags')
+                ->whereIn('id', function($query) use ($postId) {
+                    $query->select('tag_id')
+                        ->from('post_tag')
+                        ->where('post_id', $postId);
+                })
                 ->pluck('name')
                 ->toArray();
 
-            if (!empty($tags)) {
-                $tags_list = implode(', ', $tags);
+            if (!empty($tagNames)) {
+                $tags_list = implode(', ', $tagNames);
             }
 
-            // فقط دسته‌بندی‌ها را بارگیری می‌کنیم
-            $categories = DB::table('categories')
-                ->select(['id', 'name'])
-                ->orderBy('name')
-                ->get();
+            // فقط دسته‌بندی‌ها را با کش بارگیری می‌کنیم
+            $categories = Cache::remember('all_categories_list', 3600, function() {
+                return DB::table('categories')
+                    ->select(['id', 'name'])
+                    ->orderBy('name')
+                    ->get();
+            });
 
             return view('admin.posts.edit', compact(
                 'post', 'categories', 'featuredImage', 'author_name', 'publisher_name',
