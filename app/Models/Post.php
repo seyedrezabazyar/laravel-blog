@@ -92,10 +92,6 @@ class Post extends Model
             ->select(['id', 'name', 'slug', 'logo']); // انتخاب فقط فیلدهای مورد نیاز
     }
 
-    /**
-     * Optimized featured image relationship
-     * Always selects only the needed columns and orders by sort_order
-     */
     public function featuredImage()
     {
         $cacheKey = "post_{$this->id}_featured_image";
@@ -109,7 +105,9 @@ class Post extends Model
         });
 
         if ($cachedImage) {
-            return $this->hasOne(PostImage::class)->wherePivot('id', $cachedImage->id);
+            // اینجا مشکل است - wherePivot با hasOne سازگار نیست
+            // از where معمولی استفاده کنید
+            return $this->hasOne(PostImage::class)->where('id', $cachedImage->id);
         }
 
         return $this->hasOne(PostImage::class)
