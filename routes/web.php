@@ -164,26 +164,30 @@ Route::get('/api/footer-partial', function () {
     return response()->view('partials.footer')->header('Cache-Control', 'public, max-age=3600');
 });
 
-// مسیر ویژه برای آزمایش دیتابیس و رفع خطای پست 772083
-Route::get('/test-db-post-772083', function() {
-    try {
-        $categories = DB::table('categories')->select(['id', 'name'])->limit(5)->get();
-        $post = DB::table('posts')->select(['id', 'title'])->where('id', 772083)->first();
-        $image = DB::table('post_images')->select(['id', 'image_path'])->where('post_id', 772083)->first();
+// پنل مدیریت (فقط برای مدیران)
+Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
+    // مسیر edit برای post با شناسه 772083 - بهینه‌سازی شده با محدود کردن پارامترها
+    Route::get('/posts/772083/edit', function() {
+        // برای اجتناب از تکرار کد، ما از کنترلر اصلی استفاده می‌کنیم
+        return app(App\Http\Controllers\Admin\PostController::class)->edit(772083);
+    })->name('posts.edit-772083');
 
-        return [
-            'success' => true,
-            'post' => $post,
-            'categories_sample' => $categories,
-            'has_image' => $image ? true : false
-        ];
-    } catch (\Exception $e) {
-        return [
-            'success' => false,
-            'error' => $e->getMessage()
-        ];
-    }
-})->middleware(['auth', 'admin']);
+    // مسیرهای استاندارد resource
+    Route::resources([
+        'posts' => App\Http\Controllers\Admin\PostController::class,
+        'categories' => App\Http\Controllers\Admin\CategoryController::class,
+        'authors' => App\Http\Controllers\Admin\AuthorController::class,
+        'publishers' => App\Http\Controllers\Admin\PublisherController::class,
+    ]);
+
+    Route::delete('post-images/{image}', [App\Http\Controllers\Admin\PostController::class, 'destroyImage'])->name('post-images.destroy');
+    Route::post('post-images/reorder', [App\Http\Controllers\Admin\PostController::class, 'reorderImages'])->name('post-images.reorder');
+
+    // گالری تصاویر - مسیرهای جدید
+    Route::get('/gallery', [App\Http\Controllers\Admin\GalleryController::class, 'index'])->name('gallery');
+    Route::get('/api/gallery/images', [App\Http\Controllers\Admin\GalleryController::class, 'getImages']);
+    Route::post('/api/gallery/categorize', [App\Http\Controllers\Admin\GalleryController::class, 'categorizeImage']);
+});
 
 // مسیرهای احراز هویت
 require __DIR__.'/auth.php';

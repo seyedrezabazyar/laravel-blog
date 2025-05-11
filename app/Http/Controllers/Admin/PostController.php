@@ -18,7 +18,7 @@ use Mews\Purifier\Facades\Purifier;
 class PostController extends Controller
 {
     /**
-     * نمایش لیست پست‌ها با کوئری بهینه
+     * نمایش لیست پست‌ها با کوئری ساده
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\View\View
@@ -28,147 +28,84 @@ class PostController extends Controller
         // غیرفعال کردن لاگ کوئری برای بهبود عملکرد
         DB::connection()->disableQueryLog();
 
-        // تشخیص پارامتر صفحه‌بندی
-        $page = $request->input('page', 1);
-        $perPage = 20;
-
-        // استفاده از کوئری بهینه و کش برای کاهش بار دیتابیس
-        $cacheKey = "admin_posts_page_{$page}";
-
-        // استفاده از کش با عدم کش‌کردن صفحات بعد از صفحه 1 برای اطمینان از به‌روز بودن
-        if ($page == 1) {
-            $posts = Cache::remember($cacheKey, 5, function () use ($perPage) {
-                return Post::select(['id', 'title', 'is_published', 'hide_content', 'slug', 'created_at'])
-                    ->orderBy('created_at', 'desc')
-                    ->paginate($perPage);
-            });
-        } else {
-            $posts = Post::select(['id', 'title', 'is_published', 'hide_content', 'slug', 'created_at'])
-                ->orderBy('created_at', 'desc')
-                ->paginate($perPage);
-        }
+        // کوئری ساده و سبک برای لیست پست‌ها
+        $posts = DB::table('posts')
+            ->select(['id', 'title', 'is_published', 'hide_content', 'slug', 'created_at'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
 
         // بازگرداندن نمای استاندارد
         return view('admin.posts.index', compact('posts'));
     }
 
     /**
-     * نمایش فرم ویرایش پست با بهینه‌سازی بارگذاری داده‌ها
+     * نمایش فرم ویرایش پست با کوئری بسیار سبک
      *
-     * @param  \App\Models\Post  $post
+     * @param  int  $id
      * @return \Illuminate\View\View
      */
-    public function edit(Post $post)
+    public function edit($id)
     {
-        // غیرفعال کردن لاگ کوئری برای بهبود عملکرد
-        DB::connection()->disableQueryLog();
-
         try {
-            // ذخیره ID پست
-            $postId = $post->id;
+            // غیرفعال کردن لاگ کوئری برای بهبود عملکرد
+            DB::connection()->disableQueryLog();
 
-            // استفاده از کش برای کاهش فشار روی دیتابیس
-            $cacheKey = "post_edit_{$postId}_data";
-            $cacheTtl = 60; // 1 ساعت
-
-            // بارگذاری داده‌های پست با کوئری خام بهینه‌سازی شده
-            $postData = DB::table('posts')
-                ->where('id', $postId)
+            // 1. اطلاعات اصلی پست با کوئری مستقیم - فقط فیلدهای ضروری
+            $post = DB::table('posts')
+                ->where('id', $id)
                 ->select([
-                    'id', 'title', 'english_title', 'slug', 'content', 'english_content',
+                    'id', 'title', 'slug', 'english_title', 'content', 'english_content',
                     'category_id', 'author_id', 'publisher_id', 'language',
                     'publication_year', 'format', 'book_codes', 'purchase_link',
-                    'is_published', 'hide_content', 'created_at', 'updated_at'
+                    'is_published', 'hide_content'
                 ])
                 ->first();
 
-            // تبدیل به شی
-            $post = (object)$postData;
+            if (!$post) {
+                return redirect()->route('admin.posts.index')
+                    ->with('error', 'پست مورد نظر یافت نشد.');
+            }
 
-            // لود تصویر شاخص
+            // 2. تصویر شاخص
             $featuredImage = DB::table('post_images')
-                ->where('post_id', $postId)
+                ->where('post_id', $id)
+                ->select(['id', 'post_id', 'image_path', 'hide_image', 'caption'])
                 ->orderBy('sort_order')
                 ->first();
 
-            // دریافت نام نویسنده اصلی (برای نمایش در فیلد جداگانه اگر لازم باشد)
-            $author_name = null;
-            if (!empty($post->author_id)) {
-                $author = DB::table('authors')
-                    ->where('id', $post->author_id)
-                    ->select('name')
-                    ->first();
-                if ($author) {
-                    $author_name = $author->name;
-                }
-            }
+            // 3. تگ‌ها با کوئری ساده
+            $tags_list = DB::table('post_tag')
+                ->join('tags', 'post_tag.tag_id', '=', 'tags.id')
+                ->where('post_tag.post_id', $id)
+                ->pluck('tags.name')
+                ->implode(', ');
 
-            // استفاده از کش برای دریافت لیست نویسندگان
-            $authors = Cache::remember('all_authors_list', 3600, function() {
-                return DB::table('authors')
-                    ->select(['id', 'name'])
-                    ->orderBy('name')
-                    ->get();
-            });
-
-            // بازیابی نویسندگان همکار فعلی این کتاب
+            // 4. نویسندگان همکار
             $post_authors = DB::table('post_author')
-                ->where('post_id', $post->id)
+                ->where('post_id', $id)
                 ->pluck('author_id')
                 ->toArray();
 
-            // بازیابی لیست ناشران با کش
-            $publishers = Cache::remember('all_publishers_list', 3600, function() {
-                return DB::table('publishers')
-                    ->select(['id', 'name'])
-                    ->orderBy('name')
-                    ->get();
-            });
+            // 5. دسته‌بندی‌ها، نویسندگان و ناشران - همه در یک عملیات
+            $categories = DB::table('categories')->select(['id', 'name'])->orderBy('name')->get();
+            $authors = DB::table('authors')->select(['id', 'name'])->orderBy('name')->get();
+            $publishers = DB::table('publishers')->select(['id', 'name'])->orderBy('name')->get();
 
-            // دریافت نام ناشر (برای نمایش در فیلد جداگانه اگر لازم باشد)
-            $publisher_name = null;
-            if (!empty($post->publisher_id)) {
-                $publisher = DB::table('publishers')
-                    ->where('id', $post->publisher_id)
-                    ->select('name')
-                    ->first();
-                if ($publisher) {
-                    $publisher_name = $publisher->name;
-                }
-            }
+            // تبدیل به آبجکت برای سازگاری با ویو
+            $post = (object)$post;
 
-            // دریافت تگ‌های پست و تبدیل آن‌ها به رشته‌ای با کاما - با کوئری بهینه
-            $tags_list = "";
-
-            // استفاده از subquery به جای join برای بهبود عملکرد
-            $tagNames = DB::table('tags')
-                ->whereIn('id', function($query) use ($postId) {
-                    $query->select('tag_id')
-                        ->from('post_tag')
-                        ->where('post_id', $postId);
-                })
-                ->pluck('name')
-                ->toArray();
-
-            if (!empty($tagNames)) {
-                $tags_list = implode(', ', $tagNames);
-            }
-
-            // فقط دسته‌بندی‌ها را با کش بارگیری می‌کنیم
-            $categories = Cache::remember('all_categories_list', 3600, function() {
-                return DB::table('categories')
-                    ->select(['id', 'name'])
-                    ->orderBy('name')
-                    ->get();
-            });
-
+            // نمایش ویو با داده‌های سبک
             return view('admin.posts.edit', compact(
-                'post', 'categories', 'featuredImage', 'author_name', 'publisher_name',
-                'tags_list', 'authors', 'post_authors', 'publishers'
+                'post', 'featuredImage', 'tags_list', 'categories',
+                'authors', 'post_authors', 'publishers'
             ));
 
         } catch (\Exception $e) {
-            \Log::error('Error in edit post form: ' . $e->getMessage());
+            \Log::error('Error in edit post form: ' . $e->getMessage(), [
+                'post_id' => $id,
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return redirect()->route('admin.posts.index')
                 ->with('error', 'خطا در بارگذاری فرم ویرایش: ' . $e->getMessage());
         }
@@ -178,10 +115,10 @@ class PostController extends Controller
      * به‌روزرسانی پست در دیتابیس - نسخه بهینه‌سازی شده
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Post  $post
+     * @param  int  $id
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function update(Request $request, Post $post)
+    public function update(Request $request, $id)
     {
         // 1. بررسی درخواست‌های تغییر وضعیت ساده (تغییر وضعیت انتشار یا نمایش)
         if ($request->has('toggle_publish') || $request->has('toggle_visibility')) {
@@ -189,34 +126,38 @@ class PostController extends Controller
                 $updates = [];
                 $statusMessage = '';
 
-                // الف. تغییر وضعیت انتشار (منتشر شده یا پیش‌نویس)
+                // تغییر وضعیت انتشار
                 if ($request->has('toggle_publish')) {
-                    $newStatus = !$post->is_published;
+                    $currentValue = DB::table('posts')->where('id', $id)->value('is_published');
+                    $newStatus = !$currentValue;
                     $updates['is_published'] = $newStatus;
                     $statusMessage = $newStatus ? 'منتشر' : 'به پیش‌نویس منتقل';
                 }
 
-                // ب. تغییر وضعیت نمایش محتوا (نمایش یا مخفی)
+                // تغییر وضعیت نمایش محتوا
                 if ($request->has('toggle_visibility')) {
-                    $newVisibility = !$post->hide_content;
+                    $currentValue = DB::table('posts')->where('id', $id)->value('hide_content');
+                    $newVisibility = !$currentValue;
                     $updates['hide_content'] = $newVisibility;
                     $statusMessage = $newVisibility ? 'مخفی' : 'قابل نمایش';
                 }
 
-                // به‌روزرسانی فقط فیلدهای مورد نیاز با کوئری مستقیم (بدون لود کامل مدل)
-                DB::table('posts')
-                    ->where('id', $post->id)
-                    ->update($updates);
+                // فقط اگر تغییری هست به‌روزرسانی کن
+                if (!empty($updates)) {
+                    DB::table('posts')->where('id', $id)->update($updates);
 
-                // پاک کردن محدود کش‌های مرتبط
-                $this->clearLimitedPostCache($post);
+                    // پاک کردن کش‌های کلیدی
+                    $this->clearLimitedPostCache($id);
+                }
 
+                // بازگشت با پیام موفقیت
+                $title = $request->input('title', 'پست');
                 return redirect()->route('admin.posts.index')
-                    ->with('success', "کتاب «{$post->title}» با موفقیت {$statusMessage} شد.");
+                    ->with('success', "کتاب «{$title}» با موفقیت {$statusMessage} شد.");
 
             } catch (\Exception $e) {
                 \Log::error('خطا در تغییر وضعیت پست: ' . $e->getMessage(), [
-                    'post_id' => $post->id,
+                    'post_id' => $id,
                     'trace' => $e->getTraceAsString()
                 ]);
 
@@ -252,24 +193,13 @@ class PostController extends Controller
             // به‌روزرسانی اسلاگ بر اساس عنوان
             $validated['slug'] = Str::slug($validated['title']);
 
-            // پاکسازی محتوا - فقط برای فیلدهای محتوا
-            if (isset($validated['content'])) {
-                // کش کردن نتایج پاکسازی برای جلوگیری از پردازش مجدد در آینده
-                $contentHash = md5($validated['content']);
-                $cacheKey = "purified_content_{$contentHash}";
-
-                $validated['content'] = Cache::remember($cacheKey, 86400, function () use ($validated) {
-                    return Purifier::clean($validated['content']);
-                });
+            // پاکسازی محتوا برای مقادیر غیر تهی
+            if (!empty($validated['content'])) {
+                $validated['content'] = Purifier::clean($validated['content']);
             }
 
-            if (isset($validated['english_content'])) {
-                $englishContentHash = md5($validated['english_content']);
-                $cacheKey = "purified_english_content_{$englishContentHash}";
-
-                $validated['english_content'] = Cache::remember($cacheKey, 86400, function () use ($validated) {
-                    return Purifier::clean($validated['english_content']);
-                });
+            if (!empty($validated['english_content'])) {
+                $validated['english_content'] = Purifier::clean($validated['english_content']);
             }
 
             // شروع تراکنش دیتابیس
@@ -283,18 +213,15 @@ class PostController extends Controller
             if (isset($postUpdateData['tags'])) unset($postUpdateData['tags']);
 
             DB::table('posts')
-                ->where('id', $post->id)
+                ->where('id', $id)
                 ->update($postUpdateData);
 
             // 4. به‌روزرسانی وضعیت نمایش تصویر فعلی (اگر درخواست شده باشد)
             if (isset($validated['hide_image'])) {
-                // استفاده از کش برای دریافت ID تصویر اصلی
-                $featuredImageId = Cache::remember("post_{$post->id}_featured_image_id", 3600, function() use ($post) {
-                    return DB::table('post_images')
-                        ->where('post_id', $post->id)
-                        ->orderBy('sort_order')
-                        ->value('id');
-                });
+                $featuredImageId = DB::table('post_images')
+                    ->where('post_id', $id)
+                    ->orderBy('sort_order')
+                    ->value('id');
 
                 if ($featuredImageId) {
                     DB::table('post_images')
@@ -305,8 +232,6 @@ class PostController extends Controller
 
                     // پاک کردن کش مربوط به تصویر
                     Cache::forget("post_image_{$featuredImageId}_url");
-                    Cache::forget("post_image_{$featuredImageId}_display_url_admin");
-                    Cache::forget("post_image_{$featuredImageId}_display_url_user");
                 }
             }
 
@@ -314,14 +239,14 @@ class PostController extends Controller
             if (isset($validated['authors'])) {
                 // حذف رابطه‌های قبلی
                 DB::table('post_author')
-                    ->where('post_id', $post->id)
+                    ->where('post_id', $id)
                     ->delete();
 
                 // افزودن رابطه‌های جدید
                 $authors_data = [];
                 foreach ($validated['authors'] as $author_id) {
                     $authors_data[] = [
-                        'post_id' => $post->id,
+                        'post_id' => $id,
                         'author_id' => $author_id,
                         'created_at' => now(),
                         'updated_at' => now(),
@@ -337,7 +262,7 @@ class PostController extends Controller
             if (isset($validated['tags'])) {
                 // حذف روابط قبلی
                 DB::table('post_tag')
-                    ->where('post_id', $post->id)
+                    ->where('post_id', $id)
                     ->delete();
 
                 // اضافه کردن تگ‌های جدید
@@ -362,7 +287,7 @@ class PostController extends Controller
 
                             // ایجاد رابطه بین پست و تگ
                             DB::table('post_tag')->insert([
-                                'post_id' => $post->id,
+                                'post_id' => $id,
                                 'tag_id' => $tag_id,
                                 'created_at' => now(),
                                 'updated_at' => now(),
@@ -376,7 +301,7 @@ class PostController extends Controller
             DB::commit();
 
             // 7. پاک کردن کش‌های مرتبط - از متد جداگانه استفاده می‌کنیم
-            $this->clearPostCache($post);
+            $this->clearPostCache($id);
 
             // 8. بازگشت پاسخ موفقیت‌آمیز
             return redirect()->route('admin.posts.index')
@@ -384,6 +309,7 @@ class PostController extends Controller
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             // خطای اعتبارسنجی - بازگشت به فرم با پیام‌های خطا
+            DB::rollBack();
             return redirect()->back()->withErrors($e->errors())->withInput();
 
         } catch (\Exception $e) {
@@ -392,7 +318,7 @@ class PostController extends Controller
 
             // ثبت خطا در لاگ
             \Log::error('خطا در به‌روزرسانی پست: ' . $e->getMessage(), [
-                'post_id' => $post->id,
+                'post_id' => $id,
                 'trace' => $e->getTraceAsString()
             ]);
 
@@ -404,16 +330,16 @@ class PostController extends Controller
     /**
      * پاک کردن کش‌های مرتبط با تغییر وضعیت ساده (منتشر/مخفی) - سبک و سریع
      *
-     * @param  \App\Models\Post  $post
+     * @param  int  $id
      * @return void
      */
-    private function clearLimitedPostCache(Post $post)
+    private function clearLimitedPostCache($id)
     {
         // فقط کش‌های ضروری را پاک می‌کنیم تا سربار کمتری داشته باشیم
         $cacheKeys = [
             "admin_posts_page_1",
-            "post_{$post->id}_featured_image",
-            "post_edit_{$post->id}_data",
+            "post_{$id}_featured_image",
+            "post_edit_{$id}_data",
         ];
 
         // کش‌های صفحه خانه
@@ -426,48 +352,43 @@ class PostController extends Controller
     /**
      * پاک کردن کش‌های مرتبط با پست - بهینه‌سازی شده
      *
-     * @param  \App\Models\Post  $post
+     * @param  int  $id
      * @return void
      */
-    private function clearPostCache(Post $post)
+    private function clearPostCache($id)
     {
-        // لیستی از کلیدهای کش که باید پاک شوند
-        $cacheKeys = [
-            "admin_posts_page_1",
-            "post_{$post->id}_featured_image",
-            "post_{$post->id}_related_posts_admin",
-            "post_{$post->id}_related_posts_user",
-            "post_edit_{$post->id}_data",
-            "post_{$post->id}_featured_image_id",
-        ];
+        // ابتدا کش‌های ضروری را پاک می‌کنیم
+        $this->clearLimitedPostCache($id);
 
-        // کش محتوای پست
-        if ($post->content) {
-            $cacheKeys[] = "post_{$post->id}_purified_content_" . md5($post->content);
+        // سپس اطلاعات ضروری برای پاک کردن سایر کش‌ها را دریافت می‌کنیم
+        $postInfo = DB::table('posts')
+            ->where('id', $id)
+            ->select(['category_id', 'author_id', 'publisher_id'])
+            ->first();
+
+        if ($postInfo) {
+            // کش‌های مرتبط با دسته‌بندی
+            if ($postInfo->category_id) {
+                Cache::forget("category_posts_{$postInfo->category_id}_page_1_admin");
+                Cache::forget("category_posts_{$postInfo->category_id}_page_1_user");
+            }
+
+            // کش‌های مرتبط با نویسنده
+            if ($postInfo->author_id) {
+                Cache::forget("author_posts_{$postInfo->author_id}_page_1_admin");
+                Cache::forget("author_posts_{$postInfo->author_id}_page_1_user");
+            }
+
+            // کش‌های مرتبط با ناشر
+            if ($postInfo->publisher_id) {
+                Cache::forget("publisher_posts_{$postInfo->publisher_id}_page_1_admin");
+                Cache::forget("publisher_posts_{$postInfo->publisher_id}_page_1_user");
+            }
         }
 
-        // کش‌های صفحه خانه
-        $cacheKeys[] = 'home_latest_posts';
-
-        // کش‌های مرتبط با دسته‌بندی
-        if ($post->category_id) {
-            $cacheKeys[] = "category_posts_{$post->category_id}_page_1_admin";
-            $cacheKeys[] = "category_posts_{$post->category_id}_page_1_user";
-        }
-
-        // کش‌های مرتبط با نویسنده
-        if ($post->author_id) {
-            $cacheKeys[] = "author_posts_{$post->author_id}_page_1_admin";
-            $cacheKeys[] = "author_posts_{$post->author_id}_page_1_user";
-        }
-
-        // کش‌های مرتبط با ناشر
-        if ($post->publisher_id) {
-            $cacheKeys[] = "publisher_posts_{$post->publisher_id}_page_1_admin";
-            $cacheKeys[] = "publisher_posts_{$post->publisher_id}_page_1_user";
-        }
-
-        // پاک کردن همه کش‌ها در یک عملیات
-        Cache::deleteMultiple($cacheKeys);
+        // کش‌های مربوط به روابط پست
+        Cache::forget("post_{$id}_related_posts_admin");
+        Cache::forget("post_{$id}_related_posts_user");
+        Cache::forget("post_{$id}_featured_image_id");
     }
 }

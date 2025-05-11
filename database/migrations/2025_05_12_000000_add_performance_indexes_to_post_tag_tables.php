@@ -1,43 +1,47 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     /**
      * Run the migrations.
-     * اضافه کردن ایندکس‌های عملکردی برای بهبود سرعت صفحه ویرایش پست
+     * ایندکس‌های بهبود عملکرد برای فرم ویرایش پست
      */
-    public function up(): void
+    public function up()
     {
-        // افزودن ایندکس‌های کارآمد به جدول post_tag برای بهبود عملکرد
-        if (!$this->hasIndex('post_tag', 'post_tag_retrieval_idx')) {
-            Schema::table('post_tag', function (Blueprint $table) {
-                $table->index(['post_id', 'tag_id'], 'post_tag_retrieval_idx');
-            });
-        }
-
-        // اطمینان از وجود ایندکس‌های موردنیاز در جدول tags
-        if (!$this->hasIndex('tags', 'tags_name_search_idx')) {
-            Schema::table('tags', function (Blueprint $table) {
-                $table->index(['name'], 'tags_name_search_idx');
-            });
-        }
-
-        // ایندکس FULLTEXT برای جستجوی متنی (فقط برای MySQL)
+        // بررسی اینکه آیا موتور دیتابیس MySQL است
         if (DB::connection()->getDriverName() === 'mysql') {
             try {
-                if (!$this->hasFullTextIndex('tags', 'tags_name_fulltext')) {
-                    DB::statement('ALTER TABLE tags ADD FULLTEXT INDEX tags_name_fulltext (name)');
+                // ایندکس برای بهبود کارایی صفحه ویرایش پست
+                if (!$this->hasIndex('posts', 'idx_posts_edit_performance')) {
+                    DB::statement('CREATE INDEX idx_posts_edit_performance ON posts(id, title, slug, category_id, author_id, publisher_id)');
                 }
 
-                // اجرای آنالیز جداول برای بهبود عملکرد
-                DB::statement('ANALYZE TABLE post_tag, tags');
+                // ایندکس برای بهبود کارایی جستجوی تصویر شاخص
+                if (!$this->hasIndex('post_images', 'idx_post_images_featured')) {
+                    DB::statement('CREATE INDEX idx_post_images_featured ON post_images(post_id, sort_order)');
+                }
+
+                // ایندکس برای بهبود کارایی تغییر وضعیت
+                if (!$this->hasIndex('posts', 'idx_posts_status')) {
+                    DB::statement('CREATE INDEX idx_posts_status ON posts(id, is_published, hide_content)');
+                }
+
+                // ایندکس برای بهبود کارایی جستجوی تگ‌ها
+                if (!$this->hasIndex('post_tag', 'idx_post_tag_search')) {
+                    DB::statement('CREATE INDEX idx_post_tag_search ON post_tag(post_id)');
+                }
+
+                // ایندکس برای بهبود کارایی جستجوی نویسندگان همکار
+                if (!$this->hasIndex('post_author', 'idx_post_author_search')) {
+                    DB::statement('CREATE INDEX idx_post_author_search ON post_author(post_id)');
+                }
             } catch (\Exception $e) {
-                \Log::error('Error creating fulltext index: ' . $e->getMessage());
+                // ثبت خطا اما ادامه اجرای migration
+                \Log::error('Error creating performance indexes: ' . $e->getMessage());
             }
         }
     }
@@ -45,49 +49,41 @@ return new class extends Migration
     /**
      * Reverse the migrations.
      */
-    public function down(): void
+    public function down()
     {
-        // حذف ایندکس‌های اضافه شده
-        try {
-            Schema::table('post_tag', function (Blueprint $table) {
-                $table->dropIndex('post_tag_retrieval_idx');
-            });
-        } catch (\Exception $e) {
-            \Log::info('Index post_tag_retrieval_idx may not exist: ' . $e->getMessage());
-        }
-
-        try {
-            Schema::table('tags', function (Blueprint $table) {
-                $table->dropIndex('tags_name_search_idx');
-            });
-        } catch (\Exception $e) {
-            \Log::info('Index tags_name_search_idx may not exist: ' . $e->getMessage());
-        }
-
         if (DB::connection()->getDriverName() === 'mysql') {
             try {
-                DB::statement('ALTER TABLE tags DROP INDEX tags_name_fulltext');
+                if ($this->hasIndex('posts', 'idx_posts_edit_performance')) {
+                    DB::statement('DROP INDEX idx_posts_edit_performance ON posts');
+                }
+
+                if ($this->hasIndex('post_images', 'idx_post_images_featured')) {
+                    DB::statement('DROP INDEX idx_post_images_featured ON post_images');
+                }
+
+                if ($this->hasIndex('posts', 'idx_posts_status')) {
+                    DB::statement('DROP INDEX idx_posts_status ON posts');
+                }
+
+                if ($this->hasIndex('post_tag', 'idx_post_tag_search')) {
+                    DB::statement('DROP INDEX idx_post_tag_search ON post_tag');
+                }
+
+                if ($this->hasIndex('post_author', 'idx_post_author_search')) {
+                    DB::statement('DROP INDEX idx_post_author_search ON post_author');
+                }
             } catch (\Exception $e) {
-                \Log::info('Fulltext index may not exist: ' . $e->getMessage());
+                \Log::error('Error dropping performance indexes: ' . $e->getMessage());
             }
         }
     }
 
     /**
-     * بررسی وجود ایندکس در جدول
+     * بررسی وجود ایندکس
      */
     private function hasIndex($table, $index)
     {
         $indexes = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = '{$index}'");
-        return !empty($indexes);
-    }
-
-    /**
-     * بررسی وجود ایندکس FULLTEXT در جدول
-     */
-    private function hasFullTextIndex($table, $index)
-    {
-        $indexes = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = '{$index}' AND Index_type = 'FULLTEXT'");
         return !empty($indexes);
     }
 };
