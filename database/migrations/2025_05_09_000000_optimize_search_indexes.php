@@ -8,29 +8,46 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * بهینه‌سازی ایندکس‌های جستجو
+     * بهینه‌سازی ایندکس‌های جستجو و عملکرد
      */
     public function up(): void
     {
-        // برای MySQL، ایندکس FULLTEXT با اولویت بالاتر برای عناوین
+        // فقط برای MySQL اجرا می‌شود
         if (DB::connection()->getDriverName() === 'mysql') {
             try {
-                // حذف ایندکس‌های FULLTEXT موجود اگر وجود داشته باشند (با روش سازگار با نسخه‌های قدیمی‌تر MySQL)
+                // بخش 1: حذف ایندکس‌های FULLTEXT موجود اگر وجود داشته باشند
                 $this->dropIndexIfExists('posts', 'posts_title_fulltext');
                 $this->dropIndexIfExists('posts', 'posts_content_fulltext');
                 $this->dropIndexIfExists('posts', 'posts_fulltext');
                 $this->dropIndexIfExists('posts', 'posts_title_fulltext_optimized');
                 $this->dropIndexIfExists('posts', 'posts_fulltext_optimized');
 
-                // ایجاد ایندکس‌های بهینه‌شده
+                // بخش 2: ایجاد ایندکس‌های FULLTEXT بهینه‌سازی شده
                 // ایندکس اول: فقط عناوین (برای جستجوی سریع)
                 DB::statement('ALTER TABLE posts ADD FULLTEXT INDEX posts_title_fulltext (title, english_title)');
 
-                // ایندکس دوم: همه فیلدها
+                // ایندکس دوم: همه فیلدهای متنی برای جستجوی کامل
                 DB::statement('ALTER TABLE posts ADD FULLTEXT INDEX posts_fulltext (title, english_title, book_codes, content, english_content)');
+
+                // بخش 3: ایندکس‌های جدید برای بهبود عملکرد
+                // ایندکس ترکیبی برای نمایش پست‌های یک دسته‌بندی
+                $this->addIndexIfNotExists('posts', 'idx_posts_category_visibility', '(category_id, is_published, hide_content)');
+
+                // ایندکس ترکیبی برای نمایش پست‌های یک نویسنده
+                $this->addIndexIfNotExists('posts', 'idx_posts_author_visibility', '(author_id, is_published, hide_content)');
+
+                // ایندکس ترکیبی برای نمایش پست‌های یک ناشر
+                $this->addIndexIfNotExists('posts', 'idx_posts_publisher_visibility', '(publisher_id, is_published, hide_content)');
+
+                // ایندکس برای مرتب‌سازی بر اساس تاریخ ایجاد
+                $this->addIndexIfNotExists('posts', 'idx_posts_created', '(created_at)');
+
+                // ایندکس روی post_images برای بهبود عملکرد تصاویر پست
+                $this->addIndexIfNotExists('post_images', 'idx_post_images_post_sort', '(post_id, sort_order)');
+
             } catch (\Exception $e) {
                 // خطا را ثبت کنید و ادامه دهید
-                \Log::error('Error optimizing search indexes: ' . $e->getMessage());
+                \Log::error('Error optimizing indexes: ' . $e->getMessage());
             }
         }
     }
@@ -41,8 +58,16 @@ return new class extends Migration
     public function down(): void
     {
         if (DB::connection()->getDriverName() === 'mysql') {
+            // حذف ایندکس‌های FULLTEXT
             $this->dropIndexIfExists('posts', 'posts_title_fulltext');
             $this->dropIndexIfExists('posts', 'posts_fulltext');
+
+            // حذف ایندکس‌های جدید
+            $this->dropIndexIfExists('posts', 'idx_posts_category_visibility');
+            $this->dropIndexIfExists('posts', 'idx_posts_author_visibility');
+            $this->dropIndexIfExists('posts', 'idx_posts_publisher_visibility');
+            $this->dropIndexIfExists('posts', 'idx_posts_created');
+            $this->dropIndexIfExists('post_images', 'idx_post_images_post_sort');
         }
     }
 
@@ -56,6 +81,21 @@ return new class extends Migration
 
         if (!empty($indexExists)) {
             DB::statement("ALTER TABLE `{$table}` DROP INDEX `{$indexName}`");
+            \Log::info("Index {$indexName} dropped from table {$table}");
+        }
+    }
+
+    /**
+     * اضافه کردن ایندکس اگر وجود نداشته باشد
+     */
+    private function addIndexIfNotExists($table, $indexName, $columns)
+    {
+        // بررسی وجود ایندکس قبل از ایجاد آن
+        $indexExists = DB::select("SHOW INDEX FROM `{$table}` WHERE Key_name = '{$indexName}'");
+
+        if (empty($indexExists)) {
+            DB::statement("ALTER TABLE `{$table}` ADD INDEX `{$indexName}` {$columns}");
+            \Log::info("Index {$indexName} added to table {$table}");
         }
     }
 };

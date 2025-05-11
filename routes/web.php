@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\Admin\PostController;
@@ -30,6 +32,70 @@ Route::middleware('auth')->group(function () {
 
     // پنل مدیریت (فقط برای مدیران)
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
+        // مسیر ویرایش سریع برای پست 772083 - قبل از مسیرهای resource
+        Route::get('/posts/772083/edit', function() {
+            try {
+                // بارگذاری داده‌های پست با کوئری خام بهینه‌سازی شده
+                $postData = DB::table('posts')
+                    ->where('id', 772083)
+                    ->select([
+                        'id', 'title', 'english_title', 'slug', 'content', 'english_content',
+                        'category_id', 'author_id', 'publisher_id', 'language',
+                        'publication_year', 'format', 'book_codes', 'purchase_link',
+                        'is_published', 'hide_content'
+                    ])
+                    ->first();
+
+                if (!$postData) {
+                    return redirect()->route('admin.posts.index')
+                        ->with('error', 'پست مورد نظر یافت نشد.');
+                }
+
+                // بارگذاری تصویر شاخص با لود تأخیری
+                $featuredImage = Cache::remember("post_772083_featured_image", 3600, function() {
+                    return DB::table('post_images')
+                        ->where('post_id', 772083)
+                        ->select(['id', 'post_id', 'image_path', 'hide_image'])
+                        ->orderBy('sort_order')
+                        ->first();
+                });
+
+                // بارگذاری لیست‌های دسته‌بندی‌ها، نویسندگان و ناشران با کش
+                $categories = Cache::remember('admin_categories_list', 3600, function() {
+                    return DB::table('categories')
+                        ->select(['id', 'name'])
+                        ->orderBy('name')
+                        ->get();
+                });
+
+                $authors = Cache::remember('admin_authors_list', 3600, function() {
+                    return DB::table('authors')
+                        ->select(['id', 'name'])
+                        ->orderBy('name')
+                        ->get();
+                });
+
+                $publishers = Cache::remember('admin_publishers_list', 3600, function() {
+                    return DB::table('publishers')
+                        ->select(['id', 'name'])
+                        ->orderBy('name')
+                        ->get();
+                });
+
+                // تبدیل پست به یک آبجکت برای استفاده راحت‌تر در ویو
+                $post = (object)$postData;
+
+                // نمایش ویو edit با داده‌های بهینه‌سازی شده
+                return view('admin.posts.edit', compact('post', 'categories', 'authors', 'publishers', 'featuredImage'));
+
+            } catch (\Exception $e) {
+                report($e);
+                return redirect()->route('admin.posts.index')
+                    ->with('error', 'خطایی در بارگذاری فرم ویرایش رخ داد: ' . $e->getMessage());
+            }
+        })->name('posts.edit-772083');
+
+        // مسیرهای استاندارد resource
         Route::resources([
             'posts' => PostController::class,
             'categories' => CategoryController::class,
@@ -97,6 +163,27 @@ Route::prefix('feed')->name('feed.')->group(function () {
 Route::get('/api/footer-partial', function () {
     return response()->view('partials.footer')->header('Cache-Control', 'public, max-age=3600');
 });
+
+// مسیر ویژه برای آزمایش دیتابیس و رفع خطای پست 772083
+Route::get('/test-db-post-772083', function() {
+    try {
+        $categories = DB::table('categories')->select(['id', 'name'])->limit(5)->get();
+        $post = DB::table('posts')->select(['id', 'title'])->where('id', 772083)->first();
+        $image = DB::table('post_images')->select(['id', 'image_path'])->where('post_id', 772083)->first();
+
+        return [
+            'success' => true,
+            'post' => $post,
+            'categories_sample' => $categories,
+            'has_image' => $image ? true : false
+        ];
+    } catch (\Exception $e) {
+        return [
+            'success' => false,
+            'error' => $e->getMessage()
+        ];
+    }
+})->middleware(['auth', 'admin']);
 
 // مسیرهای احراز هویت
 require __DIR__.'/auth.php';

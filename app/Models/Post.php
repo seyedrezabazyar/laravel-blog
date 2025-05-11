@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB; // اضافه کردن DB Facade
+use Illuminate\Support\Facades\DB;
 use Mews\Purifier\Facades\Purifier;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
@@ -43,10 +43,10 @@ class Post extends Model
     ];
 
     /**
-     * Default relationships to eager load
-     * This reduces the N+1 query problem by loading common relationships by default
+     * تنظیمات برای عدم بارگذاری خودکار روابط - کاهش فشار روی دیتابیس
+     * از $with استفاده نمی‌کنیم تا هر جا لازم است روابط را بارگذاری کنیم
      */
-    protected $with = ['featuredImage'];
+    protected $with = [];
 
     /**
      * SlugOptions configuration
@@ -98,6 +98,20 @@ class Post extends Model
      */
     public function featuredImage()
     {
+        $cacheKey = "post_{$this->id}_featured_image";
+
+        // استفاده از کش کوتاه مدت برای کاهش فشار روی دیتابیس
+        $cachedImage = Cache::remember($cacheKey, 60, function() {
+            return $this->hasOne(PostImage::class)
+                ->select(['id', 'post_id', 'image_path', 'caption', 'hide_image', 'sort_order'])
+                ->orderBy('sort_order')
+                ->first();
+        });
+
+        if ($cachedImage) {
+            return $this->hasOne(PostImage::class)->wherePivot('id', $cachedImage->id);
+        }
+
         return $this->hasOne(PostImage::class)
             ->select(['id', 'post_id', 'image_path', 'caption', 'hide_image', 'sort_order'])
             ->orderBy('sort_order');
@@ -132,14 +146,13 @@ class Post extends Model
     }
 
     /**
-     * Get purified content with caching
-     * Uses a longer cache time for better performance
+     * Get purified content with caching - بهینه‌سازی شده با TTL طولانی‌تر
      */
     public function getPurifiedContentAttribute()
     {
         $cacheKey = "post_{$this->id}_purified_content_" . md5($this->content);
 
-        return Cache::remember($cacheKey, 86400 * 7, function () {
+        return Cache::remember($cacheKey, 86400 * 14, function () {
             return Purifier::clean($this->content);
         });
     }
@@ -176,8 +189,11 @@ class Post extends Model
     public function scopeByAuthor($query, $authorId)
     {
         return $query->where('author_id', $authorId)
-            ->orWhereHas('authors', function ($q) use ($authorId) {
-                $q->where('authors.id', $authorId);
+            ->orWhereExists(function ($subq) use ($authorId) {
+                $subq->select(DB::raw(1))
+                    ->from('post_author')
+                    ->whereRaw('post_author.post_id = posts.id')
+                    ->where('post_author.author_id', $authorId);
             });
     }
 
@@ -198,45 +214,16 @@ class Post extends Model
         $searchTerm = preg_replace('/[^\p{L}\p{N}_\s-]/u', '', $searchTerm);
 
         // بررسی وجود ایندکس FULLTEXT - با استفاده از try-catch برای امنیت بیشتر
-        $fullTextEnabled = false;
-
         try {
-            // جستجوی ساده با LIKE را استفاده می‌کنیم
-            return $query->where(function ($q) use ($searchTerm) {
-                $q->where('title', 'like', "%{$searchTerm}%")
-                    ->orWhere('english_title', 'like', "%{$searchTerm}%")
-                    ->orWhere('book_codes', 'like', "%{$searchTerm}%");
-
-                // محدود کردن جستجو در محتوا فقط برای کلمات کلیدی بلندتر از 3 حرف
-                if (mb_strlen($searchTerm) > 3) {
-                    $q->orWhere('content', 'like', "%{$searchTerm}%")
-                        ->orWhere('english_content', 'like', "%{$searchTerm}%");
-                }
-            });
+            // استفاده از ایندکس مشخص شده برای بهینه‌سازی جستجو
+            return $query->whereRaw("MATCH(title) AGAINST(? IN BOOLEAN MODE)", [$searchTerm . '*']);
         } catch (\Exception $e) {
+            // در صورت بروز خطا از جستجوی ساده استفاده می‌کنیم
             \Log::error('Search error: ' . $e->getMessage());
 
-            // در صورت خطا، فقط در عنوان جستجو می‌کنیم
-            return $query->where('title', 'like', "%{$searchTerm}%");
+            // جستجو فقط در عنوان برای کارایی بیشتر
+            return $query->where('title', 'like', "%{$searchTerm}%")
+                ->orWhere('english_title', 'like', "%{$searchTerm}%");
         }
-    }
-
-    /**
-     * تنظیم رویدادهای مدل
-     */
-    protected static function booted()
-    {
-        // رویداد ایجاد پست جدید
-        static::created(function ($post) {
-            // فقط اگر پست منتشر شده و غیر مخفی باشد، شمارنده را به‌روزرسانی می‌کنیم
-            if ($post->is_published && !$post->hide_content) {
-                if ($post->category) {
-                    $post->category->updatePostCount();
-                }
-            }
-        });
-
-        // سایر رویدادها...
-        // بقیه کد ارائه شده را اینجا قرار دهید
     }
 }

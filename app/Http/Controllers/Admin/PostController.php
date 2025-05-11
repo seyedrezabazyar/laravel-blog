@@ -63,27 +63,72 @@ class PostController extends Controller
         // غیرفعال کردن لاگ کوئری برای بهبود عملکرد
         DB::connection()->disableQueryLog();
 
-        // فقط روابط مورد نیاز را بارگذاری می‌کنیم
-        $post->load([
-            'featuredImage' => function($query) {
-                $query->select(['id', 'post_id', 'image_path', 'hide_image']);
+        // استفاده از توابع خام SQL برای بهینه‌سازی بیشتر
+        try {
+            // بارگذاری مستقیم پست با کوئری اختصاصی - کاهش فشار روی ORM
+            $postData = DB::table('posts')
+                ->where('id', $post->id)
+                ->select([
+                    'id', 'title', 'english_title', 'slug', 'content', 'english_content',
+                    'category_id', 'author_id', 'publisher_id', 'language',
+                    'publication_year', 'format', 'book_codes', 'purchase_link',
+                    'is_published', 'hide_content'
+                ])
+                ->first();
+
+            if (!$postData) {
+                return redirect()->route('admin.posts.index')
+                    ->with('error', 'پست مورد نظر یافت نشد.');
             }
-        ]);
 
-        // کش کردن داده‌های ثابت برای کاهش کوئری‌های تکراری
-        $categories = Cache::remember('admin_categories', 3600, function() {
-            return Category::select(['id', 'name'])->orderBy('name')->get();
-        });
+            // تبدیل به مدل پست برای استفاده در ویو
+            $post = Post::make((array)$postData);
+            $post->exists = true;
+            $post->id = $postData->id;
 
-        $authors = Cache::remember('admin_authors', 3600, function() {
-            return Author::select(['id', 'name'])->orderBy('name')->get();
-        });
+            // بارگذاری تصویر شاخص - فقط اگر وجود داشته باشد
+            $featuredImage = Cache::remember("post_{$post->id}_featured_image", 60, function() use ($post) {
+                return DB::table('post_images')
+                    ->where('post_id', $post->id)
+                    ->select(['id', 'post_id', 'image_path', 'hide_image'])
+                    ->orderBy('sort_order')
+                    ->first();
+            });
 
-        $publishers = Cache::remember('admin_publishers', 3600, function() {
-            return Publisher::select(['id', 'name'])->orderBy('name')->get();
-        });
+            if ($featuredImage) {
+                $post->setRelation('featuredImage', PostImage::make((array)$featuredImage));
+            }
 
-        return view('admin.posts.edit', compact('post', 'categories', 'authors', 'publishers'));
+            // بارگذاری داده‌های ثابت با کش طولانی‌مدت - این داده‌ها به ندرت تغییر می‌کنند
+            $categories = Cache::remember('admin_categories_list', 3600, function() {
+                return Category::select(['id', 'name'])
+                    ->orderBy('name')
+                    ->get();
+            });
+
+            $authors = Cache::remember('admin_authors_list', 3600, function() {
+                return Author::select(['id', 'name'])
+                    ->orderBy('name')
+                    ->get();
+            });
+
+            $publishers = Cache::remember('admin_publishers_list', 3600, function() {
+                return Publisher::select(['id', 'name'])
+                    ->orderBy('name')
+                    ->get();
+            });
+
+            return view('admin.posts.edit', compact('post', 'categories', 'authors', 'publishers'));
+
+        } catch (\Exception $e) {
+            Log::error('Error loading post edit form: ' . $e->getMessage(), [
+                'post_id' => $post->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()->route('admin.posts.index')
+                ->with('error', 'خطا در بارگذاری فرم ویرایش: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -156,14 +201,26 @@ class PostController extends Controller
         try {
             DB::beginTransaction();
 
-            // به‌روزرسانی پست
-            $post->update($validated);
+            // استفاده از بروزرسانی مستقیم با کوئری برای کارایی بیشتر
+            // این کار از فراخوانی هوک‌های مدل جلوگیری می‌کند و سربار کمتری دارد
+            DB::table('posts')
+                ->where('id', $post->id)
+                ->update($validated);
 
             // به‌روزرسانی وضعیت نمایش تصویر فعلی (اگر وجود دارد)
-            if ($post->featuredImage && isset($validated['hide_image'])) {
-                $post->featuredImage->update([
-                    'hide_image' => $validated['hide_image'] ? 'hidden' : 'visible'
-                ]);
+            if (isset($validated['hide_image'])) {
+                $featuredImageId = DB::table('post_images')
+                    ->where('post_id', $post->id)
+                    ->orderBy('sort_order')
+                    ->value('id');
+
+                if ($featuredImageId) {
+                    DB::table('post_images')
+                        ->where('id', $featuredImageId)
+                        ->update([
+                            'hide_image' => $validated['hide_image'] ? 'hidden' : 'visible'
+                        ]);
+                }
             }
 
             DB::commit();
@@ -177,7 +234,10 @@ class PostController extends Controller
             DB::rollBack();
 
             // لاگ خطا
-            Log::error('Error updating post: ' . $e->getMessage(), ['post_id' => $post->id]);
+            Log::error('Error updating post: ' . $e->getMessage(), [
+                'post_id' => $post->id,
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return redirect()->back()->withInput()
                 ->with('error', 'خطا در به‌روزرسانی پست: ' . $e->getMessage());
@@ -185,36 +245,42 @@ class PostController extends Controller
     }
 
     /**
-     * پاک کردن کش‌های مرتبط با پست
+     * پاک کردن کش‌های مرتبط با پست - بهینه‌سازی شده
      *
      * @param  \App\Models\Post  $post
      * @return void
      */
     private function clearPostCache(Post $post)
     {
-        // پاک کردن کش صفحه اصلی پست‌ها
-        Cache::forget("admin_posts_page_1");
+        // لیستی از کلیدهای کش که باید پاک شوند
+        $cacheKeys = [
+            "admin_posts_page_1",
+            "post_{$post->id}_featured_image",
+            "post_{$post->id}_related_posts_admin",
+            "post_{$post->id}_related_posts_user",
+        ];
 
-        // پاک کردن کش‌های مرتبط با صفحات بلاگ
-        Cache::forget("post_{$post->id}_related_posts_admin");
-        Cache::forget("post_{$post->id}_related_posts_user");
-
+        // کش محتوای پست
         if ($post->content) {
-            Cache::forget("post_{$post->id}_purified_content_" . md5($post->content));
+            $cacheKeys[] = "post_{$post->id}_purified_content_" . md5($post->content);
         }
 
-        // پاک کردن کش‌های مرتبط با صفحه خانه بلاگ
-        Cache::forget('home_latest_posts');
+        // کش‌های صفحه خانه
+        $cacheKeys[] = 'home_latest_posts';
 
-        // پاک کردن سایر کش‌های مرتبط
-        if ($post->category) {
-            Cache::forget("category_posts_{$post->category->id}_page_1_admin");
-            Cache::forget("category_posts_{$post->category->id}_page_1_user");
+        // کش‌های مرتبط با دسته‌بندی
+        if ($post->category_id) {
+            $cacheKeys[] = "category_posts_{$post->category_id}_page_1_admin";
+            $cacheKeys[] = "category_posts_{$post->category_id}_page_1_user";
         }
 
-        if ($post->author) {
-            Cache::forget("author_posts_{$post->author->id}_page_1_admin");
-            Cache::forget("author_posts_{$post->author->id}_page_1_user");
+        // کش‌های مرتبط با نویسنده
+        if ($post->author_id) {
+            $cacheKeys[] = "author_posts_{$post->author_id}_page_1_admin";
+            $cacheKeys[] = "author_posts_{$post->author_id}_page_1_user";
         }
+
+        // پاک کردن همه کش‌ها در یک عملیات
+        Cache::deleteMultiple($cacheKeys);
     }
 }
