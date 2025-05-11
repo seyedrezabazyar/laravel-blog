@@ -13,7 +13,6 @@ use App\Services\DownloadHostService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Mews\Purifier\Facades\Purifier;
 
@@ -21,22 +20,11 @@ class PostController extends Controller
 {
     /**
      * سرویس مدیریت هاست دانلود
-     *
-     * @var DownloadHostService
      */
     protected $downloadHostService;
 
     /**
-     * TTL کش در دقیقه
-     *
-     * @var int
-     */
-    protected $cacheTtl = 1440; // 24 ساعت
-
-    /**
      * ایجاد نمونه جدید از کنترلر
-     *
-     * @param DownloadHostService $downloadHostService
      */
     public function __construct(DownloadHostService $downloadHostService)
     {
@@ -44,85 +32,132 @@ class PostController extends Controller
     }
 
     /**
-     * نمایش لیست پست‌ها - بهینه‌سازی شده
-     *
-     * @return \Illuminate\View\View
+     * نمایش لیست خیلی ساده پست‌ها با SQL خام
      */
     public function index(Request $request)
     {
-        // ایجاد کلید کش یکتا براساس پارامترهای درخواست
-        $cacheKey = 'admin_posts_' . md5(json_encode($request->all()));
+        // غیرفعال کردن لاگ کوئری
+        DB::connection()->disableQueryLog();
 
-        return Cache::remember($cacheKey, 10, function() use ($request) {
-            // متغیرهای فیلتر
-            $search = $request->input('search');
-            $categoryId = $request->input('category');
-            $authorId = $request->input('author');
-            $publisherId = $request->input('publisher');
-            $status = $request->input('status');
-            $hideContent = $request->input('hide_content');
+        // برگرداندن HTML ساده به جای استفاده از ویو
+        $html = '<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدیریت کتاب‌ها</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">مدیریت کتاب‌ها</h1>
+            <a href="' . route('admin.posts.create') . '" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">افزودن کتاب جدید</a>
+        </div>';
 
-            // ساخت کوئری اصلی
-            $postsQuery = Post::select(['id', 'title', 'slug', 'category_id', 'author_id', 'publisher_id',
-                'is_published', 'hide_content', 'publication_year', 'created_at', 'updated_at']);
+        // پیام‌های فلش
+        if (session('success')) {
+            $html .= '<div class="bg-green-100 border-r-4 border-green-500 text-green-700 p-4 mb-6 rounded">
+                ' . session('success') . '
+            </div>';
+        }
 
-            // اضافه کردن روابط مورد نیاز با انتخاب فیلدهای ضروری
-            $postsQuery->with([
-                'category:id,name,slug',
-                'author:id,name,slug',
-                'publisher:id,name,slug',
-                'featuredImage:id,post_id,image_path,hide_image,caption',
-                'authors:id,name,slug',
-            ]);
+        // شروع جدول
+        $html .= '<div class="bg-white shadow-md rounded-lg overflow-hidden">
+            <table class="min-w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">عنوان</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">';
 
-            // اعمال فیلترها در یک ترانزاکشن دیتابیس
-            DB::connection()->disableQueryLog(); // غیرفعال کردن لاگ کوئری برای بهبود کارایی
+        // گرفتن پست‌ها با SQL خام
+        try {
+            $page = max(1, (int) $request->input('page', 1));
+            $perPage = 20;
+            $offset = ($page - 1) * $perPage;
 
-            // اعمال فیلترهای جستجو
-            if ($search) {
-                $postsQuery->where(function($query) use ($search) {
-                    $query->where('title', 'like', "%{$search}%")
-                        ->orWhere('english_title', 'like', "%{$search}%")
-                        ->orWhere('book_codes', 'like', "%{$search}%");
-                });
+            // کوئری کاملاً خام برای گرفتن فقط ID و عنوان
+            $posts = DB::select("SELECT id, title FROM posts ORDER BY created_at DESC LIMIT ? OFFSET ?", [$perPage, $offset]);
+
+            // کوئری برای شمارش کل
+            $totalPosts = DB::selectOne("SELECT COUNT(*) as total FROM posts");
+            $total = $totalPosts->total;
+
+            // اطلاعات پاگینیشن
+            $lastPage = max(1, ceil($total / $perPage));
+            $hasPrevious = $page > 1;
+            $hasNext = $page < $lastPage;
+
+            // نمایش پست‌ها
+            if (count($posts) > 0) {
+                foreach ($posts as $post) {
+                    $html .= '<tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">' . htmlspecialchars($post->title) . '</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div class="flex space-x-2 space-x-reverse">
+                                    <a href="' . route('admin.posts.edit', $post->id) . '" class="ml-2 text-indigo-600 hover:text-indigo-900">ویرایش</a>
+                                    <a href="' . route('admin.posts.show', $post->id) . '" class="ml-2 text-blue-600 hover:text-blue-900">نمایش</a>
+                                    <form action="' . route('admin.posts.destroy', $post->id) . '" method="POST" class="inline" onsubmit="return confirm(\'آیا از حذف این کتاب اطمینان دارید؟\');">
+                                        ' . csrf_field() . '
+                                        ' . method_field('DELETE') . '
+                                        <button type="submit" class="text-red-600 hover:text-red-900">حذف</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>';
+                }
+            } else {
+                $html .= '<tr><td colspan="2" class="px-6 py-4 text-center text-sm text-gray-500">هیچ کتابی یافت نشد</td></tr>';
             }
 
-            if ($categoryId) {
-                $postsQuery->where('category_id', $categoryId);
+            // پایان جدول
+            $html .= '</tbody>
+            </table>
+        </div>';
+
+            // پاگینیشن ساده
+            $html .= '<div class="mt-6 flex justify-between items-center">
+                <div class="text-sm text-gray-600">
+                    نمایش ' . count($posts) . ' کتاب از ' . $total . ' کتاب
+                </div>
+                <div class="flex space-x-2 space-x-reverse">';
+
+            // دکمه قبلی
+            if ($hasPrevious) {
+                $html .= '<a href="' . route('admin.posts.index', ['page' => $page - 1]) . '" class="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50">قبلی</a>';
+            } else {
+                $html .= '<span class="px-4 py-2 border border-gray-200 rounded-md text-sm bg-gray-100 text-gray-400 cursor-not-allowed">قبلی</span>';
             }
 
-            if ($authorId) {
-                $postsQuery->where(function($query) use ($authorId) {
-                    $query->where('author_id', $authorId)
-                        ->orWhereHas('authors', function($q) use ($authorId) {
-                            $q->where('authors.id', $authorId)->limit(1);
-                        });
-                });
+            // دکمه بعدی
+            if ($hasNext) {
+                $html .= '<a href="' . route('admin.posts.index', ['page' => $page + 1]) . '" class="px-4 py-2 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50">بعدی</a>';
+            } else {
+                $html .= '<span class="px-4 py-2 border border-gray-200 rounded-md text-sm bg-gray-100 text-gray-400 cursor-not-allowed">بعدی</span>';
             }
 
-            if ($publisherId) {
-                $postsQuery->where('publisher_id', $publisherId);
-            }
+            $html .= '</div>
+            </div>';
 
-            if ($status !== null && $status !== '') {
-                $postsQuery->where('is_published', $status);
-            }
+        } catch (\Exception $e) {
+            // در صورت خطا
+            $html .= '<div class="bg-red-100 border-r-4 border-red-500 text-red-700 p-4 rounded mb-6">
+                خطا در بارگذاری لیست پست‌ها: ' . $e->getMessage() . '
+            </div>';
 
-            if ($hideContent !== null && $hideContent !== '') {
-                $postsQuery->where('hide_content', $hideContent);
-            }
+            \Log::error('Error in posts index: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+        }
 
-            // مرتب‌سازی و دریافت نتایج
-            $postsQuery->latest()->withCount('authors');
-            $posts = $postsQuery->paginate(25)->withQueryString();
+        // پایان HTML
+        $html .= '</div>
+</body>
+</html>';
 
-            // استفاده از کش برای دریافت اطلاعات فیلترها
-            $categories = $this->getCachedCategories();
-            $authors = $this->getCachedAuthors();
-            $publishers = $this->getCachedPublishers();
-
-            return view('admin.posts.index', compact('posts', 'categories', 'authors', 'publishers'));
-        });
+        return response($html);
     }
 
     /**
@@ -132,11 +167,11 @@ class PostController extends Controller
      */
     public function create()
     {
-        // استفاده از کش برای کاهش کوئری‌ها
-        $categories = $this->getCachedCategories();
-        $authors = $this->getCachedAuthors();
-        $publishers = $this->getCachedPublishers();
-        $tags = $this->getCachedTags();
+        // استفاده از کوئری‌های ساده با انتخاب حداقل فیلدها
+        $categories = Category::select(['id', 'name'])->orderBy('name')->get();
+        $authors = Author::select(['id', 'name'])->orderBy('name')->get();
+        $publishers = Publisher::select(['id', 'name'])->orderBy('name')->get();
+        $tags = Tag::select(['id', 'name'])->orderBy('name')->get();
 
         return view('admin.posts.create', compact('categories', 'authors', 'publishers', 'tags'));
     }
@@ -199,11 +234,8 @@ class PostController extends Controller
 
             DB::commit();
 
-            // پاک کردن کش مرتبط
-            $this->clearRelatedCaches();
-
             return redirect()->route('admin.posts.index')
-                ->with('success', 'پست با موفقیت ایجاد شد.');
+                ->with('success', 'کتاب با موفقیت ایجاد شد.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -220,23 +252,21 @@ class PostController extends Controller
      */
     public function show(Post $post)
     {
-        // کش کردن اطلاعات پست با روابط آن
-        $cacheKey = "admin_post_show_{$post->id}";
+        // بارگذاری روابط مورد نیاز
+        $post->load([
+            'user:id,name,email',
+            'category:id,name,slug',
+            'author:id,name,slug',
+            'publisher:id,name,slug',
+            'authors:id,name,slug',
+            'featuredImage',
+            'tags:id,name,slug',
+            'images' => function($query) {
+                $query->orderBy('sort_order');
+            }
+        ]);
 
-        return Cache::remember($cacheKey, 30, function() use ($post) {
-            $post->load([
-                'user:id,name,email',
-                'category:id,name,slug',
-                'author:id,name,slug',
-                'publisher:id,name,slug',
-                'authors:id,name,slug',
-                'featuredImage',
-                'tags:id,name,slug',
-                'images'
-            ]);
-
-            return view('admin.posts.show', compact('post'));
-        });
+        return view('admin.posts.show', compact('post'));
     }
 
     /**
@@ -251,11 +281,11 @@ class PostController extends Controller
         $post->load(['authors', 'tags', 'featuredImage']);
         $coAuthors = $post->authors->pluck('id')->toArray();
 
-        // استفاده از کش برای کاهش کوئری‌ها
-        $categories = $this->getCachedCategories();
-        $authors = $this->getCachedAuthors();
-        $publishers = $this->getCachedPublishers();
-        $tags = $this->getCachedTags();
+        // استفاده از کوئری‌های ساده با انتخاب حداقل فیلدها
+        $categories = Category::select(['id', 'name'])->orderBy('name')->get();
+        $authors = Author::select(['id', 'name'])->orderBy('name')->get();
+        $publishers = Publisher::select(['id', 'name'])->orderBy('name')->get();
+        $tags = Tag::select(['id', 'name'])->orderBy('name')->get();
 
         return view('admin.posts.edit', compact('post', 'categories', 'authors', 'publishers', 'coAuthors', 'tags'));
     }
@@ -309,7 +339,9 @@ class PostController extends Controller
                 $this->savePostImage($post, $featuredImage, $hideImage);
             } elseif ($post->featuredImage) {
                 // به‌روزرسانی وضعیت نمایش تصویر فعلی
-                $post->featuredImage->update(['hide_image' => $hideImage]);
+                $post->featuredImage->update([
+                    'hide_image' => $hideImage ? 'hidden' : 'visible'
+                ]);
             }
 
             // به‌روزرسانی نویسندگان همکار
@@ -322,11 +354,8 @@ class PostController extends Controller
 
             DB::commit();
 
-            // پاک کردن کش مرتبط
-            $this->clearRelatedCaches($post->id);
-
             return redirect()->route('admin.posts.index')
-                ->with('success', 'پست با موفقیت بروزرسانی شد.');
+                ->with('success', 'کتاب با موفقیت بروزرسانی شد.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -365,11 +394,8 @@ class PostController extends Controller
 
             DB::commit();
 
-            // پاک کردن کش مرتبط
-            $this->clearRelatedCaches();
-
             return redirect()->route('admin.posts.index')
-                ->with('success', 'پست با موفقیت حذف شد.');
+                ->with('success', 'کتاب با موفقیت حذف شد.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -391,9 +417,6 @@ class PostController extends Controller
         try {
             // حذف تصویر
             $this->deletePostImage($image);
-
-            // پاک کردن کش مرتبط
-            $this->clearRelatedCaches($post->id);
 
             return redirect()->route('admin.posts.edit', $post)
                 ->with('success', 'تصویر با موفقیت حذف شد.');
@@ -458,7 +481,7 @@ class PostController extends Controller
             'post_id' => $post->id,
             'image_path' => $path,
             'caption' => $post->title,
-            'hide_image' => $hideImage,
+            'hide_image' => $hideImage ? 'hidden' : 'visible',
             'sort_order' => 0
         ]);
     }
@@ -534,85 +557,5 @@ class PostController extends Controller
 
         // همگام‌سازی برچسب‌ها با پست
         $post->tags()->sync($tagIds);
-
-        // پاک کردن کش تگ‌ها
-        Cache::forget('admin_tags_list');
-    }
-
-    /**
-     * دریافت دسته‌بندی‌ها از کش
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
-    private function getCachedCategories()
-    {
-        return Cache::remember('admin_categories_list', $this->cacheTtl, function() {
-            return Category::select(['id', 'name'])->orderBy('name')->get();
-        });
-    }
-
-    /**
-     * دریافت نویسندگان از کش
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
-    private function getCachedAuthors()
-    {
-        return Cache::remember('admin_authors_list', $this->cacheTtl, function() {
-            return Author::select(['id', 'name'])->orderBy('name')->get();
-        });
-    }
-
-    /**
-     * دریافت ناشران از کش
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
-    private function getCachedPublishers()
-    {
-        return Cache::remember('admin_publishers_list', $this->cacheTtl, function() {
-            return Publisher::select(['id', 'name'])->orderBy('name')->get();
-        });
-    }
-
-    /**
-     * دریافت تگ‌ها از کش
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
-    private function getCachedTags()
-    {
-        return Cache::remember('admin_tags_list', $this->cacheTtl, function() {
-            return Tag::select(['id', 'name'])->orderBy('name')->get();
-        });
-    }
-
-    /**
-     * پاک کردن کش‌های مرتبط
-     *
-     * @param int|null $postId
-     * @return void
-     */
-    private function clearRelatedCaches($postId = null)
-    {
-        // پاک کردن کش‌های مرتبط با لیست‌ها
-        Cache::forget('admin_posts_list');
-
-        // پاک کردن کش‌های مرتبط با فیلترها
-        $keys = ['search', 'category', 'author', 'publisher', 'status', 'hide_content', 'page'];
-        foreach ($keys as $key) {
-            Cache::forget('admin_posts_' . $key);
-        }
-
-        // پاک کردن کش‌های مرتبط با پست خاص
-        if ($postId) {
-            Cache::forget("admin_post_show_{$postId}");
-            Cache::forget("admin_post_edit_{$postId}");
-        }
-
-        // پاک کردن هرگونه کش دیگر که با الگوی admin_posts_ شروع می‌شود
-        foreach (Cache::getStore()->many(Cache::getStore()->keys('admin_posts_*')) as $key => $value) {
-            Cache::forget($key);
-        }
     }
 }
