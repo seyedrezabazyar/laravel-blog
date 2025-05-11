@@ -57,7 +57,7 @@
                             </div>
                         </div>
                         <div class="mt-4">
-                            <a href="{{ route('admin.posts.index') }}?status=1" class="text-green-600 hover:text-green-800 text-sm flex items-center">
+                            <a href="{{ route('admin.posts.index') }}?filter=published" class="text-green-600 hover:text-green-800 text-sm flex items-center">
                                 <span>مشاهده پست‌های منتشر شده</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
@@ -82,7 +82,7 @@
                             </div>
                         </div>
                         <div class="mt-4">
-                            <a href="{{ route('admin.posts.index') }}?status=0" class="text-yellow-600 hover:text-yellow-800 text-sm flex items-center">
+                            <a href="{{ route('admin.posts.index') }}?filter=draft" class="text-yellow-600 hover:text-yellow-800 text-sm flex items-center">
                                 <span>مشاهده پیش‌نویس‌ها</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
@@ -107,7 +107,7 @@
                             </div>
                         </div>
                         <div class="mt-4">
-                            <a href="{{ route('admin.posts.index') }}?hide_content=1" class="text-red-600 hover:text-red-800 text-sm flex items-center">
+                            <a href="{{ route('admin.posts.index') }}?filter=hidden" class="text-red-600 hover:text-red-800 text-sm flex items-center">
                                 <span>مشاهده محتوای مخفی</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />

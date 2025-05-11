@@ -2,13 +2,13 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ __('مدیریت کتاب‌ها') }}
+                {{ __('پست ها') }}
             </h2>
-            <a href="{{ route('admin.posts.create') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-150 flex items-center">
+            <a href="{{ route('blog.index') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-150 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                    <path d="M10.707 1.293a1 1 0 00-1.414 0l-7 7A1 1 0 003 9h1v7a1 1 0 001 1h4a1 1 0 001-1v-4h2v4a1 1 0 001 1h4a1 1 0 001-1V9h1a1 1 0 00.707-1.707l-7-7z" />
                 </svg>
-                افزودن کتاب جدید
+                مشاهده سایت
             </a>
         </div>
     </x-slot>
@@ -34,6 +34,33 @@
                             {{ session('error') }}
                         </div>
                     @endif
+
+                        <!-- فیلترهای نمایش کتاب‌ها -->
+                        <div class="mb-6">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <a href="{{ route('admin.posts.index') }}" class="px-4 py-2 {{ !request()->has('filter') ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700' }} rounded-md hover:bg-indigo-500 hover:text-white transition duration-150">
+                                    همه کتاب‌ها
+                                </a>
+                                <a href="{{ route('admin.posts.index', ['filter' => 'published']) }}" class="px-4 py-2 {{ request('filter') == 'published' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700' }} rounded-md hover:bg-indigo-500 hover:text-white transition duration-150">
+                                    منتشر شده‌ها
+                                    <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-indigo-100 bg-indigo-700 rounded-full ml-1">
+                {{ $publishedCount ?? 0 }}
+            </span>
+                                </a>
+                                <a href="{{ route('admin.posts.index', ['filter' => 'draft']) }}" class="px-4 py-2 {{ request('filter') == 'draft' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700' }} rounded-md hover:bg-indigo-500 hover:text-white transition duration-150">
+                                    پیش‌نویس‌ها
+                                    <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-indigo-100 bg-indigo-700 rounded-full ml-1">
+                {{ $draftCount ?? 0 }}
+            </span>
+                                </a>
+                                <a href="{{ route('admin.posts.index', ['filter' => 'hidden']) }}" class="px-4 py-2 {{ request('filter') == 'hidden' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700' }} rounded-md hover:bg-indigo-500 hover:text-white transition duration-150">
+                                    مخفی شده‌ها
+                                    <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-indigo-100 bg-indigo-700 rounded-full ml-1">
+                {{ $hiddenCount ?? 0 }}
+            </span>
+                                </a>
+                            </div>
+                        </div>
 
                     <!-- لیست پست‌ها با دکمه‌های مورد نیاز -->
                     <div class="bg-white rounded-lg overflow-hidden">
@@ -142,7 +169,7 @@
 
                     <!-- پاگینیشن استاندارد لاراول -->
                     <div class="mt-4">
-                        {{ $posts->links() }}
+                        {{ $posts->appends(request()->query())->links() }}
                     </div>
                 </div>
             </div>
