@@ -4,21 +4,12 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 {{ __('ویرایش کتاب') }}: {{ $post->title }}
             </h2>
-            <div class="flex space-x-2 space-x-reverse">
-                <a href="{{ route('admin.posts.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-150 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                    </svg>
-                    بازگشت به لیست کتاب‌ها
-                </a>
-                <a href="{{ route('blog.show', $post->slug) }}" target="_blank" class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition duration-150 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
-                    </svg>
-                    مشاهده در وبلاگ
-                </a>
-            </div>
+            <a href="{{ route('admin.posts.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-150 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+                بازگشت به لیست کتاب‌ها
+            </a>
         </div>
     </x-slot>
 
@@ -26,7 +17,25 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
-                    <form action="{{ route('admin.posts.update', $post) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                    @if(session('success'))
+                        <div class="bg-green-100 border-r-4 border-green-500 text-green-700 p-4 mb-6 rounded-md flex items-center">
+                            <svg class="h-6 w-6 ml-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {{ session('success') }}
+                        </div>
+                    @endif
+
+                    @if(session('error'))
+                        <div class="bg-red-100 border-r-4 border-red-500 text-red-700 p-4 mb-6 rounded-md flex items-center">
+                            <svg class="h-6 w-6 ml-2 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
+                    <form action="{{ route('admin.posts.update', $post) }}" method="POST" class="space-y-6">
                         @csrf
                         @method('PUT')
 
@@ -53,7 +62,9 @@
                                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                     @enderror
                                 </div>
+                            </div>
 
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                                 <div>
                                     <label for="category_id" class="block text-sm font-medium text-gray-700 mb-1">دسته‌بندی</label>
                                     <select name="category_id" id="category_id"
@@ -108,20 +119,6 @@
                                 </div>
 
                                 <div>
-                                    <label for="co_authors" class="block text-sm font-medium text-gray-700 mb-1">نویسندگان همکار</label>
-                                    <select name="co_authors[]" id="co_authors" multiple
-                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 @error('co_authors') border-red-300 @enderror">
-                                        @foreach($authors as $author)
-                                            <option value="{{ $author->id }}" {{ in_array($author->id, old('co_authors', $coAuthors)) ? 'selected' : '' }}>{{ $author->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <p class="text-xs text-gray-500 mt-1">برای انتخاب چند نویسنده، کلید Ctrl را نگه دارید.</p>
-                                    @error('co_authors')
-                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                <div>
                                     <label for="publisher_id" class="block text-sm font-medium text-gray-700 mb-1">ناشر</label>
                                     <select name="publisher_id" id="publisher_id"
                                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 @error('publisher_id') border-red-300 @enderror">
@@ -134,7 +131,14 @@
                                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                     @enderror
                                 </div>
+                            </div>
+                        </div>
 
+                        <!-- اطلاعات اضافی کتاب -->
+                        <div class="bg-gray-50 p-4 rounded-lg mb-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4 pb-2 border-b border-gray-200">اطلاعات تکمیلی</h3>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                                 <div>
                                     <label for="publication_year" class="block text-sm font-medium text-gray-700 mb-1">سال انتشار</label>
                                     <input type="number" name="publication_year" id="publication_year" value="{{ old('publication_year', $post->publication_year) }}" min="1800" max="{{ date('Y') }}"
@@ -143,14 +147,7 @@
                                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                     @enderror
                                 </div>
-                            </div>
-                        </div>
 
-                        <!-- بخش جزئیات کتاب -->
-                        <div class="bg-gray-50 p-4 rounded-lg mb-6">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4 pb-2 border-b border-gray-200">جزئیات کتاب</h3>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                                 <div>
                                     <label for="format" class="block text-sm font-medium text-gray-700 mb-1">فرمت کتاب</label>
                                     <select name="format" id="format"
@@ -167,12 +164,13 @@
                                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                     @enderror
                                 </div>
+                            </div>
 
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                                 <div>
                                     <label for="book_codes" class="block text-sm font-medium text-gray-700 mb-1">کدهای کتاب (ISBN و غیره)</label>
                                     <input type="text" name="book_codes" id="book_codes" value="{{ old('book_codes', $post->book_codes) }}"
                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 @error('book_codes') border-red-300 @enderror">
-                                    <p class="text-xs text-gray-500 mt-1">برای چندین کد، از علامت کاما استفاده کنید (مثلا: ISBN-10: 1234567890, ISBN-13: 978-1234567890)</p>
                                     @error('book_codes')
                                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                     @enderror
@@ -186,17 +184,21 @@
                                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                     @enderror
                                 </div>
-
-                                <div>
-                                    <label for="tags" class="block text-sm font-medium text-gray-700 mb-1">برچسب‌ها</label>
-                                    <input type="text" name="tags" id="tags" value="{{ old('tags', $post->tags->pluck('name')->implode(', ')) }}"
-                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 @error('tags') border-red-300 @enderror">
-                                    <p class="text-xs text-gray-500 mt-1">برچسب‌ها را با کاما از هم جدا کنید.</p>
-                                    @error('tags')
-                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                    @enderror
-                                </div>
                             </div>
+
+                            <!-- نمایش اطلاعات تصویر (بدون امکان تغییر) -->
+                            @if($post->featuredImage)
+                                <div class="bg-blue-50 p-3 rounded-md mt-3 text-gray-700 text-sm">
+                                    <p><strong>وضعیت تصویر:</strong> این کتاب دارای تصویر است</p>
+                                    <p class="mt-1"><strong>مسیر تصویر:</strong> <code class="bg-gray-100 px-1 py-0.5 rounded text-xs text-gray-700">{{ $post->featuredImage->image_path }}</code></p>
+                                    <p class="mt-1"><strong>وضعیت نمایش:</strong> {{ $post->featuredImage->hide_image === 'hidden' ? 'مخفی' : 'قابل نمایش' }}</p>
+                                    <input type="hidden" name="hide_image" value="{{ $post->featuredImage->hide_image === 'hidden' ? '1' : '0' }}">
+                                </div>
+                            @else
+                                <div class="bg-yellow-50 p-3 rounded-md mt-3 text-gray-700 text-sm">
+                                    <p><strong>وضعیت تصویر:</strong> این کتاب بدون تصویر است</p>
+                                </div>
+                            @endif
                         </div>
 
                         <!-- بخش محتوا -->
@@ -216,99 +218,11 @@
 
                             <div class="mb-4">
                                 <label for="english_content" class="block text-sm font-medium text-gray-700 mb-1">توضیحات انگلیسی (اختیاری)</label>
-                                <textarea name="english_content" id="english_content" rows="10"
+                                <textarea name="english_content" id="english_content" rows="8"
                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 @error('english_content') border-red-300 @enderror">{{ old('english_content', $post->english_content) }}</textarea>
                                 @error('english_content')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                 @enderror
-                            </div>
-                        </div>
-
-                        <!-- بخش تصاویر -->
-                        <div class="bg-gray-50 p-4 rounded-lg mb-6">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4 pb-2 border-b border-gray-200">تصاویر کتاب</h3>
-
-                            <div class="mb-4">
-                                <label for="featured_image" class="block text-sm font-medium text-gray-700 mb-1">تصویر اصلی (جلد کتاب)</label>
-                                @if($post->featured_image)
-                                    <div class="mt-2 mb-4">
-                                        <div class="relative group w-full max-w-lg">
-                                            <img src="{{ asset('storage/' . $post->featured_image) }}" alt="{{ $post->title }}" class="h-48 w-auto object-cover rounded-lg shadow-sm">
-                                            <div class="absolute inset-0 bg-gray-900 bg-opacity-50 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition-opacity">
-                                                <span class="text-white text-sm">تصویر فعلی</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endif
-                                <input type="file" name="featured_image" id="featured_image"
-                                       class="mt-1 block w-full border border-gray-300 rounded-md p-2 @error('featured_image') border-red-300 @enderror"
-                                       accept="image/*">
-                                <p class="mt-1 text-xs text-gray-500">برای تغییر تصویر، یک فایل جدید انتخاب کنید. در غیر این صورت، تصویر فعلی حفظ می‌شود.</p>
-
-                                <div class="mt-2 flex items-center">
-                                    <input type="checkbox" name="hide_image" id="hide_image" value="1" {{ old('hide_image', $post->hide_image) ? 'checked' : '' }}
-                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 ml-2">
-                                    <label for="hide_image" class="text-sm text-gray-700">مخفی کردن تصویر اصلی</label>
-                                </div>
-
-                                @error('featured_image')
-                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            <!-- تصاویر موجود -->
-                            @if($post->images->count() > 0)
-                                <div class="mb-4">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">تصاویر فعلی</label>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
-                                        @foreach($post->images as $image)
-                                            <div class="border border-gray-200 rounded-lg p-3 relative">
-                                                <img src="{{ $image->image_url }}" alt="{{ $image->caption ?? $post->title }}" class="w-full h-32 object-cover rounded">
-                                                <div class="mt-2">
-                                                    <input type="text" name="existing_image_captions[{{ $image->id }}]" value="{{ old('existing_image_captions.' . $image->id, $image->caption) }}" placeholder="عنوان تصویر" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm">
-
-                                                    <div class="flex justify-between mt-2">
-                                                        <div class="flex items-center">
-                                                            <input type="checkbox" name="hide_existing_images[]" value="{{ $image->id }}" {{ old('hide_existing_images.' . $image->id, $image->hide_image) ? 'checked' : '' }} class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 ml-1">
-                                                            <label class="text-xs text-gray-700">مخفی کردن</label>
-                                                        </div>
-
-                                                        <div class="flex items-center">
-                                                            <input type="checkbox" name="delete_images[]" value="{{ $image->id }}" class="rounded border-gray-300 text-red-600 shadow-sm focus:border-red-300 focus:ring focus:ring-red-200 focus:ring-opacity-50 ml-1">
-                                                            <label class="text-xs text-red-700">حذف</label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @endif
-
-                            <!-- افزودن تصاویر جدید -->
-                            <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">افزودن تصاویر جدید</label>
-                                <div class="border border-gray-300 rounded-md p-4">
-                                    <div id="additional-images">
-                                        <div class="additional-image mb-3 pb-3 border-b border-gray-200">
-                                            <input type="file" name="post_images[]" class="mt-1 block w-full border border-gray-300 rounded-md p-2" accept="image/*">
-                                            <div class="grid grid-cols-2 gap-2 mt-2">
-                                                <div>
-                                                    <label class="text-sm text-gray-700">عنوان تصویر (اختیاری)</label>
-                                                    <input type="text" name="image_captions[]" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm">
-                                                </div>
-                                                <div class="flex items-center mt-5">
-                                                    <input type="checkbox" name="hide_post_images[]" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 ml-2">
-                                                    <label class="text-sm text-gray-700">مخفی کردن این تصویر</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <button type="button" id="add-image-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 px-3 rounded text-sm mt-2">
-                                        افزودن تصویر دیگر
-                                    </button>
-                                </div>
                             </div>
                         </div>
 
@@ -349,42 +263,4 @@
             </div>
         </div>
     </div>
-
-    @push('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const addImageBtn = document.getElementById('add-image-btn');
-                const additionalImagesContainer = document.getElementById('additional-images');
-
-                addImageBtn.addEventListener('click', function() {
-                    const newImageDiv = document.createElement('div');
-                    newImageDiv.className = 'additional-image mb-3 pb-3 border-b border-gray-200';
-                    newImageDiv.innerHTML = `
-                    <input type="file" name="post_images[]" class="mt-1 block w-full border border-gray-300 rounded-md p-2" accept="image/*">
-                    <div class="grid grid-cols-2 gap-2 mt-2">
-                        <div>
-                            <label class="text-sm text-gray-700">عنوان تصویر (اختیاری)</label>
-                            <input type="text" name="image_captions[]" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm">
-                        </div>
-                        <div class="flex items-center mt-5">
-                            <input type="checkbox" name="hide_post_images[]" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 ml-2">
-                            <label class="text-sm text-gray-700">مخفی کردن این تصویر</label>
-                        </div>
-                    </div>
-                    <button type="button" class="remove-image-btn bg-red-100 hover:bg-red-200 text-red-800 py-1 px-3 rounded text-sm mt-2">
-                        حذف این تصویر
-                    </button>
-                `;
-
-                    additionalImagesContainer.appendChild(newImageDiv);
-
-                    // اضافه کردن عملکرد دکمه حذف
-                    const removeBtn = newImageDiv.querySelector('.remove-image-btn');
-                    removeBtn.addEventListener('click', function() {
-                        newImageDiv.remove();
-                    });
-                });
-            });
-        </script>
-    @endpush
 </x-app-layout>
