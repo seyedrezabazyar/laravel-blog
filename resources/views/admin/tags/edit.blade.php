@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('ویرایش نویسنده') }}
+            {{ __('ویرایش تگ') }}
         </h2>
     </x-slot>
 
@@ -11,12 +11,12 @@
                 <div class="p-6 bg-white border-b border-gray-200">
                     <!-- نمایش اطلاعات دیباگ -->
                     <div class="mb-6 bg-yellow-50 p-4 rounded border border-yellow-200">
-                        <h3 class="font-bold text-lg mb-2">اطلاعات فعلی نویسنده:</h3>
-                        <p><strong>شناسه:</strong> {{ $author->id }}</p>
-                        <p><strong>نام:</strong> {{ $author->name }}</p>
-                        <p><strong>اسلاگ:</strong> {{ $author->slug }}</p>
-                        <p><strong>زندگی‌نامه:</strong> {{ $author->biography ?? 'خالی' }}</p>
-                        <p><strong>لینک صفحه:</strong> <a href="{{ route('blog.author', $author->slug) }}" target="_blank" class="text-blue-600">{{ route('blog.author', $author->slug) }}</a></p>
+                        <h3 class="font-bold text-lg mb-2">اطلاعات فعلی تگ:</h3>
+                        <p><strong>شناسه:</strong> {{ $tag->id }}</p>
+                        <p><strong>نام:</strong> {{ $tag->name }}</p>
+                        <p><strong>اسلاگ:</strong> {{ $tag->slug }}</p>
+                        <p><strong>توضیحات:</strong> {{ $tag->description ?? 'خالی' }}</p>
+                        <p><strong>لینک صفحه:</strong> <a href="{{ route('blog.tag', $tag->slug) }}" target="_blank" class="text-blue-600">{{ route('blog.tag', $tag->slug) }}</a></p>
                     </div>
 
                     @if(session('error'))
@@ -31,33 +31,34 @@
                         </div>
                     @endif
 
-                    <form action="{{ route('admin.authors.update', $author->id) }}" method="POST" id="authorForm">
+                    <form action="{{ route('admin.tags.update', $tag->id) }}" method="POST" id="tagForm">
                         @csrf
                         @method('PUT')
 
-                        <!-- نام نویسنده -->
+                        <!-- نام تگ -->
                         <div class="mb-4">
-                            <label for="name" class="block text-sm font-medium text-gray-700">نام نویسنده</label>
-                            <input type="text" name="name" id="name" value="{{ old('name', $author->name) }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>
+                            <label for="name" class="block text-sm font-medium text-gray-700">نام تگ</label>
+                            <input type="text" name="name" id="name" value="{{ old('name', $tag->name) }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>
                             @error('name')
                             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                             @enderror
                         </div>
 
-                        <!-- زندگی‌نامه -->
+                        <!-- توضیحات تگ -->
                         <div class="mb-4">
-                            <label for="biography" class="block text-sm font-medium text-gray-700">زندگی‌نامه</label>
-                            <textarea name="biography" id="biography" rows="6" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">{{ old('biography', $author->biography) }}</textarea>
-                            @error('biography')
+                            <label for="description" class="block text-sm font-medium text-gray-700">توضیحات</label>
+                            <textarea name="description" id="description" rows="6" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">{{ old('description', $tag->description) }}</textarea>
+                            <p class="text-gray-500 text-xs mt-1">توضیحات این تگ را وارد کنید (اختیاری)</p>
+                            @error('description')
                             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                             @enderror
                         </div>
 
                         <div class="flex items-center justify-between mt-6">
                             <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                                بروزرسانی نویسنده
+                                بروزرسانی تگ
                             </button>
-                            <a href="{{ route('admin.authors.index') }}" class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">
+                            <a href="{{ route('admin.tags.index') }}" class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">
                                 انصراف
                             </a>
                         </div>
@@ -81,7 +82,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const checkFormButton = document.getElementById('checkFormButton');
             const formDataDisplay = document.getElementById('formDataDisplay');
-            const form = document.getElementById('authorForm');
+            const form = document.getElementById('tagForm');
 
             checkFormButton.addEventListener('click', function() {
                 // جمع‌آوری همه داده‌های فرم
@@ -97,7 +98,7 @@
                 <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
                     <p><strong>توجه:</strong> اطمینان حاصل کنید که:</p>
                     <ol class="list-decimal pl-5 mt-2">
-                        <li>نام فیلدها در فرم (name, biography) با نام فیلدهای مدل مطابقت دارند.</li>
+                        <li>نام فیلدها در فرم (name, description) با نام فیلدهای مدل مطابقت دارند.</li>
                         <li>متد form از نوع POST است و اکشن به درستی به آدرس کنترلر اشاره می‌کند.</li>
                         <li>توکن CSRF و متد PUT به درستی در فرم اضافه شده‌اند.</li>
                     </ol>

@@ -75,7 +75,7 @@ class PostController extends Controller
     }
 
     /**
-     * نمایش فرم ویرایش پست با کوئری فوق‌العاده سبک - الهام گرفته از BlogController
+     * نمایش فرم ویرایش پست با کوئری فوق‌العاده سبک و کش‌گذاری هوشمند
      *
      * @param  int  $id
      * @return \Illuminate\View\View
@@ -158,8 +158,6 @@ class PostController extends Controller
 
             // 6. استفاده از کش طولانی مدت (6 ساعت) برای لیست‌های ثابت
             // اینها تقریباً استاتیک هستند و نیاز به بروزرسانی مکرر ندارند
-
-            // استفاده از کوئری‌های SQL خام برای سرعت بیشتر
             $categoriesCacheKey = "admin_categories_minimal_list";
             $categories = Cache::remember($categoriesCacheKey, 21600, function() {
                 return DB::select("SELECT id, name FROM categories ORDER BY name");

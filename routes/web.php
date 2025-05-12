@@ -49,81 +49,18 @@ Route::middleware('auth')->group(function () {
 
     // پنل مدیریت (فقط برای مدیران)
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
-        // مسیر ویرایش سریع برای پست 772083
-        Route::get('/posts/772083/edit', function() {
-            try {
-                // بارگذاری داده‌های پست با کوئری خام بهینه‌سازی شده
-                $postData = DB::table('posts')
-                    ->where('id', 772083)
-                    ->select([
-                        'id', 'title', 'english_title', 'slug', 'content', 'english_content',
-                        'category_id', 'author_id', 'publisher_id', 'language',
-                        'publication_year', 'format', 'book_codes', 'purchase_link',
-                        'is_published', 'hide_content'
-                    ])
-                    ->first();
-
-                if (!$postData) {
-                    return redirect()->route('admin.posts.index')
-                        ->with('error', 'پست مورد نظر یافت نشد.');
-                }
-
-                // بارگذاری تصویر شاخص با لود تأخیری
-                $featuredImage = Cache::remember("post_772083_featured_image", 3600, function() {
-                    return DB::table('post_images')
-                        ->where('post_id', 772083)
-                        ->select(['id', 'post_id', 'image_path', 'hide_image'])
-                        ->orderBy('sort_order')
-                        ->first();
-                });
-
-                // بارگذاری لیست‌های دسته‌بندی‌ها، نویسندگان و ناشران با کش
-                $categories = Cache::remember('admin_categories_list', 3600, function() {
-                    return DB::table('categories')
-                        ->select(['id', 'name'])
-                        ->orderBy('name')
-                        ->get();
-                });
-
-                $authors = Cache::remember('admin_authors_list', 3600, function() {
-                    return DB::table('authors')
-                        ->select(['id', 'name'])
-                        ->orderBy('name')
-                        ->get();
-                });
-
-                $publishers = Cache::remember('admin_publishers_list', 3600, function() {
-                    return DB::table('publishers')
-                        ->select(['id', 'name'])
-                        ->orderBy('name')
-                        ->get();
-                });
-
-                // تبدیل پست به یک آبجکت برای استفاده راحت‌تر در ویو
-                $post = (object)$postData;
-
-                // نمایش ویو edit با داده‌های بهینه‌سازی شده
-                return view('admin.posts.edit', compact('post', 'categories', 'authors', 'publishers', 'featuredImage'));
-
-            } catch (\Exception $e) {
-                report($e);
-                return redirect()->route('admin.posts.index')
-                    ->with('error', 'خطایی در بارگذاری فرم ویرایش رخ داد: ' . $e->getMessage());
-            }
-        })->name('posts.edit-772083');
-
         // مسیرهای استاندارد دسته‌بندی‌ها، نویسندگان و پست‌ها
         Route::resource('posts', PostController::class);
         Route::resource('categories', CategoryController::class);
         Route::resource('authors', AuthorController::class);
 
-        // مسیرهای ناشر - به صورت صریح برای جلوگیری از مشکلات احتمالی
+// مسیرهای ناشر - به صورت صریح با ترتیب درست
         Route::get('publishers', [PublisherController::class, 'index'])->name('publishers.index');
         Route::get('publishers/create', [PublisherController::class, 'create'])->name('publishers.create');
         Route::post('publishers', [PublisherController::class, 'store'])->name('publishers.store');
-        Route::get('publishers/{publisher}/edit', [PublisherController::class, 'edit'])->name('publishers.edit');
-        Route::put('publishers/{publisher}', [PublisherController::class, 'update'])->name('publishers.update');
-        Route::delete('publishers/{publisher}', [PublisherController::class, 'destroy'])->name('publishers.destroy');
+        Route::get('publishers/{id}/edit', [PublisherController::class, 'edit'])->name('publishers.edit');
+        Route::put('publishers/{id}', [PublisherController::class, 'update'])->name('publishers.update');
+        Route::delete('publishers/{id}', [PublisherController::class, 'destroy'])->name('publishers.destroy');
 
         // مسیرهای تصاویر پست
         Route::delete('post-images/{image}', [PostController::class, 'destroyImage'])->name('post-images.destroy');
