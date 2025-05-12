@@ -165,28 +165,15 @@ Route::get('/api/footer-partial', function () {
 });
 
 // پنل مدیریت (فقط برای مدیران)
-Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
-    // مسیر edit برای post با شناسه 772083 - بهینه‌سازی شده با محدود کردن پارامترها
-    Route::get('/posts/772083/edit', function() {
-        // برای اجتناب از تکرار کد، ما از کنترلر اصلی استفاده می‌کنیم
-        return app(App\Http\Controllers\Admin\PostController::class)->edit(772083);
-    })->name('posts.edit-772083');
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+    // مسیرهای گالری تصاویر تایید شده و رد شده
+    Route::get('/gallery/visible', [App\Http\Controllers\Admin\GalleryController::class, 'visible'])->name('gallery.visible');
+    Route::get('/api/gallery/visible', [App\Http\Controllers\Admin\GalleryController::class, 'getVisibleImages']);
 
-    // مسیرهای استاندارد resource
-    Route::resources([
-        'posts' => App\Http\Controllers\Admin\PostController::class,
-        'categories' => App\Http\Controllers\Admin\CategoryController::class,
-        'authors' => App\Http\Controllers\Admin\AuthorController::class,
-        'publishers' => App\Http\Controllers\Admin\PublisherController::class,
-    ]);
+    Route::get('/gallery/hidden', [App\Http\Controllers\Admin\GalleryController::class, 'hidden'])->name('gallery.hidden');
+    Route::get('/api/gallery/hidden', [App\Http\Controllers\Admin\GalleryController::class, 'getHiddenImages']);
 
-    Route::delete('post-images/{image}', [App\Http\Controllers\Admin\PostController::class, 'destroyImage'])->name('post-images.destroy');
-    Route::post('post-images/reorder', [App\Http\Controllers\Admin\PostController::class, 'reorderImages'])->name('post-images.reorder');
-
-    // گالری تصاویر - مسیرهای جدید
-    Route::get('/gallery', [App\Http\Controllers\Admin\GalleryController::class, 'index'])->name('gallery');
-    Route::get('/api/gallery/images', [App\Http\Controllers\Admin\GalleryController::class, 'getImages']);
-    Route::post('/api/gallery/categorize', [App\Http\Controllers\Admin\GalleryController::class, 'categorizeImage']);
+    Route::post('/api/gallery/manage', [App\Http\Controllers\Admin\GalleryController::class, 'manageImage']);
 });
 
 // مسیرهای احراز هویت

@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 500); // Updating to 500 characters
+            $table->string('name', 500);
             $table->string('slug')->unique();
-            $table->index('name'); // Índice para búsqueda por nombre
+            $table->text('description')->nullable();
+            $table->string('image')->nullable();
+            $table->index('name');
 
-            // Añadir contador en caché de posts (para evitar consultas lentas)
             $table->unsignedInteger('posts_count')->default(0);
 
             $table->timestamps();

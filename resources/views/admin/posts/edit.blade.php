@@ -74,18 +74,6 @@
                                         @endforeach
                                     </select>
                                 </div>
-
-                                <div>
-                                    <label for="publisher_id" class="block text-sm font-medium text-gray-700 mb-1">ناشر</label>
-                                    <select name="publisher_id" id="publisher_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                                        <option value="">انتخاب ناشر</option>
-                                        @foreach($publishers as $publisher)
-                                            <option value="{{ $publisher->id }}" {{ $post->publisher_id == $publisher->id ? 'selected' : '' }}>
-                                                {{ $publisher->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
                             </div>
 
                             <!-- ستون چپ -->
@@ -126,20 +114,6 @@
                                            value="{{ old('purchase_link', $post->purchase_link ?? '') }}"
                                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
                                 </div>
-
-                                <div>
-                                    <label for="authors" class="block text-sm font-medium text-gray-700 mb-1">نویسندگان کتاب</label>
-                                    <select name="authors[]" id="authors" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50" multiple>
-                                        @foreach($authors as $author)
-                                            <option value="{{ $author->id }}"
-                                                {{ (isset($post->author_id) && $post->author_id == $author->id) ||
-                                                   (isset($post_authors) && in_array($author->id, $post_authors)) ? 'selected' : '' }}>
-                                                {{ $author->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <p class="text-xs text-gray-500 mt-1">برای انتخاب چند نویسنده، دکمه Ctrl (یا Command در Mac) را نگه دارید.</p>
-                                </div>
                             </div>
                         </div>
 
@@ -169,64 +143,45 @@
                     </div>
                 </div>
 
-                <!-- کارت تصویر و تگ‌ها -->
+                <!-- کارت تصویر -->
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-4 md:p-6 bg-white border-b border-gray-200">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- بخش تصویر -->
-                            <div>
-                                <h3 class="text-lg font-bold text-gray-800 mb-4">تصویر جلد کتاب</h3>
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">تصویر جلد کتاب</h3>
 
-                                <div class="flex items-start space-x-4 space-x-reverse">
-                                    <!-- نمایش تصویر فعلی -->
-                                    <div class="w-28 h-40 flex-shrink-0">
-                                        @if(isset($featuredImage) && $featuredImage && $featuredImage->image_path)
-                                            <div class="relative w-full h-full">
-                                                <img
-                                                    src="{{ asset('storage/' . $featuredImage->image_path) }}"
-                                                    alt="{{ $post->title }}"
-                                                    class="object-cover w-full h-full rounded-md border"
-                                                    onerror="this.src='{{ asset('images/default-book.png') }}';"
-                                                >
+                        <div class="flex items-start space-x-4 space-x-reverse">
+                            <!-- نمایش تصویر فعلی -->
+                            <div class="w-28 h-40 flex-shrink-0">
+                                @if(isset($featuredImage) && $featuredImage && $featuredImage->image_path)
+                                    <div class="relative w-full h-full">
+                                        <img
+                                            src="{{ asset('storage/' . $featuredImage->image_path) }}"
+                                            alt="{{ $post->title }}"
+                                            class="object-cover w-full h-full rounded-md border"
+                                            onerror="this.src='{{ asset('images/default-book.png') }}';"
+                                        >
 
-                                                @if(isset($featuredImage->hide_image) && $featuredImage->hide_image == 'hidden')
-                                                    <div class="absolute inset-0 bg-red-500 bg-opacity-30 flex items-center justify-center rounded-md">
-                                                        <span class="text-white text-xs font-bold">مخفی</span>
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        @else
-                                            <div class="w-full h-full flex items-center justify-center bg-gray-100 rounded-md border">
-                                                <span class="text-xs text-gray-400">بدون تصویر</span>
+                                        @if(isset($featuredImage->hide_image) && $featuredImage->hide_image == 'hidden')
+                                            <div class="absolute inset-0 bg-red-500 bg-opacity-30 flex items-center justify-center rounded-md">
+                                                <span class="text-white text-xs font-bold">مخفی</span>
                                             </div>
                                         @endif
                                     </div>
-
-                                    <!-- آپلود تصویر جدید -->
-                                    <div class="flex-grow">
-                                        <div class="mb-2">
-                                            <label for="image" class="block text-sm font-medium text-gray-700 mb-1">تصویر جدید</label>
-                                            <input type="file" name="image" id="image"
-                                                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                                   accept="image/*">
-                                        </div>
-                                        <p class="text-xs text-gray-500">فرمت‌های مجاز: JPG، PNG - حداکثر 2 مگابایت</p>
+                                @else
+                                    <div class="w-full h-full flex items-center justify-center bg-gray-100 rounded-md border">
+                                        <span class="text-xs text-gray-400">بدون تصویر</span>
                                     </div>
-                                </div>
+                                @endif
                             </div>
 
-                            <!-- بخش تگ‌ها -->
-                            <div>
-                                <h3 class="text-lg font-bold text-gray-800 mb-4">برچسب‌های کتاب</h3>
-
-                                <div>
-                                    <label for="tags" class="block text-sm font-medium text-gray-700 mb-1">برچسب‌ها</label>
-                                    <input type="text" name="tags" id="tags"
-                                           value="{{ old('tags', $tags_list ?? '') }}"
-                                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                                           placeholder="برچسب‌ها را با کاما جدا کنید">
-                                    <p class="text-xs text-gray-500 mt-1">مثال: رمان، ادبیات معاصر، فانتزی</p>
+                            <!-- آپلود تصویر جدید -->
+                            <div class="flex-grow">
+                                <div class="mb-2">
+                                    <label for="image" class="block text-sm font-medium text-gray-700 mb-1">تصویر جدید</label>
+                                    <input type="file" name="image" id="image"
+                                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                           accept="image/*">
                                 </div>
+                                <p class="text-xs text-gray-500">فرمت‌های مجاز: JPG، PNG - حداکثر 2 مگابایت</p>
                             </div>
                         </div>
                     </div>
@@ -283,6 +238,13 @@
                         </a>
                     </div>
                 </div>
+
+                <!-- فیلدهای مخفی برای نویسنده، ناشر و تگ -->
+                <input type="hidden" name="author_id" value="{{ $post->author_id }}">
+                <input type="hidden" name="publisher_id" value="{{ $post->publisher_id }}">
+                @if(isset($tags_list))
+                    <input type="hidden" name="tags" value="{{ $tags_list }}">
+                @endif
             </form>
         </div>
     </div>
