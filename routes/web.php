@@ -21,6 +21,23 @@ Route::get('/dashboard', fn () => view('dashboard'))
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
+// مسیر دیباگ برای بررسی مسیرها
+Route::get('/debug/routes', function () {
+    $routes = [];
+    foreach (Route::getRoutes() as $route) {
+        if (strpos($route->getName(), 'publisher') !== false || strpos($route->uri, 'publisher') !== false) {
+            $routes[] = [
+                'method' => implode('|', $route->methods),
+                'uri' => $route->uri,
+                'name' => $route->getName(),
+                'action' => $route->getActionName(),
+            ];
+        }
+    }
+
+    return response()->json($routes);
+});
+
 // مسیرهای کاربر احراز هویت شده
 Route::middleware('auth')->group(function () {
     // پروفایل
@@ -32,7 +49,7 @@ Route::middleware('auth')->group(function () {
 
     // پنل مدیریت (فقط برای مدیران)
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
-        // مسیر ویرایش سریع برای پست 772083 - قبل از مسیرهای resource
+        // مسیر ویرایش سریع برای پست 772083
         Route::get('/posts/772083/edit', function() {
             try {
                 // بارگذاری داده‌های پست با کوئری خام بهینه‌سازی شده
@@ -95,21 +112,34 @@ Route::middleware('auth')->group(function () {
             }
         })->name('posts.edit-772083');
 
-        // مسیرهای استاندارد resource
-        Route::resources([
-            'posts' => PostController::class,
-            'categories' => CategoryController::class,
-            'authors' => AuthorController::class,
-            'publishers' => PublisherController::class,
-        ]);
+        // مسیرهای استاندارد دسته‌بندی‌ها، نویسندگان و پست‌ها
+        Route::resource('posts', PostController::class);
+        Route::resource('categories', CategoryController::class);
+        Route::resource('authors', AuthorController::class);
 
+        // مسیرهای ناشر - به صورت صریح برای جلوگیری از مشکلات احتمالی
+        Route::get('publishers', [PublisherController::class, 'index'])->name('publishers.index');
+        Route::get('publishers/create', [PublisherController::class, 'create'])->name('publishers.create');
+        Route::post('publishers', [PublisherController::class, 'store'])->name('publishers.store');
+        Route::get('publishers/{publisher}/edit', [PublisherController::class, 'edit'])->name('publishers.edit');
+        Route::put('publishers/{publisher}', [PublisherController::class, 'update'])->name('publishers.update');
+        Route::delete('publishers/{publisher}', [PublisherController::class, 'destroy'])->name('publishers.destroy');
+
+        // مسیرهای تصاویر پست
         Route::delete('post-images/{image}', [PostController::class, 'destroyImage'])->name('post-images.destroy');
         Route::post('post-images/reorder', [PostController::class, 'reorderImages'])->name('post-images.reorder');
 
         // گالری تصاویر - مسیرهای جدید
-        Route::get('/gallery', [GalleryController::class, 'index'])->name('gallery');
-        Route::get('/api/gallery/images', [GalleryController::class, 'getImages']);
-        Route::post('/api/gallery/categorize', [GalleryController::class, 'categorizeImage']);
+        Route::get('gallery', [GalleryController::class, 'index'])->name('gallery');
+        Route::get('api/gallery/images', [GalleryController::class, 'getImages']);
+        Route::post('api/gallery/categorize', [GalleryController::class, 'categorizeImage']);
+
+        // مسیرهای گالری تصاویر تایید شده و رد شده
+        Route::get('gallery/visible', [GalleryController::class, 'visible'])->name('gallery.visible');
+        Route::get('api/gallery/visible', [GalleryController::class, 'getVisibleImages']);
+        Route::get('gallery/hidden', [GalleryController::class, 'hidden'])->name('gallery.hidden');
+        Route::get('api/gallery/hidden', [GalleryController::class, 'getHiddenImages']);
+        Route::post('api/gallery/manage', [GalleryController::class, 'manageImage']);
     });
 });
 
@@ -121,7 +151,7 @@ Route::get('/book/{post:slug}', [BlogController::class, 'show'])->name('blog.sho
 Route::get('/tags', [BlogController::class, 'tags'])->name('blog.tags');
 Route::get('/tag/{tag:slug}', [BlogController::class, 'tag'])->name('blog.tag');
 
-// صفحه ناشرها - example.com/publishers و example.com/publisher/publisher_slug
+// صفحه ناشران - example.com/publishers و example.com/publisher/publisher_slug
 Route::get('/publishers', [BlogController::class, 'publishers'])->name('blog.publishers');
 Route::get('/publisher/{publisher:slug}', [BlogController::class, 'publisher'])->name('blog.publisher');
 
@@ -162,18 +192,6 @@ Route::prefix('feed')->name('feed.')->group(function () {
 
 Route::get('/api/footer-partial', function () {
     return response()->view('partials.footer')->header('Cache-Control', 'public, max-age=3600');
-});
-
-// پنل مدیریت (فقط برای مدیران)
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
-    // مسیرهای گالری تصاویر تایید شده و رد شده
-    Route::get('/gallery/visible', [App\Http\Controllers\Admin\GalleryController::class, 'visible'])->name('gallery.visible');
-    Route::get('/api/gallery/visible', [App\Http\Controllers\Admin\GalleryController::class, 'getVisibleImages']);
-
-    Route::get('/gallery/hidden', [App\Http\Controllers\Admin\GalleryController::class, 'hidden'])->name('gallery.hidden');
-    Route::get('/api/gallery/hidden', [App\Http\Controllers\Admin\GalleryController::class, 'getHiddenImages']);
-
-    Route::post('/api/gallery/manage', [App\Http\Controllers\Admin\GalleryController::class, 'manageImage']);
 });
 
 // مسیرهای احراز هویت
