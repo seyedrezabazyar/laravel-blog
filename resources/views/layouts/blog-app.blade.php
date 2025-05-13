@@ -72,7 +72,7 @@
 </head>
 <body class="font-sans antialiased bg-gray-50">
 <!-- هدر سبک برای بارگذاری سریع‌تر -->
-@includeFirst(['partials.header-minimal', 'partials.header'])
+@includeFirst(['partials.header', 'partials.header'])
 
 <!-- محتوای اصلی -->
 <main>

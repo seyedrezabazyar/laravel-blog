@@ -45,13 +45,7 @@
             @forelse($posts as $post)
                 <x-blog-card :post="$post" />
             @empty
-                <div class="col-span-3 bg-white p-12 rounded-lg shadow-sm text-center">
-                    <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
-                    </svg>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">هیچ کتابی در این دسته‌بندی یافت نشد</h3>
-                    <p class="text-gray-500">به زودی کتاب‌های جدیدی در این دسته‌بندی اضافه خواهد شد.</p>
-                </div>
+                <!-- Empty state content -->
             @endforelse
         </div>
 

@@ -112,7 +112,7 @@ class Post extends Model
 
         return $this->hasOne(PostImage::class)
             ->select(['id', 'post_id', 'image_path', 'caption', 'hide_image', 'sort_order'])
-            ->orderBy('sort_order');
+            ->orderBy('sort_order', 'asc');
     }
 
     /**

@@ -199,34 +199,40 @@ class BlogController extends Controller
     }
 
     /**
-     * نمایش پست‌های یک دسته‌بندی خاص - نسخه نهایی بهینه‌شده
+     * Display posts from a specific category - optimized version
      */
     public function category(Category $category)
     {
-        // Clave de caché única basada en la categoría y parámetros importantes
+        // پاک کردن کش قبلی
         $page = request()->get('page', 1);
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
         $cacheKey = "category_posts_{$category->id}_page_{$page}_" . ($isAdmin ? 'admin' : 'user');
+        Cache::forget($cacheKey);
 
-        // Caché de datos por 12 horas
-        $posts = Cache::remember($cacheKey, 12 * 60 * 60, function () use ($category, $isAdmin) {
-            return Post::where('is_published', true)
-                ->when(!$isAdmin, function ($query) {
-                    $query->where('hide_content', false);
-                })
-                ->where('category_id', $category->id)
-                ->select(['id', 'title', 'slug', 'category_id', 'author_id', 'publication_year', 'format'])
-                ->with([
-                    'featuredImage' => function($query) {
-                        $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
-                    },
-                    'author:id,name,slug'
-                ])
-                ->latest()
-                ->simplePaginate(12); // Usar simplePaginate en lugar de paginate
-        });
+        // لود کردن پست‌ها با تمام فیلدهای مورد نیاز
+        $posts = Post::where('is_published', true)
+            ->when(!$isAdmin, function ($query) {
+                $query->where('hide_content', false);
+            })
+            ->where('category_id', $category->id)
+            ->with([
+                'featuredImage' => function($query) {
+                    $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
+                },
+                'author:id,name,slug'
+            ])
+            ->latest()
+            ->simplePaginate(12);
 
-        // No cargar categorías adicionales - ya estamos en una página de categoría específica
+        // برای اطمینان - بررسی دسترسی به داده‌های featuredImage در کنسول
+        foreach ($posts as $post) {
+            if ($post->featuredImage) {
+                \Log::info('Post Image: ' . $post->id, [
+                    'image_path' => $post->featuredImage->image_path,
+                    'hide_image' => $post->featuredImage->hide_image
+                ]);
+            }
+        }
 
         return view('blog.category', compact('posts', 'category'));
     }

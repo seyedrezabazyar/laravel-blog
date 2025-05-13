@@ -15,11 +15,11 @@ class PostImage extends Model
         'sort_order',
     ];
 
-    // TTL de caché para URLs de imágenes - 7 días
+    // TTL for image URL cache - 7 days
     protected $imageCacheTtl = 604800;
 
     /**
-     * Relación con el post - optimizada
+     * Relationship with post - optimized
      */
     public function post()
     {
@@ -27,7 +27,7 @@ class PostImage extends Model
     }
 
     /**
-     * Verificar si la imagen está oculta
+     * Check if image is hidden
      */
     public function isHidden()
     {
@@ -35,7 +35,7 @@ class PostImage extends Model
     }
 
     /**
-     * Verificar si la imagen es visible
+     * Check if image is visible
      */
     public function isVisible()
     {
@@ -43,9 +43,15 @@ class PostImage extends Model
     }
 
     /**
-     * Obtener URL de imagen en caché
-     *
-     * Esto reduce el procesamiento necesario para cada solicitud de imagen
+     * Check if image is restricted (NULL or hidden)
+     */
+    public function isRestricted()
+    {
+        return $this->hide_image === null || $this->hide_image === 'hidden';
+    }
+
+    /**
+     * Get cached image URL
      */
     public function getImageUrlAttribute()
     {
@@ -56,52 +62,82 @@ class PostImage extends Model
                 return asset('images/default-book.png');
             }
 
-            // URL directa para rutas HTTP/HTTPS
+            // Direct URL for HTTP/HTTPS paths
             if (strpos($this->image_path, 'http://') === 0 || strpos($this->image_path, 'https://') === 0) {
                 return $this->image_path;
             }
 
-            // Manejar dominio images.balyan.ir
+            // Handle images.balyan.ir domain
             if (strpos($this->image_path, 'images.balyan.ir/') !== false) {
                 return 'https://' . $this->image_path;
             }
 
-            // Manejar imágenes del host de descarga
+            // Handle images from download host
             if (strpos($this->image_path, 'post_images/') === 0 || strpos($this->image_path, 'posts/') === 0) {
                 return config('app.custom_image_host', 'https://images.balyan.ir') . '/' . $this->image_path;
             }
 
-            // Fallback al almacenamiento local
+            // Local storage fallback
             return asset('storage/' . $this->image_path);
         });
     }
 
     /**
-     * Obtener URL para mostrar la imagen
-     *
-     * Tiene en cuenta los permisos de usuario y la visibilidad de la imagen
+     * Get display URL for the image based on visibility and user role
      */
     public function getDisplayUrlAttribute()
     {
-        // Generar clave de caché incluyendo el estado de admin
+        // Generate cache key including admin status
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
         $cacheKey = "post_image_{$this->id}_display_url_" . ($isAdmin ? 'admin' : 'user');
 
         return Cache::remember($cacheKey, $this->imageCacheTtl, function () use ($isAdmin) {
-            // Imagen predeterminada
+            // Default image
             $defaultImage = asset('images/default-book.png');
 
-            // Siempre mostrar la imagen real a los administradores
+            // If image path is empty, return default image regardless of user role
+            if (empty($this->image_path)) {
+                return $defaultImage;
+            }
+
+            // For admins, always show the actual image
             if ($isAdmin) {
                 return $this->image_url;
             }
 
-            // Mostrar imagen predeterminada si está oculta o vacía
-            if ($this->hide_image === 'hidden' || empty($this->image_path)) {
-                return $defaultImage;
+            // For non-admins:
+            // - Show actual image only if hide_image is 'visible'
+            // - Show default image if hide_image is NULL or 'hidden'
+            if ($this->hide_image === 'visible') {
+                return $this->image_url;
             }
 
-            return $this->image_url;
+            return $defaultImage;
         });
+    }
+
+    public function getFullImageUrl($imagePath)
+    {
+        if (empty($imagePath)) {
+            return asset('images/default-book.png');
+        }
+
+        // URL مستقیم برای مسیرهای HTTP/HTTPS
+        if (strpos($imagePath, 'http://') === 0 || strpos($imagePath, 'https://') === 0) {
+            return $imagePath;
+        }
+
+        // مدیریت دامنه images.balyan.ir
+        if (strpos($imagePath, 'images.balyan.ir/') !== false) {
+            return 'https://' . $imagePath;
+        }
+
+        // مدیریت تصاویر از هاست دانلود
+        if (strpos($imagePath, 'post_images/') === 0 || strpos($imagePath, 'posts/') === 0) {
+            return config('app.custom_image_host', 'https://images.balyan.ir') . '/' . $imagePath;
+        }
+
+        // فالبک به ذخیره‌سازی محلی
+        return asset('storage/' . $imagePath);
     }
 }
