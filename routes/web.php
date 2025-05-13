@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\PublisherController;
+use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\RssController;
@@ -20,23 +21,6 @@ Route::get('/', [BlogController::class, 'index'])->name('blog.index');
 Route::get('/dashboard', fn () => view('dashboard'))
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
-
-// مسیر دیباگ برای بررسی مسیرها
-Route::get('/debug/routes', function () {
-    $routes = [];
-    foreach (Route::getRoutes() as $route) {
-        if (strpos($route->getName(), 'publisher') !== false || strpos($route->uri, 'publisher') !== false) {
-            $routes[] = [
-                'method' => implode('|', $route->methods),
-                'uri' => $route->uri,
-                'name' => $route->getName(),
-                'action' => $route->getActionName(),
-            ];
-        }
-    }
-
-    return response()->json($routes);
-});
 
 // مسیرهای کاربر احراز هویت شده
 Route::middleware('auth')->group(function () {
@@ -54,7 +38,12 @@ Route::middleware('auth')->group(function () {
         Route::resource('categories', CategoryController::class);
         Route::resource('authors', AuthorController::class);
 
-// مسیرهای ناشر - به صورت صریح با ترتیب درست
+        // مسیرهای تگ‌ها - فقط index، edit و update
+        Route::get('tags', [TagController::class, 'index'])->name('tags.index');
+        Route::get('tags/{id}/edit', [TagController::class, 'edit'])->name('tags.edit');
+        Route::put('tags/{id}', [TagController::class, 'update'])->name('tags.update');
+
+        // مسیرهای ناشر - به صورت صریح با ترتیب درست
         Route::get('publishers', [PublisherController::class, 'index'])->name('publishers.index');
         Route::get('publishers/create', [PublisherController::class, 'create'])->name('publishers.create');
         Route::post('publishers', [PublisherController::class, 'store'])->name('publishers.store');
@@ -66,16 +55,16 @@ Route::middleware('auth')->group(function () {
         Route::delete('post-images/{image}', [PostController::class, 'destroyImage'])->name('post-images.destroy');
         Route::post('post-images/reorder', [PostController::class, 'reorderImages'])->name('post-images.reorder');
 
-        // گالری تصاویر - مسیرهای جدید
+// روت‌های گالری تصاویر
         Route::get('gallery', [GalleryController::class, 'index'])->name('gallery');
-        Route::get('api/gallery/images', [GalleryController::class, 'getImages']);
-        Route::post('api/gallery/categorize', [GalleryController::class, 'categorizeImage']);
-
-        // مسیرهای گالری تصاویر تایید شده و رد شده
         Route::get('gallery/visible', [GalleryController::class, 'visible'])->name('gallery.visible');
-        Route::get('api/gallery/visible', [GalleryController::class, 'getVisibleImages']);
         Route::get('gallery/hidden', [GalleryController::class, 'hidden'])->name('gallery.hidden');
+
+// API روت‌های گالری برای دریافت و مدیریت تصاویر
+        Route::get('api/gallery/images', [GalleryController::class, 'getImages']);
+        Route::get('api/gallery/visible', [GalleryController::class, 'getVisibleImages']);
         Route::get('api/gallery/hidden', [GalleryController::class, 'getHiddenImages']);
+        Route::post('api/gallery/categorize', [GalleryController::class, 'categorizeImage']);
         Route::post('api/gallery/manage', [GalleryController::class, 'manageImage']);
     });
 });

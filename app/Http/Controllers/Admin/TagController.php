@@ -33,9 +33,6 @@ class TagController extends Controller
     public function edit($id)
     {
         try {
-            // لاگ برای اشکال‌زدایی
-            Log::info('Edit tag page accessed', ['tag_id' => $id]);
-
             // دریافت تگ با ID
             $tag = Tag::findOrFail($id);
 
@@ -63,28 +60,25 @@ class TagController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            // لاگ برای اشکال‌زدایی
-            Log::info('Update tag request', [
-                'tag_id' => $id,
-                'data' => $request->all()
-            ]);
-
             // دریافت تگ با ID
             $tag = Tag::findOrFail($id);
 
             // اعتبارسنجی داده‌های ورودی
             $validated = $request->validate([
-                'name' => 'required|max:255',
-                'description' => 'nullable',
+                'name' => 'required|max:255|unique:tags,name,' . $id,
+                'slug' => 'nullable|max:255|unique:tags,slug,' . $id,
             ]);
 
-            // اسلاگ به صورت خودکار از نام ساخته می‌شود
-            $validated['slug'] = Str::slug($validated['name']);
+            // اگر اسلاگ ارائه نشده باشد، آن را از نام ایجاد کنید
+            if (empty($validated['slug'])) {
+                $validated['slug'] = Str::slug($validated['name']);
+            } else {
+                // در غیر این صورت، اسلاگ ارائه شده را اسلاگ کنید
+                $validated['slug'] = Str::slug($validated['slug']);
+            }
 
             // بروزرسانی تگ
             $tag->update($validated);
-
-            Log::info('Tag updated', ['id' => $tag->id, 'name' => $tag->name]);
 
             return redirect()->route('admin.tags.index')
                 ->with('success', 'تگ با موفقیت به‌روزرسانی شد.');

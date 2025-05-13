@@ -35,33 +35,6 @@
             color: var(--primary-color);
         }
 
-        .view-toggle {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-
-        .view-toggle-btn {
-            padding: 8px 20px;
-            margin: 0 5px;
-            background-color: #e0e0e0;
-            color: #555;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-weight: bold;
-        }
-
-        .view-toggle-btn:hover {
-            background-color: #d0d0d0;
-        }
-
-        .view-toggle-btn.active {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
         /* استایل برای بخش عملیات گروهی */
         .bulk-actions-container {
             background: #e9f7f6;
@@ -95,12 +68,6 @@
         .bulk-btn:hover {
             transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .bulk-btn-reject {
-            background-color: var(--danger-color);
-            border: none;
-            color: white;
         }
 
         .bulk-btn-unapprove {
@@ -201,7 +168,7 @@
 
         .image-actions {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             padding: 5px;
             background: white;
         }
@@ -209,7 +176,7 @@
         .btn-action {
             flex: 1;
             margin: 0 2px;
-            padding: 4px 0;
+            padding: 8px 0;
             border: none;
             border-radius: 3px;
             font-size: 12px;
@@ -218,13 +185,8 @@
             transition: all 0.2s ease;
         }
 
-        .btn-orange {
+        .btn-warning {
             background-color: var(--warning-color);
-            color: white;
-        }
-
-        .btn-red {
-            background-color: var(--danger-color);
             color: white;
         }
 
@@ -598,7 +560,6 @@
         <div class="bulk-actions-title">عملیات گروهی</div>
         <div class="d-flex justify-content-center flex-wrap">
             <button class="bulk-btn bulk-btn-unapprove" onclick="bulkManage('unapprove')">خروج از حالت تایید</button>
-            <button class="bulk-btn bulk-btn-reject" onclick="bulkManage('reject')">رد همه</button>
         </div>
     </div>
 </div>
@@ -823,8 +784,7 @@
                         <div class="approved-badge" title="تاریخ تایید: ${formattedDate}">تایید شده</div>
                     </div>
                     <div class="image-actions">
-                        <button class="btn-action btn-orange" onclick="manageImage(${image.id}, 'unapprove')">خروج از حالت تایید</button>
-                        <button class="btn-action btn-red" onclick="manageImage(${image.id}, 'reject')">رد</button>
+                        <button class="btn-action btn-warning" onclick="manageImage(${image.id}, 'unapprove')">خروج از حالت تایید</button>
                     </div>
                 </div>
             `;
@@ -865,6 +825,7 @@
         window.manageImage = function(imageId, action) {
             if (confirm(`آیا از ${action === 'reject' ? 'رد کردن' : 'خارج کردن از حالت تایید'} این تصویر اطمینان دارید؟`)) {
                 // نمایش افکت محو شدن
+// نمایش افکت محو شدن
                 const imageElement = document.querySelector(`.gallery-image[data-image-id="${imageId}"]`);
                 if (imageElement) {
                     const cardElement = imageElement.closest('.col-lg-3');

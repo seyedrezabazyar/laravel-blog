@@ -582,8 +582,8 @@
             emptyGallery.classList.remove('d-none');
         }
 
-        // تابع برای دسته‌بندی تصویر
-        window.categorizeImage = function(imageId, hideValue) {
+// تابع برای دسته‌بندی تصویر
+        window.categorizeImage = function(imageId, approve) {
             // نمایش افکت محو شدن
             const imageElement = document.querySelector(`[data-image-id="${imageId}"]`);
             if (imageElement) {
@@ -630,6 +630,9 @@
             }
 
             // ارسال درخواست به سرور
+            // مهم: مقدار hide_image را برعکس ارسال می‌کنیم چون راهکار این است
+            // approve = true --> hide_image = false (نمایش تصویر / تایید تصویر)
+            // approve = false --> hide_image = true (مخفی کردن تصویر / رد تصویر)
             fetch('/admin/api/gallery/categorize', {
                 method: 'POST',
                 headers: {
@@ -638,7 +641,7 @@
                 },
                 body: JSON.stringify({
                     image_id: imageId,
-                    hide_image: hideValue
+                    hide_image: !approve // برعکس کردن مقدار برای ارسال درست به سرور
                 })
             })
                 .then(response => response.json())

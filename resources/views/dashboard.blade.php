@@ -305,12 +305,13 @@
                         <p class="text-gray-600 mb-4">مدیریت برچسب‌های محتوا</p>
                         <div class="flex justify-between items-center">
                             <span class="text-yellow-600 font-semibold">{{ \App\Models\Tag::count() }} تگ</span>
-                            <a href="{{ route('blog.tags') }}" class="bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700 transition">
+                            <a href="{{ route('admin.tags.index') }}" class="bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700 transition">
                                 مشاهده
                             </a>
                         </div>
                     </div>
                 </div>
+
             </div>
 
             <!-- مدیریت گالری تصاویر -->
@@ -359,7 +360,7 @@
                                 <span class="text-gray-500 text-sm block">تصویر</span>
                             </div>
                             <div class="text-center">
-                                <a href="{{ route('admin.gallery') }}?filter=visible" class="bg-green-600 text-white py-2 px-6 rounded-md inline-block hover:bg-green-700 transition">
+                                <a href="{{ route('admin.gallery.visible') }}" class="bg-green-600 text-white py-2 px-6 rounded-md inline-block hover:bg-green-700 transition">
                                     مشاهده
                                 </a>
                             </div>
@@ -382,7 +383,7 @@
                                 <span class="text-gray-500 text-sm block">تصویر</span>
                             </div>
                             <div class="text-center">
-                                <a href="{{ route('admin.gallery') }}?filter=hidden" class="bg-red-600 text-white py-2 px-6 rounded-md inline-block hover:bg-red-700 transition">
+                                <a href="{{ route('admin.gallery.hidden') }}" class="bg-red-600 text-white py-2 px-6 rounded-md inline-block hover:bg-red-700 transition">
                                     مشاهده
                                 </a>
                             </div>
