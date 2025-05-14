@@ -23,8 +23,8 @@ return new class extends Migration
                 $this->dropIndexIfExists('posts', 'posts_fulltext_optimized');
 
                 // بخش 2: ایجاد ایندکس‌های FULLTEXT بهینه‌سازی شده
-                // ایندکس اول: فقط عناوین (برای جستجوی سریع)
-                DB::statement('ALTER TABLE posts ADD FULLTEXT INDEX posts_title_fulltext (title, english_title)');
+                // ایندکس اول: فقط ستون title (برای سازگاری با متد scopeFullTextSearch)
+                DB::statement('ALTER TABLE posts ADD FULLTEXT INDEX posts_title_fulltext (title)');
 
                 // ایندکس دوم: همه فیلدهای متنی برای جستجوی کامل
                 DB::statement('ALTER TABLE posts ADD FULLTEXT INDEX posts_fulltext (title, english_title, book_codes, content, english_content)');

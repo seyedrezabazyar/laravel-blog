@@ -31,47 +31,46 @@
                 @endforeach
             </div>
 
-            <!-- Pagination - SimplePaginate Version -->
-            <!-- صفحه‌بندی -->
+            <!-- Pagination - با اصلاح برای حفظ پارامتر جستجو -->
             <div class="mt-10 flex justify-between">
                 @if($posts->previousPageUrl())
-                    <a href="{{ $posts->previousPageUrl() }}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition">
-            <span class="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-                صفحه قبلی
-            </span>
+                    <a href="{{ $posts->previousPageUrl() . '&q=' . urlencode($query) }}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition">
+                        <span class="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                            صفحه قبلی
+                        </span>
                     </a>
                 @else
                     <span class="px-4 py-2 bg-indigo-300 text-white rounded-md cursor-not-allowed">
-            <span class="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-                صفحه قبلی
-            </span>
-        </span>
+                        <span class="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                            صفحه قبلی
+                        </span>
+                    </span>
                 @endif
 
                 @if($posts->hasMorePages())
-                    <a href="{{ $posts->nextPageUrl() }}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition">
-            <span class="flex items-center">
-                صفحه بعدی
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-            </span>
+                    <a href="{{ $posts->nextPageUrl() . '&q=' . urlencode($query) }}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition">
+                        <span class="flex items-center">
+                            صفحه بعدی
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </span>
                     </a>
                 @else
                     <span class="px-4 py-2 bg-indigo-300 text-white rounded-md cursor-not-allowed">
-            <span class="flex items-center">
-                صفحه بعدی
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-            </span>
-        </span>
+                        <span class="flex items-center">
+                            صفحه بعدی
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </span>
+                    </span>
                 @endif
             </div>
         @else

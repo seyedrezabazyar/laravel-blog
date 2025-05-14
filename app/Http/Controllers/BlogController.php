@@ -342,7 +342,7 @@ class BlogController extends Controller
     }
 
     /**
-     * جستجو در وبلاگ - نسخه بسیار ساده شده فقط با نتایج جستجو
+     * جستجو در وبلاگ - نسخه بهینه‌سازی شده با حفظ پارامترهای جستجو
      */
     public function search(Request $request)
     {
@@ -357,7 +357,7 @@ class BlogController extends Controller
 
         // نتایج جستجو را از کش بخوان یا محاسبه کن
         $posts = Cache::remember($cacheKey, $this->cacheTtl, function () use ($query, $request) {
-            // کد قبلی بدون تغییر
+            // کد جستجو
             $postsQuery = Post::visibleToUser()
                 ->select(['id', 'title', 'slug', 'category_id', 'author_id', 'publisher_id', 'publication_year', 'format'])
                 ->with([
@@ -369,9 +369,19 @@ class BlogController extends Controller
                     'authors:id,name,slug'
                 ]);
 
-            // کد جستجو بدون تغییر
+            // کد جستجو
             if (method_exists(Post::class, 'scopeFullTextSearch')) {
-                $postsQuery->fullTextSearch($query);
+                try {
+                    $postsQuery->fullTextSearch($query);
+                } catch (\Exception $e) {
+                    // اگر جستجوی FULLTEXT با خطا مواجه شد، از جستجوی LIKE استفاده کن
+                    \Log::error('Search error: ' . $e->getMessage());
+                    $postsQuery->where(function ($q) use ($query) {
+                        $q->where('title', 'like', "%{$query}%")
+                            ->orWhere('english_title', 'like', "%{$query}%")
+                            ->orWhere('book_codes', 'like', "%{$query}%");
+                    });
+                }
             } else {
                 $postsQuery->where(function ($q) use ($query) {
                     $q->where('title', 'like', "%{$query}%")
@@ -380,10 +390,13 @@ class BlogController extends Controller
                 });
             }
 
-            return $postsQuery->latest()->simplePaginate(12);
+            $result = $postsQuery->latest()->simplePaginate(12);
+
+            // مهم: اضافه کردن پارامتر جستجو به URL صفحه‌بندی
+            return $result->appends(['q' => $query]);
         });
 
-        // تغییر: ساده‌سازی کد پست‌های محبوب
+        // پست‌های محبوب
         $popularPosts = Cache::remember('popular_posts', $this->cacheTtl * 24, function () {
             return Post::visibleToUser()
                 ->select(['id', 'title', 'slug'])
@@ -397,7 +410,6 @@ class BlogController extends Controller
                 ->get();
         });
 
-        // حذف categories از compact
         return view('blog.search', compact('posts', 'query', 'popularPosts'));
     }
 

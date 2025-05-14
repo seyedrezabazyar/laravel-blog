@@ -211,17 +211,11 @@ class Post extends Model
         // پاکسازی عبارت جستجو برای جلوگیری از SQL Injection
         $searchTerm = preg_replace('/[^\p{L}\p{N}_\s-]/u', '', $searchTerm);
 
-        // بررسی وجود ایندکس FULLTEXT - با استفاده از try-catch برای امنیت بیشتر
-        try {
-            // استفاده از ایندکس مشخص شده برای بهینه‌سازی جستجو
-            return $query->whereRaw("MATCH(title) AGAINST(? IN BOOLEAN MODE)", [$searchTerm . '*']);
-        } catch (\Exception $e) {
-            // در صورت بروز خطا از جستجوی ساده استفاده می‌کنیم
-            \Log::error('Search error: ' . $e->getMessage());
-
-            // جستجو فقط در عنوان برای کارایی بیشتر
-            return $query->where('title', 'like', "%{$searchTerm}%")
-                ->orWhere('english_title', 'like', "%{$searchTerm}%");
-        }
+        // استفاده از جستجوی LIKE به جای FULLTEXT
+        return $query->where(function($q) use ($searchTerm) {
+            $q->where('title', 'like', "%{$searchTerm}%")
+                ->orWhere('english_title', 'like', "%{$searchTerm}%")
+                ->orWhere('book_codes', 'like', "%{$searchTerm}%");
+        });
     }
 }
