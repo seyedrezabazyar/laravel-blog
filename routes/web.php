@@ -55,20 +55,19 @@ Route::middleware('auth')->group(function () {
         Route::delete('post-images/{image}', [PostController::class, 'destroyImage'])->name('post-images.destroy');
         Route::post('post-images/reorder', [PostController::class, 'reorderImages'])->name('post-images.reorder');
 
-// روت‌های گالری تصاویر
+        // مسیرهای گالری - بدون گروه‌بندی و با نام‌های مستقیم
+        // مسیر اصلی با نام admin.gallery
         Route::get('gallery', [GalleryController::class, 'index'])->name('gallery');
+
+        // سایر مسیرهای گالری با نام‌های مستقیم
         Route::get('gallery/visible', [GalleryController::class, 'visible'])->name('gallery.visible');
         Route::get('gallery/hidden', [GalleryController::class, 'hidden'])->name('gallery.hidden');
-        Route::get('gallery/real', [GalleryController::class, 'realImages'])->name('gallery.real'); // مسیر جدید
+        Route::get('gallery/real', [GalleryController::class, 'real'])->name('gallery.real');
 
-// API روت‌های گالری برای دریافت و مدیریت تصاویر
-        Route::get('api/gallery/images', [GalleryController::class, 'getImages']);
-        Route::get('api/gallery/visible', [GalleryController::class, 'getVisibleImages']);
-        Route::get('api/gallery/hidden', [GalleryController::class, 'getHiddenImages']);
-        Route::get('api/gallery/real', [GalleryController::class, 'getRealImages']); // مسیر API جدید
-        Route::post('api/gallery/categorize', [GalleryController::class, 'categorizeImage']);
-        Route::post('api/gallery/manage', [GalleryController::class, 'manageImage']);
-
+        // مسیرهای API برای تأیید و رد تصاویر
+        Route::post('gallery/approve/{id}', [GalleryController::class, 'approve'])->name('gallery.approve');
+        Route::post('gallery/reject/{id}', [GalleryController::class, 'reject'])->name('gallery.reject');
+        Route::post('gallery/bulk-approve', [GalleryController::class, 'bulkApprove'])->name('gallery.bulk-approve');
     });
 });
 

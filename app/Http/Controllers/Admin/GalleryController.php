@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Image;
+use App\Models\PostImage; // تغییر از Image به PostImage
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -12,7 +12,7 @@ class GalleryController extends Controller
     // نمایش همه تصاویر بدون فیلتر hide_image و با pagination
     public function index()
     {
-        $images = Image::paginate(4);
+        $images = PostImage::orderBy('id', 'desc')->paginate(120);
         return view('admin.images.gallery', compact('images'));
     }
 
@@ -20,48 +20,41 @@ class GalleryController extends Controller
     public function real()
     {
         $page = request()->get('page', 1);
-        $images = Image::whereNull('hide_image')->paginate(4, ['*'], 'page', $page);
+        $images = PostImage::whereNull('hide_image')->orderBy('id', 'desc')->paginate(120, ['*'], 'page', $page);
         $validImages = [];
 
-        $responses = Http::pool(function ($pool) use ($images) {
-            foreach ($images as $image) {
-                $pool->as($image->id)->timeout(5)->get($image->image_path);
+        // برای بهبود عملکرد، فقط برای تعداد محدودی تصویر بررسی 200 را انجام می‌دهیم
+        $imagesToCheck = $images->take(120);
+
+        $responses = Http::pool(function ($pool) use ($imagesToCheck) {
+            foreach ($imagesToCheck as $image) {
+                $imageUrl = $image->image_url ?? $image->image_path;
+                if (!empty($imageUrl)) {
+                    $pool->as($image->id)->timeout(3)->get($imageUrl);
+                }
             }
         });
 
-        foreach ($images as $image) {
+        foreach ($imagesToCheck as $image) {
             if (isset($responses[$image->id]) && $responses[$image->id]->status() === 200) {
                 $validImages[] = $image;
             }
         }
 
-        while (empty($validImages) && $images->hasMorePages()) {
-            $page++;
-            $images = Image::whereNull('hide_image')->paginate(4, ['*'], 'page', $page);
-            $validImages = [];
-
-            $responses = Http::pool(function ($pool) use ($images) {
-                foreach ($images as $image) {
-                    $pool->as($image->id)->timeout(5)->get($image->image_path);
-                }
-            });
-
-            foreach ($images as $image) {
-                if (isset($responses[$image->id]) && $responses[$image->id]->status() === 200) {
-                    $validImages[] = $image;
-                }
-            }
-        }
-
-        return view('admin.gallery.real', compact('images', 'validImages'));
+        return view('admin.images.real', compact('images', 'validImages'));
     }
 
     // API برای تأیید تصویر (visible)
     public function approve(Request $request, $id)
     {
-        $image = Image::findOrFail($id);
+        $image = PostImage::findOrFail($id);
         $image->update(['hide_image' => 'visible']);
-        return response()->json(['success' => true, 'message' => 'تصویر تأیید شد.']);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تصویر تأیید شد.']);
+        }
+
+        return redirect()->back()->with('success', 'تصویر با موفقیت تأیید شد.');
     }
 
     // API برای تأیید گروهی تصاویر صفحه فعلی
@@ -69,31 +62,46 @@ class GalleryController extends Controller
     {
         $imageIds = $request->input('image_ids', []);
         if (!empty($imageIds)) {
-            Image::whereIn('id', $imageIds)->update(['hide_image' => 'visible']);
-            return response()->json(['success' => true, 'message' => 'همه تصاویر تأیید شدند.']);
+            PostImage::whereIn('id', $imageIds)->update(['hide_image' => 'visible']);
+
+            if ($request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => 'همه تصاویر تأیید شدند.']);
+            }
+
+            return redirect()->back()->with('success', 'همه تصاویر با موفقیت تأیید شدند.');
         }
-        return response()->json(['success' => false, 'message' => 'هیچ تصویری برای تأیید وجود ندارد.']);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => false, 'message' => 'هیچ تصویری برای تأیید وجود ندارد.']);
+        }
+
+        return redirect()->back()->with('error', 'هیچ تصویری برای تأیید وجود ندارد.');
     }
 
     // API برای رد تصویر (hidden)
     public function reject(Request $request, $id)
     {
-        $image = Image::findOrFail($id);
+        $image = PostImage::findOrFail($id);
         $image->update(['hide_image' => 'hidden']);
-        return response()->json(['success' => true, 'message' => 'تصویر رد شد.']);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'تصویر رد شد.']);
+        }
+
+        return redirect()->back()->with('success', 'تصویر با موفقیت رد شد.');
     }
 
     // نمایش تصاویر تأیید شده (visible)
     public function visible()
     {
-        $images = Image::where('hide_image', 'visible')->paginate(4);
-        return view('admin.gallery.visible', compact('images'));
+        $images = PostImage::where('hide_image', 'visible')->orderBy('id', 'desc')->paginate(12);
+        return view('admin.images.visible', compact('images'));
     }
 
     // نمایش تصاویر رد شده (hidden)
     public function hidden()
     {
-        $images = Image::where('hide_image', 'hidden')->paginate(4);
-        return view('admin.gallery.hidden', compact('images'));
+        $images = PostImage::where('hide_image', 'hidden')->orderBy('id', 'desc')->paginate(12);
+        return view('admin.images.hidden', compact('images'));
     }
 }
