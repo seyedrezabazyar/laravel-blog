@@ -25,3 +25,8 @@ yarn-error.log
 lib_import.php
 import_progress.txt
 categories.php
+
+app/Providers/TelescopeServiceProvider.php
+config/telescope.php
+public/vendor/telescope/
+database/migrations/*telescope*.php

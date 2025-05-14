@@ -59,13 +59,16 @@ Route::middleware('auth')->group(function () {
         Route::get('gallery', [GalleryController::class, 'index'])->name('gallery');
         Route::get('gallery/visible', [GalleryController::class, 'visible'])->name('gallery.visible');
         Route::get('gallery/hidden', [GalleryController::class, 'hidden'])->name('gallery.hidden');
+        Route::get('gallery/real', [GalleryController::class, 'realImages'])->name('gallery.real'); // مسیر جدید
 
 // API روت‌های گالری برای دریافت و مدیریت تصاویر
         Route::get('api/gallery/images', [GalleryController::class, 'getImages']);
         Route::get('api/gallery/visible', [GalleryController::class, 'getVisibleImages']);
         Route::get('api/gallery/hidden', [GalleryController::class, 'getHiddenImages']);
+        Route::get('api/gallery/real', [GalleryController::class, 'getRealImages']); // مسیر API جدید
         Route::post('api/gallery/categorize', [GalleryController::class, 'categorizeImage']);
         Route::post('api/gallery/manage', [GalleryController::class, 'manageImage']);
+
     });
 });
 

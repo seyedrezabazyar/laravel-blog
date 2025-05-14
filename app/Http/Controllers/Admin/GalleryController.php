@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class GalleryController extends Controller
@@ -35,6 +36,15 @@ class GalleryController extends Controller
     public function hidden()
     {
         return view('admin.images.hidden');
+    }
+
+    /**
+     * نمایش صفحه گالری تصاویر واقعی
+     */
+    public function realImages()
+    {
+        Log::info('Gallery real images page accessed');
+        return view('admin.images.real');
     }
 
     /**
@@ -272,6 +282,105 @@ class GalleryController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error in getHiddenImages: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در دریافت تصاویر: ' . $e->getMessage(),
+                'data' => []
+            ], 500);
+        }
+    }
+
+    /**
+     * دریافت تصاویر واقعی - نسخه بهینه‌سازی شده
+     */
+    public function getRealImages(Request $request)
+    {
+        try {
+            // لاگ برای اشکال‌زدایی
+            Log::info('GetRealImages called with params: ' . json_encode($request->all()));
+
+            // ساخت کوئری پایه
+            $query = PostImage::query();
+
+            // فقط تصاویری را بگیر که مسیر خالی یا default نباشند
+            $query->whereNotNull('image_path')
+                ->where('image_path', '!=', '')
+                ->where(function($q) {
+                    $q->where('image_path', 'NOT LIKE', '%default-book.png%')
+                        ->where('image_path', 'NOT LIKE', '%placeholder%');
+                });
+
+            // فقط تصاویری که پسوند تصویر دارند
+            $query->where(function($q) {
+                $q->where('image_path', 'LIKE', '%.jpg')
+                    ->orWhere('image_path', 'LIKE', '%.jpeg')
+                    ->orWhere('image_path', 'LIKE', '%.png')
+                    ->orWhere('image_path', 'LIKE', '%.gif')
+                    ->orWhere('image_path', 'LIKE', '%.webp')
+                    ->orWhere('image_path', 'LIKE', '%.svg');
+            });
+
+            // بارگذاری اطلاعات پست مرتبط
+            $query->with('post:id,title');
+
+            // اعمال فیلتر جستجو
+            if ($request->has('search') && !empty($request->search)) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('id', 'like', "%{$search}%")
+                        ->orWhere('image_path', 'like', "%{$search}%");
+                });
+            }
+
+            // اعمال ترتیب نمایش
+            if ($request->has('sort') && !empty($request->sort)) {
+                switch ($request->sort) {
+                    case 'newest':
+                        $query->orderBy('id', 'desc');
+                        break;
+                    case 'oldest':
+                        $query->orderBy('id', 'asc');
+                        break;
+                }
+            } else {
+                $query->orderBy('id', 'desc');
+            }
+
+            // لاگ کوئری برای اشکال‌زدایی
+            Log::info('Query SQL: ' . $query->toSql());
+            Log::info('Query Bindings: ' . json_encode($query->getBindings()));
+
+            // اجرای کوئری و دریافت نتایج با پیجینیشن
+            $images = $query->paginate(100);
+
+            // لاگ تعداد نتایج
+            Log::info('Total images found: ' . $images->total());
+
+            // افزودن ویژگی‌های محاسبه شده و برگرداندن مسیر اصلی تصویر
+            $images->getCollection()->transform(function ($image) {
+                // استفاده مستقیم از image_path به جای image_url
+                $image->makeVisible(['image_path']);
+
+                // اضافه کردن مسیر کامل تصویر
+                $image->raw_image_url = $this->getFullImageUrl($image->image_path);
+
+                return $image;
+            });
+
+            // اضافه کردن لاگ برای اشکال‌زدایی
+            Log::info('Real Images API response', [
+                'count' => $images->count(),
+                'current_page' => $images->currentPage(),
+                'total_pages' => $images->lastPage(),
+                'first_image' => $images->first() ? $images->first()->image_path : null
+            ]);
+
+            return response()->json($images);
+
+        } catch (\Exception $e) {
+            Log::error('Error in getRealImages: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
 
             return response()->json([
                 'success' => false,
