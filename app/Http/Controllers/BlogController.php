@@ -238,55 +238,58 @@ class BlogController extends Controller
     }
 
     /**
-     * نمایش پست‌های یک نویسنده خاص - نسخه کاملاً بهینه‌شده
+     * نمایش پست‌های یک نویسنده خاص
      */
     public function author(Author $author)
     {
-        // کلید کش منحصر به فرد بر اساس شناسه نویسنده، شماره صفحه، و وضعیت مدیر بودن کاربر
-        $page = request()->get('page', 1);
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
-        $cacheKey = "author_posts_{$author->id}_page_{$page}_" . ($isAdmin ? 'admin' : 'user');
 
-        // ذخیره نتایج در کش به مدت 1 ساعت
-        $posts = Cache::remember($cacheKey, 3600, function () use ($author, $isAdmin) {
-            // استفاده از شمارنده‌ها برای بهینه‌سازی - اگر هیچ پستی نیست، کوئری ساده برگردان
-            if ($author->total_posts_count == 0) {
-                return Post::where('id', '<', 0)->paginate(12); // پاگینیشن خالی
+        // استفاده از کوئری‌های خام SQL به جای eloquent و کش
+        $mainPosts = DB::select("
+        SELECT p.* FROM posts p
+        WHERE p.author_id = ?
+        AND p.is_published = 1
+        " . (!$isAdmin ? "AND p.hide_content = 0" : "") . "
+        ORDER BY p.created_at DESC
+    ", [$author->id]);
+
+        $coAuthoredPosts = DB::select("
+        SELECT p.* FROM posts p
+        JOIN post_author pa ON p.id = pa.post_id
+        WHERE pa.author_id = ?
+        AND p.is_published = 1
+        " . (!$isAdmin ? "AND p.hide_content = 0" : "") . "
+        ORDER BY p.created_at DESC
+    ", [$author->id]);
+
+        // ترکیب و حذف موارد تکراری
+        $postIds = [];
+        $postsArray = [];
+
+        foreach ($mainPosts as $post) {
+            if (!in_array($post->id, $postIds)) {
+                $postIds[] = $post->id;
+                $postsArray[] = $post;
             }
+        }
 
-            // استفاده از یک کوئری بهینه با انتخاب فیلدهای مشخص
-            $query = Post::select(['id', 'title', 'slug', 'category_id', 'author_id', 'publication_year', 'format'])
-                ->where('is_published', true)
-                ->when(!$isAdmin, function ($q) {
-                    $q->where('hide_content', false);
-                })
-                ->where(function ($q) use ($author) {
-                    $q->where('author_id', $author->id) // استفاده از ایندکس author_id
-                    ->orWhereExists(function ($subq) use ($author) {
-                        $subq->select(DB::raw(1))
-                            ->from('post_author')
-                            ->whereRaw('post_author.post_id = posts.id')
-                            ->where('post_author.author_id', $author->id);
-                    });
-                });
+        foreach ($coAuthoredPosts as $post) {
+            if (!in_array($post->id, $postIds)) {
+                $postIds[] = $post->id;
+                $postsArray[] = $post;
+            }
+        }
 
-            // بارگذاری روابط با انتخاب فیلدهای مشخص برای کاهش حجم داده
-            return $query->with([
-                'category:id,name,slug',
-                'featuredImage' => function($q) {
-                    $q->select('id', 'post_id', 'image_path', 'hide_image');
-                },
-                'author:id,name,slug'
-            ])
-                ->latest()
-                ->paginate(12);
-        });
+        // تبدیل آرایه به Collection برای استفاده از paginate
+        $posts = new \Illuminate\Pagination\LengthAwarePaginator(
+            $postsArray,
+            count($postsArray),
+            12,  // تعداد آیتم در هر صفحه
+            null, // صفحه فعلی (null برای استفاده از صفحه فعلی از request)
+            ['path' => request()->url()]
+        );
 
-        // افزودن هدرهای کش برای کش مرورگر
-        return response()
-            ->view('blog.author', compact('posts', 'author'))
-            ->header('Cache-Control', 'public, max-age=300')
-            ->header('ETag', md5($author->id . $page . $isAdmin . time() / 3600));
+        return view('blog.author', compact('posts', 'author'));
     }
 
     /**

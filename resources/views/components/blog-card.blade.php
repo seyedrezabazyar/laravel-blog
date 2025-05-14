@@ -5,25 +5,30 @@
     <div class="w-full relative aspect-[4/3]">
         @php
             $isAdmin = auth()->check() && auth()->user()->isAdmin();
+
+            // استفاده مستقیم از اطلاعات دیتابیس به جای رابطه eloquent
+            $dbImage = DB::select('SELECT * FROM post_images WHERE post_id = ? ORDER BY sort_order ASC LIMIT 1', [$post->id]);
+            $imageInfo = !empty($dbImage) ? $dbImage[0] : null;
+
             $showDefaultImage = true;
             $isHidden = false;
             $imageUrl = asset('images/default-book.png');
 
-            if ($post->featuredImage) {
-                if (!empty($post->featuredImage->image_path)) {
+            if ($imageInfo) {
+                if (!empty($imageInfo->image_path)) {
                     if ($isAdmin) {
                         // برای مدیران همیشه تصویر را نمایش بده
-                        $imageUrl = $post->featuredImage->image_path;
+                        $imageUrl = $imageInfo->image_path;
                         if (strpos($imageUrl, 'http') !== 0) {
                             $imageUrl = 'https://images.balyan.ir/' . $imageUrl;
                         }
                         $showDefaultImage = false;
                         // بررسی اینکه آیا تصویر مخفی است
-                        $isHidden = $post->featuredImage->hide_image === 'hidden';
+                        $isHidden = $imageInfo->hide_image === 'hidden';
                     }
-                    else if ($post->featuredImage->hide_image === 'visible') {
+                    else if ($imageInfo->hide_image === 'visible') {
                         // برای کاربران عادی فقط تصاویر visible را نمایش بده
-                        $imageUrl = $post->featuredImage->image_path;
+                        $imageUrl = $imageInfo->image_path;
                         if (strpos($imageUrl, 'http') !== 0) {
                             $imageUrl = 'https://images.balyan.ir/' . $imageUrl;
                         }

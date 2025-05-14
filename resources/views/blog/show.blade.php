@@ -32,43 +32,65 @@
                 <!-- Book image with lazy loading -->
                 <div class="card mb-6 overflow-hidden rounded-xl shadow hover:shadow-lg transition-shadow">
                     <div class="relative">
-                        @if($post->featuredImage)
-                            @if(auth()->check() && auth()->user()->isAdmin())
-                                <img
-                                    src="{{ $post->featuredImage->display_url }}"
-                                    alt="{{ $post->title }}"
-                                    class="w-full h-auto"
-                                    loading="lazy"
-                                    onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
-                                >
-                                @if($post->featuredImage->hide_image == 'hidden')
-                                    <div class="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center">
-                                        <span class="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-bold shadow">تصویر مخفی شده است</span>
-                                    </div>
-                                @endif
-                            @elseif(!$post->featuredImage->hide_image || $post->featuredImage->hide_image != 'hidden')
-                                <img
-                                    src="{{ $post->featuredImage->display_url }}"
-                                    alt="{{ $post->title }}"
-                                    class="w-full h-auto"
-                                    loading="lazy"
-                                    onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
-                                >
-                            @else
-                                <img
-                                    src="{{ asset('images/default-book.png') }}"
-                                    alt="{{ $post->title }}"
-                                    class="w-full h-auto"
-                                    loading="lazy"
-                                >
-                            @endif
-                        @else
+                        @php
+                            $isAdmin = auth()->check() && auth()->user()->isAdmin();
+
+                            // استفاده مستقیم از اطلاعات دیتابیس به جای رابطه eloquent
+                            $dbImage = DB::select('SELECT * FROM post_images WHERE post_id = ? ORDER BY sort_order ASC LIMIT 1', [$post->id]);
+                            $imageInfo = !empty($dbImage) ? $dbImage[0] : null;
+
+                            $showDefaultImage = true;
+                            $isHidden = false;
+                            $imageUrl = asset('images/default-book.png');
+
+                            if ($imageInfo) {
+                                if (!empty($imageInfo->image_path)) {
+                                    if ($isAdmin) {
+                                        // برای مدیران همیشه تصویر را نمایش بده
+                                        $imageUrl = $imageInfo->image_path;
+                                        if (strpos($imageUrl, 'http') !== 0) {
+                                            $imageUrl = 'https://images.balyan.ir/' . $imageUrl;
+                                        }
+                                        $showDefaultImage = false;
+                                        // بررسی اینکه آیا تصویر مخفی است
+                                        $isHidden = $imageInfo->hide_image === 'hidden';
+                                    }
+                                    else if ($imageInfo->hide_image === 'visible') {
+                                        // برای کاربران عادی فقط تصاویر visible را نمایش بده
+                                        $imageUrl = $imageInfo->image_path;
+                                        if (strpos($imageUrl, 'http') !== 0) {
+                                            $imageUrl = 'https://images.balyan.ir/' . $imageUrl;
+                                        }
+                                        $showDefaultImage = false;
+                                    }
+                                }
+                            }
+                        @endphp
+
+                        @if($showDefaultImage)
+                            <!-- نمایش تصویر پیش‌فرض -->
                             <img
                                 src="{{ asset('images/default-book.png') }}"
                                 alt="{{ $post->title }}"
                                 class="w-full h-auto"
                                 loading="lazy"
                             >
+                        @else
+                            <!-- نمایش تصویر واقعی -->
+                            <img
+                                src="{{ $imageUrl }}"
+                                alt="{{ $post->title }}"
+                                class="w-full h-auto"
+                                loading="lazy"
+                                onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
+                            >
+
+                            @if($isAdmin && $isHidden)
+                                <!-- نمایش اخطار تصویر مخفی برای مدیران -->
+                                <div class="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center">
+                                    <span class="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-bold shadow">تصویر مخفی شده است</span>
+                                </div>
+                            @endif
                         @endif
 
                         @if($post->publication_year)
@@ -82,13 +104,13 @@
                 <!-- Purchase button -->
                 @if($post->purchase_link)
                     <div class="mb-6">
-
-                        href="{{ $post->purchase_link }}"
-                        target="_blank"
-                        rel="noopener"
-                        class="btn btn-primary block text-center py-3 text-lg font-bold rounded-lg transition hover:shadow-lg bg-blue-600 hover:bg-blue-700 text-white"
+                        <a
+                            href="{{ $post->purchase_link }}"
+                            target="_blank"
+                            rel="noopener"
+                            class="btn btn-primary block text-center py-3 text-lg font-bold rounded-lg transition hover:shadow-lg bg-blue-600 hover:bg-blue-700 text-white"
                         >
-                        خرید کتاب از سایت ناشر
+                            خرید کتاب از سایت ناشر
                         </a>
                         <p class="text-xs text-gray-500 text-center mt-2">انتقال به وب‌سایت رسمی ناشر</p>
                     </div>
@@ -110,7 +132,7 @@
                     <div class="bg-blue-600 py-4 px-6">
                         <h2 class="text-xl font-bold text-white flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V6a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
                             مشخصات کتاب
                         </h2>
@@ -311,48 +333,70 @@
                         <a href="{{ route('blog.show', $relatedPost->slug) }}" class="block">
                             <div class="overflow-hidden rounded-xl shadow hover:shadow-lg transition-all duration-300 bg-white border border-gray-100 transform group-hover:-translate-y-1">
                                 <div class="aspect-[2/3] relative overflow-hidden">
-                                    @if($relatedPost->featuredImage)
-                                        @if(auth()->check() && auth()->user()->isAdmin())
-                                            <img
-                                                src="{{ $relatedPost->featuredImage->image_url }}"
-                                                alt="{{ $relatedPost->title }}"
-                                                class="w-full h-full object-cover"
-                                                loading="lazy"
-                                                onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
-                                            >
-                                            @if($relatedPost->featuredImage->isHidden())
-                                                <div class="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center">
-                                                    <span class="bg-red-600 text-white px-2 py-1 rounded-md text-xs font-bold shadow">تصویر مخفی شده</span>
-                                                </div>
-                                            @endif
-                                        @elseif($relatedPost->featuredImage->isVisible())
-                                            <img
-                                                src="{{ $relatedPost->featuredImage->image_url }}"
-                                                alt="{{ $relatedPost->title }}"
-                                                class="w-full h-full object-cover"
-                                                loading="lazy"
-                                                onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
-                                            >
-                                        @else
-                                            <img
-                                                src="{{ asset('images/default-book.png') }}"
-                                                alt="{{ $relatedPost->title }}"
-                                                class="w-full h-full object-cover"
-                                                loading="lazy"
-                                            >
-                                        @endif
+                                    @php
+                                        // استفاده مستقیم از اطلاعات دیتابیس به جای رابطه eloquent
+                                        $dbRelatedImage = DB::select('SELECT * FROM post_images WHERE post_id = ? ORDER BY sort_order ASC LIMIT 1', [$relatedPost->id]);
+                                        $relatedImageInfo = !empty($dbRelatedImage) ? $dbRelatedImage[0] : null;
+
+                                        $showDefaultImage = true;
+                                        $isHidden = false;
+                                        $imageUrl = asset('images/default-book.png');
+
+                                        if ($relatedImageInfo) {
+                                            if (!empty($relatedImageInfo->image_path)) {
+                                                if ($isAdmin) {
+                                                    // برای مدیران همیشه تصویر را نمایش بده
+                                                    $imageUrl = $relatedImageInfo->image_path;
+                                                    if (strpos($imageUrl, 'http') !== 0) {
+                                                        $imageUrl = 'https://images.balyan.ir/' . $imageUrl;
+                                                    }
+                                                    $showDefaultImage = false;
+                                                    // بررسی اینکه آیا تصویر مخفی است
+                                                    $isHidden = $relatedImageInfo->hide_image === 'hidden';
+                                                }
+                                                else if ($relatedImageInfo->hide_image === 'visible') {
+                                                    // برای کاربران عادی فقط تصاویر visible را نمایش بده
+                                                    $imageUrl = $relatedImageInfo->image_path;
+                                                    if (strpos($imageUrl, 'http') !== 0) {
+                                                        $imageUrl = 'https://images.balyan.ir/' . $imageUrl;
+                                                    }
+                                                    $showDefaultImage = false;
+                                                }
+                                            }
+                                        }
+                                    @endphp
+
+                                    @if($showDefaultImage)
+                                        <!-- نمایش تصویر پیش‌فرض -->
+                                        <img
+                                            src="{{ asset('images/default-book.png') }}"
+                                            alt="{{ $relatedPost->title }}"
+                                            class="w-full h-full object-cover"
+                                            loading="lazy"
+                                        >
                                     @else
-                                        <div class="w-full h-full flex items-center justify-center bg-gradient-to-r from-gray-100 to-gray-200">
-                                            <img
-                                                src="{{ asset('images/default-book.png') }}"
-                                                alt="{{ $relatedPost->title }}"
-                                                class="max-h-40 max-w-full"
-                                                loading="lazy"
-                                            >
-                                        </div>
+                                        <!-- نمایش تصویر واقعی -->
+                                        <img
+                                            src="{{ $imageUrl }}"
+                                            alt="{{ $relatedPost->title }}"
+                                            class="w-full h-full object-cover"
+                                            loading="lazy"
+                                            onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
+                                        >
+
+                                        @if($isAdmin && $isHidden)
+                                            <!-- نمایش اخطار تصویر مخفی برای مدیران -->
+                                            <div class="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center">
+                                                <span class="bg-red-600 text-white px-2 py-1 rounded-md text-xs font-bold shadow">تصویر مخفی شده</span>
+                                            </div>
+                                        @endif
                                     @endif
                                 </div>
-                                <!-- Content remains the same -->
+                                <div class="p-4">
+                                    <h3 class="text-sm font-medium text-gray-900 line-clamp-2">
+                                        {{ $relatedPost->title }}
+                                    </h3>
+                                </div>
                             </div>
                         </a>
                     </div>
@@ -428,48 +472,4 @@
             }
         }
     </style>
-@endpush
-
-@push('scripts')
-    <script>
-        // Use Intersection Observer for lazy loading
-        document.addEventListener('DOMContentLoaded', function() {
-            // Only use IntersectionObserver if it's supported
-            if ('IntersectionObserver' in window) {
-                const imageObserver = new IntersectionObserver((entries, observer) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            const img = entry.target;
-                            const src = img.getAttribute('data-src');
-                            if (src) {
-                                img.src = src;
-                                img.removeAttribute('data-src');
-                            }
-                            imageObserver.unobserve(img);
-                        }
-                    });
-                }, {
-                    rootMargin: '300px 0px', // Load images when they're within 300px of viewport
-                    threshold: 0.01
-                });
-
-                // Select all images with 'loading="lazy"' attribute
-                document.querySelectorAll('img[loading="lazy"]').forEach(img => {
-                    // Only observe images with data-src attribute
-                    if (img.getAttribute('data-src')) {
-                        imageObserver.observe(img);
-                    }
-                });
-            }
-
-            // Error handling for images
-            document.querySelectorAll('img').forEach(img => {
-                img.addEventListener('error', function() {
-                    if (!this.src.includes('default-book.png')) {
-                        this.src = '{{ asset("images/default-book.png") }}';
-                    }
-                });
-            });
-        });
-    </script>
 @endpush
