@@ -45,8 +45,8 @@ class PostController extends Controller
                 break;
         }
 
-        // مرتب‌سازی بر اساس تاریخ ایجاد (نزولی)
-        $postsQuery->orderBy('created_at', 'desc');
+        // مرتب‌سازی بر اساس ID به صورت نزولی (بزرگ به کوچک)
+        $postsQuery->orderBy('id', 'desc');
 
         // استفاده از کش برای شمارش‌ها برای کاهش بار دیتابیس
         // کش به مدت 10 دقیقه ذخیره می‌شود و با هر تغییر در پست‌ها پاک می‌شود
@@ -205,6 +205,10 @@ class PostController extends Controller
         // 1. بررسی درخواست‌های تغییر وضعیت ساده (تغییر وضعیت انتشار یا نمایش)
         if ($request->has('toggle_publish') || $request->has('toggle_visibility')) {
             try {
+                // دریافت شماره صفحه فعلی و فیلتر
+                $currentPage = $request->input('current_page', 1);
+                $currentFilter = $request->input('current_filter', '');
+
                 // استفاده از کوئری‌های بهینه برای عملیات‌های ساده
                 $statusMessage = '';
 
@@ -225,9 +229,26 @@ class PostController extends Controller
                 // پاک کردن فقط کش‌های ضروری مرتبط
                 $this->clearMinimalPostCache($id);
 
-                // بازگشت با پیام موفقیت
+                // بازگشت با پیام موفقیت و حفظ صفحه فعلی
                 $title = $request->input('title', 'پست');
-                return redirect()->route('admin.posts.index')
+
+                // ساخت URL بازگشت با حفظ پارامترهای فیلتر و شماره صفحه
+                $redirectUrl = route('admin.posts.index');
+                $queryParams = [];
+
+                if (!empty($currentFilter)) {
+                    $queryParams['filter'] = $currentFilter;
+                }
+
+                if ($currentPage > 1) {
+                    $queryParams['page'] = $currentPage;
+                }
+
+                if (!empty($queryParams)) {
+                    $redirectUrl .= '?' . http_build_query($queryParams);
+                }
+
+                return redirect($redirectUrl)
                     ->with('success', "کتاب «{$title}» با موفقیت {$statusMessage} شد.");
 
             } catch (\Exception $e) {
@@ -243,6 +264,10 @@ class PostController extends Controller
 
         // 2. به‌روزرسانی کامل پست
         try {
+            // دریافت شماره صفحه فعلی و فیلتر برای بازگشت
+            $currentPage = $request->input('current_page', 1);
+            $currentFilter = $request->input('current_filter', '');
+
             // اعتبارسنجی داده‌های ورودی - فقط فیلدهای مورد نیاز
             $validated = $request->validate([
                 'title' => 'required|max:255',
@@ -468,8 +493,23 @@ class PostController extends Controller
             // 8. پاک کردن کش‌های مرتبط - با روش بهینه
             $this->clearPostCacheFast($id);
 
-            // 9. بازگشت پاسخ موفقیت‌آمیز
-            return redirect()->route('admin.posts.index')
+            // 9. بازگشت پاسخ موفقیت‌آمیز با حفظ صفحه فعلی
+            $redirectUrl = route('admin.posts.index');
+            $queryParams = [];
+
+            if (!empty($currentFilter)) {
+                $queryParams['filter'] = $currentFilter;
+            }
+
+            if ($currentPage > 1) {
+                $queryParams['page'] = $currentPage;
+            }
+
+            if (!empty($queryParams)) {
+                $redirectUrl .= '?' . http_build_query($queryParams);
+            }
+
+            return redirect($redirectUrl)
                 ->with('success', 'کتاب با موفقیت بروزرسانی شد.');
 
         } catch (\Illuminate\Validation\ValidationException $e) {

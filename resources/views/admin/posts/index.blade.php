@@ -120,6 +120,8 @@
                                                     @method('PUT')
                                                     <input type="hidden" name="toggle_publish" value="1">
                                                     <input type="hidden" name="title" value="{{ $post->title }}">
+                                                    <input type="hidden" name="current_page" value="{{ request()->get('page', 1) }}">
+                                                    <input type="hidden" name="current_filter" value="{{ request()->get('filter', '') }}">
                                                     <button type="submit" title="{{ $post->is_published ? 'ارسال به پیش‌نویس' : 'انتشار' }}" class="{{ $post->is_published ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' : 'bg-green-100 text-green-700 hover:bg-green-200' }} rounded-md p-2 transition-colors">
                                                         @if($post->is_published)
                                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -139,6 +141,8 @@
                                                     @method('PUT')
                                                     <input type="hidden" name="toggle_visibility" value="1">
                                                     <input type="hidden" name="title" value="{{ $post->title }}">
+                                                    <input type="hidden" name="current_page" value="{{ request()->get('page', 1) }}">
+                                                    <input type="hidden" name="current_filter" value="{{ request()->get('filter', '') }}">
                                                     <button type="submit" title="{{ $post->hide_content ? 'نمایش محتوا' : 'مخفی کردن محتوا' }}" class="{{ $post->hide_content ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200' }} rounded-md p-2 transition-colors">
                                                         @if($post->hide_content)
                                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -152,6 +156,7 @@
                                                         @endif
                                                     </button>
                                                 </form>
+
                                             </div>
                                         </td>
                                     </tr>
