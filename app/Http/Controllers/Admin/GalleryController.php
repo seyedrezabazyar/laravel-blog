@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\PostImage; // تغییر از Image به PostImage
+use App\Models\PostImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -12,7 +12,7 @@ class GalleryController extends Controller
     // نمایش همه تصاویر بدون فیلتر hide_image و با pagination
     public function index()
     {
-        $images = PostImage::orderBy('id', 'desc')->paginate(120);
+        $images = PostImage::orderBy('id', 'desc')->paginate(20);
         return view('admin.images.gallery', compact('images'));
     }
 
@@ -20,11 +20,11 @@ class GalleryController extends Controller
     public function real()
     {
         $page = request()->get('page', 1);
-        $images = PostImage::whereNull('hide_image')->orderBy('id', 'desc')->paginate(120, ['*'], 'page', $page);
+        $images = PostImage::whereNull('hide_image')->orderBy('id', 'desc')->paginate(20, ['*'], 'page', $page);
         $validImages = [];
 
         // برای بهبود عملکرد، فقط برای تعداد محدودی تصویر بررسی 200 را انجام می‌دهیم
-        $imagesToCheck = $images->take(120);
+        $imagesToCheck = $images->take(20);
 
         $responses = Http::pool(function ($pool) use ($imagesToCheck) {
             foreach ($imagesToCheck as $image) {
