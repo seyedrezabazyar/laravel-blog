@@ -212,13 +212,15 @@ class BlogController extends Controller
     {
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
 
-        $mainPosts = DB::select("
-            SELECT p.* FROM posts p
-            WHERE p.author_id = ?
-            AND p.is_published = 1
-            " . (!$isAdmin ? "AND p.hide_content = 0" : "") . "
-            ORDER BY p.created_at DESC
-        ", [$author->id]);
+        $query = DB::table('posts')
+            ->where('author_id', $author->id)
+            ->where('is_published', 1);
+
+        if (!$isAdmin) {
+            $query->where('hide_content', 0);
+        }
+
+        $mainPosts = $query->orderBy('created_at', 'DESC')->get();
 
         $coAuthoredPosts = DB::select("
             SELECT p.* FROM posts p

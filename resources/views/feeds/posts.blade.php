@@ -43,9 +43,9 @@
             <content type="html">
                 <![CDATA[
                 @if($post->featuredImage && !$post->featuredImage->hide_image)
-                    <p><img src="{{ $post->featuredImage->display_url }}" alt="{{ $post->title }}" style="max-width:100%; height:auto;"/></p>
+                    <p><img src="{{ e($post->featuredImage->display_url) }}" alt="{{ e($post->title) }}" style="max-width:100%; height:auto;"/></p>
                 @endif
-                {!! $post->content !!}
+                {!! $post->purified_content !!}
                 ]]>
             </content>
         </entry>
