@@ -1,1 +1,304 @@
-html{overflow-x:hidden}body{margin:0;padding:0;background:#f1f1f1;font-family:Tahoma,Arial,sans-serif}.header{text-align:center;padding:15px 0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.1)}.menu{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:10px 0}.menu-button{padding:8px 16px;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700;transition:transform .2s ease,box-shadow .2s ease}.menu-button:hover{transform:translateY(-2px);box-shadow:0 4px 6px rgba(0,0,0,.1)}.menu-button.active{box-shadow:0 0 0 3px rgba(255,255,255,.5)}.image-grid{display:flex;flex-wrap:wrap;width:100%}.image-item{position:relative;border:1px solid #ddd;transition:transform .3s ease,box-shadow .3s ease}.image-item:hover{transform:scale(1.02);box-shadow:0 4px 8px rgba(0,0,0,.1);z-index:1}.image-container{width:100%;height:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;background:#f8f8f8}.image-container img{width:100%;height:100%;object-fit:cover;transition:transform .3s ease}.image-container:hover img{transform:scale(1.05)}.button-container{display:flex;width:100%;position:absolute;bottom:0;left:0}.action-btn{flex:1;padding:12px 0;text-align:center;color:#fff;font-weight:700;cursor:pointer;border:none;transition:background-color .3s ease}.approve-btn{background:#10B981}.approve-btn:hover{background:#059669}.reject-btn{background:#EF4444}.reject-btn:hover{background:#DC2626}.reset-btn{background:#3B82F6}.reset-btn:hover{background:#2563EB}.missing-btn{background:#F59E0B}.missing-btn:hover{background:#D97706}.fullscreen{position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.95);z-index:9999;display:none;align-items:center;justify-content:center;cursor:pointer}.fullscreen img{max-width:90%;max-height:90%;object-fit:contain;border:2px solid #fff;box-shadow:0 0 20px rgba(0,0,0,.5)}.footer{width:100%;background:#fff;padding:15px;margin-top:20px;border-top:1px solid #ddd;box-shadow:0 -2px 10px rgba(0,0,0,.05)}.notification{position:fixed;top:20px;right:20px;padding:15px 25px;color:#fff;border-radius:5px;z-index:9999;box-shadow:0 4px 15px rgba(0,0,0,.2);display:none;font-size:16px;font-weight:700;transition:opacity .3s ease,transform .3s ease;transform:translateY(-10px)}.image-details{background:rgba(0,0,0,.7);color:#fff;position:absolute;bottom:40px;left:0;width:100%;padding:8px;font-size:12px;opacity:0;transition:opacity .3s ease}.image-item:hover .image-details{opacity:1}.status-badge{position:absolute;top:10px;right:10px;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:700;z-index:10;box-shadow:0 2px 4px rgba(0,0,0,.2);transition:transform .2s ease}.image-container:hover .status-badge{transform:scale(1.1)}.pending-badge{background:rgba(59,130,246,.9)}.approved-badge{background:rgba(16,185,129,.9)}.rejected-badge{background:rgba(239,68,68,.9)}.missing-badge{background:rgba(245,158,11,.9)}@media (max-width:1200px){.image-item{width:33.333%;height:33.333vw}}@media (max-width:768px){.image-item{width:50%;height:50vw}}@media (max-width:480px){.image-item{width:100%;height:100vw}.menu-button{padding:6px 12px;font-size:14px}}.animate-pulse{animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+/* gallery.css - استایل‌های مشترک گالری تصاویر */
+
+/* تنظیمات اصلی */
+html {
+    overflow-x: hidden;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background: #f1f1f1;
+    font-family: Tahoma, Arial, sans-serif;
+}
+
+/* هدر و منو */
+.header {
+    text-align: center;
+    padding: 15px 0;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,.1);
+}
+
+.menu {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.menu-button {
+    padding: 8px 16px;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: transform .2s ease, box-shadow .2s ease;
+    margin: 0 4px;
+    display: inline-block;
+}
+
+.menu-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,.1);
+}
+
+.menu-button.active {
+    box-shadow: 0 0 0 3px rgba(255,255,255,.5);
+}
+
+/* گرید تصاویر */
+.image-grid {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.image-item {
+    position: relative;
+    border: 1px solid #ddd;
+    transition: transform .3s ease, box-shadow .3s ease;
+}
+
+.image-item:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 8px rgba(0,0,0,.1);
+    z-index: 1;
+}
+
+/* کانتینر تصویر */
+.image-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    background: #f8f8f8;
+    position: relative;
+}
+
+.image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .3s ease;
+}
+
+.image-container:hover img {
+    transform: scale(1.05);
+}
+
+/* دکمه‌های اکشن */
+.button-container {
+    display: flex;
+    width: 100%;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+}
+
+.action-btn,
+.approve-btn,
+.reject-btn,
+.reset-btn,
+.missing-btn {
+    flex: 1;
+    padding: 12px 0;
+    text-align: center;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: background-color .3s ease;
+}
+
+.approve-btn {
+    background: #10B981;
+}
+
+.approve-btn:hover {
+    background: #059669;
+}
+
+.reject-btn {
+    background: #EF4444;
+}
+
+.reject-btn:hover {
+    background: #DC2626;
+}
+
+.reset-btn {
+    background: #3B82F6;
+}
+
+.reset-btn:hover {
+    background: #2563EB;
+}
+
+.missing-btn {
+    background: #F59E0B;
+}
+
+.missing-btn:hover {
+    background: #D97706;
+}
+
+/* حالت تمام‌صفحه */
+.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,.95);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.fullscreen img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    border: 2px solid #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,.5);
+}
+
+/* فوتر */
+.footer {
+    width: 100%;
+    background: #fff;
+    padding: 15px;
+    margin-top: 20px;
+    border-top: 1px solid #ddd;
+    box-shadow: 0 -2px 10px rgba(0,0,0,.05);
+}
+
+/* اعلان */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    color: #fff;
+    border-radius: 5px;
+    z-index: 9999;
+    box-shadow: 0 4px 15px rgba(0,0,0,.2);
+    display: none;
+    font-size: 16px;
+    font-weight: 700;
+    transition: opacity .3s ease, transform .3s ease;
+    transform: translateY(-10px);
+    opacity: 0;
+}
+
+/* جزئیات تصویر */
+.image-details {
+    background: rgba(0,0,0,.7);
+    color: #fff;
+    position: absolute;
+    bottom: 40px;
+    left: 0;
+    width: 100%;
+    padding: 8px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity .3s ease;
+}
+
+.image-item:hover .image-details {
+    opacity: 1;
+}
+
+/* نشانگر وضعیت */
+.status-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,.2);
+    transition: transform .2s ease;
+}
+
+.image-container:hover .status-badge {
+    transform: scale(1.1);
+}
+
+.pending-badge {
+    background: rgba(59,130,246,.9);
+}
+
+.approved-badge {
+    background: rgba(16,185,129,.9);
+}
+
+.rejected-badge {
+    background: rgba(239,68,68,.9);
+}
+
+.missing-badge {
+    background: rgba(245,158,11,.9);
+}
+
+/* دکمه تأیید گروهی */
+.bulk-approve {
+    transition: background-color .3s ease, opacity .3s ease;
+}
+
+.bulk-approve:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* واکنش‌گرایی */
+@media (max-width: 1200px) {
+    .image-item {
+        width: 33.333%;
+        height: 33.333vw;
+    }
+}
+
+@media (max-width: 768px) {
+    .image-item {
+        width: 50%;
+        height: 50vw;
+    }
+}
+
+@media (max-width: 480px) {
+    .image-item {
+        width: 100%;
+        height: 100vw;
+    }
+
+    .menu-button {
+        padding: 6px 12px;
+        font-size: 14px;
+    }
+}
+
+/* انیمیشن‌ها */
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(.4,0,.6,1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: .7;
+    }
+}
