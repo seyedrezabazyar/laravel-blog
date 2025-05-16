@@ -1,19 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html dir="rtl">
 <head>
-    <title>تصاویر تأیید شده</title>
+    <title>گالری تصاویر - تصاویر تأیید شده</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
-        /* ریست کامل استایل‌ها */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* استایل‌های پایه */
         body, html {
             margin: 0;
             padding: 0;
@@ -21,14 +15,10 @@
             height: 100%;
             overflow-x: hidden;
             background-color: #f1f1f1;
+            font-family: Tahoma, Arial, sans-serif;
         }
 
-        .rtl-content {
-            text-align: right;
-            direction: rtl;
-        }
-
-        /* چیدمان و گرید تصاویر */
+        /* چیدمان گرید تصاویر */
         .image-grid {
             display: flex;
             flex-wrap: wrap;
@@ -36,18 +26,23 @@
         }
 
         .image-item {
-            width: 25%; /* چهار تصویر در هر ردیف */
-            height: 25vw; /* ارتفاع تصاویر بر اساس عرض صفحه تنظیم شود */
+            width: 25%;
+            height: 25vw;
             position: relative;
-            margin: 0; /* حذف فاصله‌های بین آیتم‌ها */
-            padding: 0; /* حذف فاصله داخلی */
-            border: 1px solid #ddd; /* حاشیه برای هر تصویر */
+            border: 1px solid #ddd;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .image-item:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 1;
         }
 
         /* استایل تصاویر */
         .image-container {
             width: 100%;
-            height: 100%; /* تصاویر کل ارتفاع ستون را پر کنند */
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -58,8 +53,13 @@
 
         .image-container img {
             width: 100%;
-            height: 100%; /* تصاویر کل ارتفاع ستون را پر کنند */
-            object-fit: cover; /* برش تصویر برای پر کردن کل ظرف */
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .image-container:hover img {
+            transform: scale(1.05);
         }
 
         /* استایل دکمه‌ها */
@@ -79,7 +79,12 @@
             font-weight: bold;
             cursor: pointer;
             border: none;
-            background-color: #3B82F6; /* آبی */
+            background-color: #3B82F6;
+            transition: background-color 0.3s ease;
+        }
+
+        .reset-btn:hover {
+            background-color: #2563EB;
         }
 
         /* حالت تمام‌صفحه */
@@ -98,17 +103,19 @@
         }
 
         .fullscreen img {
-            max-width: 98%;
-            max-height: 98%;
+            max-width: 90%;
+            max-height: 90%;
             object-fit: contain;
+            border: 2px solid white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
 
         /* هدر و منو */
         .header {
             text-align: center;
-            padding: 10px 0;
+            padding: 15px 0;
             background-color: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             width: 100%;
             z-index: 100;
             position: static;
@@ -117,25 +124,37 @@
         .menu {
             display: flex;
             justify-content: center;
-            gap: 5px;
-            margin: 5px 0;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0;
         }
 
         .menu-button {
-            padding: 5px 15px;
+            padding: 8px 16px;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
-        /* فوتر */
+        .menu-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .menu-button.active {
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.5);
+        }
+
         .footer {
             width: 100%;
             background-color: white;
             padding: 15px;
-            margin-top: 0;
+            margin-top: 20px;
             border-top: 1px solid #ddd;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
         }
 
         /* اعلان */
@@ -147,46 +166,106 @@
             color: white;
             border-radius: 5px;
             z-index: 9999;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             display: none;
             font-size: 16px;
             font-weight: bold;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: translateY(-10px);
+        }
+
+        /* جزئیات تصویر */
+        .image-details {
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            position: absolute;
+            bottom: 40px;
+            left: 0;
+            width: 100%;
+            padding: 8px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .image-item:hover .image-details {
+            opacity: 1;
         }
 
         /* پاسخگویی */
         @media (max-width: 1200px) {
             .image-item {
-                width: 33.333%; /* سه تصویر در هر ردیف */
-                height: 33.333vw; /* ارتفاع تصاویر بر اساس عرض صفحه تنظیم شود */
+                width: 33.333%;
+                height: 33.333vw;
             }
         }
 
         @media (max-width: 768px) {
             .image-item {
-                width: 50%; /* دو تصویر در هر ردیف */
-                height: 50vw; /* ارتفاع تصاویر بر اساس عرض صفحه تنظیم شود */
+                width: 50%;
+                height: 50vw;
             }
         }
 
         @media (max-width: 480px) {
             .image-item {
-                width: 100%; /* یک تصویر در هر ردیف */
-                height: 100vw; /* ارتفاع تصاویر بر اساس عرض صفحه تنظیم شود */
+                width: 100%;
+                height: 100vw;
             }
+
+            .menu-button {
+                padding: 6px 12px;
+                font-size: 14px;
+            }
+        }
+
+        /* انیمیشن‌ها */
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        /* برچسب‌های وضعیت */
+        .status-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10; /* افزایش z-index برای اطمینان از نمایش روی تصویر */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease;
+            background-color: rgba(16, 185, 129, 0.9); /* سبز */
+        }
+
+        .image-container:hover .status-badge {
+            transform: scale(1.1);
         }
     </style>
 </head>
 <body>
-<div class="rtl-content">
+<div>
     <!-- هدر و منو -->
     <div class="header">
-        <h1 class="text-2xl font-bold">تصاویر تأیید شده</h1>
+        <h1 class="text-2xl font-bold">گالری تصاویر - تصاویر تأیید شده</h1>
         <div class="menu">
             <a href="{{ route('admin.gallery') }}" class="menu-button" style="background-color: #3B82F6;">بررسی نشده</a>
-            <a href="{{ route('admin.gallery.visible') }}" class="menu-button" style="background-color: #10B981;">تأیید شده</a>
+            <a href="{{ route('admin.gallery.visible') }}" class="menu-button active" style="background-color: #10B981;">تأیید شده</a>
             <a href="{{ route('admin.gallery.hidden') }}" class="menu-button" style="background-color: #EF4444;">رد شده</a>
             <a href="{{ route('admin.gallery.missing') }}" class="menu-button" style="background-color: #F59E0B;">گمشده</a>
             <a href="{{ route('admin.images.checker') }}" class="menu-button" style="background-color: #8B5CF6;">بررسی تصاویر گمشده</a>
+            <a href="{{ url('/dashboard') }}" class="menu-button" style="background-color: #6B7280;">بازگشت به داشبورد</a>
         </div>
     </div>
 
@@ -195,13 +274,13 @@
 
     <!-- پیام‌های سیستم -->
     @if(session('success'))
-        <div class="text-center py-2 bg-green-100 text-green-700">
+        <div class="text-center py-3 bg-green-100 text-green-700 mb-4 font-bold">
             {{ session('success') }}
         </div>
     @endif
 
     @if(session('error'))
-        <div class="text-center py-2 bg-red-100 text-red-700">
+        <div class="text-center py-3 bg-red-100 text-red-700 mb-4 font-bold">
             {{ session('error') }}
         </div>
     @endif
@@ -211,8 +290,13 @@
         @forelse ($images as $image)
             <div class="image-item" data-image-id="{{ $image->id }}">
                 <div class="image-container" onclick="showFullscreen('{{ $image->image_url ?? asset('storage/' . $image->image_path) }}')">
+                    <span class="status-badge approved-badge">تأیید شده</span>
                     <img src="{{ $image->image_url ?? asset('storage/' . $image->image_path) }}" alt="تصویر"
                          onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';">
+                </div>
+                <div class="image-details">
+                    <div>شناسه: {{ $image->id }}</div>
+                    <div class="truncate">{{ basename($image->image_path) }}</div>
                 </div>
                 <div class="button-container">
                     <button onclick="resetImage({{ $image->id }})" class="reset-btn">بازگرداندن به حالت بررسی نشده</button>
@@ -220,7 +304,7 @@
             </div>
         @empty
             <div class="w-full text-center py-8 bg-yellow-100 text-yellow-700">
-                <p>هیچ تصویر تأیید شده‌ای یافت نشد.</p>
+                <p class="font-bold text-lg">هیچ تصویر تأیید شده‌ای یافت نشد.</p>
             </div>
         @endforelse
     </div>
@@ -268,11 +352,29 @@
                 'Accept': 'application/json'
             },
         })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`خطای HTTP: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
-                    document.querySelector(`[data-image-id="${imageId}"]`).remove();
-                    showNotification('تصویر با موفقیت به حالت بررسی نشده بازگردانده شد', 'success');
+                    const element = document.querySelector(`[data-image-id="${imageId}"]`);
+                    element.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    element.style.opacity = '0';
+                    element.style.transform = 'scale(0.8)';
+
+                    setTimeout(() => {
+                        element.remove();
+                        showNotification('تصویر با موفقیت به حالت بررسی نشده بازگردانده شد', 'success');
+
+                        // اگر تصویری باقی نمانده، پیام نمایش دهیم
+                        if (document.querySelectorAll('#image-gallery [data-image-id]').length === 0) {
+                            document.getElementById('image-gallery').innerHTML =
+                                '<div class="w-full text-center py-8 bg-yellow-100 text-yellow-700"><p class="font-bold text-lg">هیچ تصویر تأیید شده‌ای وجود ندارد.</p></div>';
+                        }
+                    }, 500);
                 }
             })
             .catch(error => {
@@ -285,6 +387,7 @@
     function showNotification(message, type = 'success') {
         const notification = document.getElementById('notification');
         notification.textContent = message;
+        notification.style.transform = 'translateY(0)';
 
         // تنظیم رنگ بر اساس نوع پیام
         if (type === 'success') {
@@ -300,9 +403,19 @@
         // نمایش اعلان
         notification.style.display = 'block';
 
+        // افکت ورود
+        setTimeout(() => {
+            notification.style.opacity = '1';
+        }, 10);
+
         // حذف اعلان بعد از 3 ثانیه
         setTimeout(() => {
-            notification.style.display = 'none';
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateY(-10px)';
+
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 300);
         }, 3000);
     }
 
