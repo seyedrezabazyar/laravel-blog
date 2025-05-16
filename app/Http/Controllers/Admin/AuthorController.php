@@ -63,10 +63,10 @@ class AuthorController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            // لاگ برای اشکال‌زدایی
+            // لاگ برای اشکال‌زدایی، فقط کلیدهای درخواست لاگ می‌شوند
             Log::info('Update author request', [
                 'author_id' => $id,
-                'data' => $request->all()
+                'fields' => array_keys($request->all())
             ]);
 
             // دریافت نویسنده با ID

@@ -178,8 +178,8 @@ class PostController extends Controller
                 'authors' => 'nullable|array',
                 'authors.*' => 'exists:authors,id',
                 'tags' => 'nullable|string|max:500',
-                'image' => 'nullable|image|max:2048',
-            ]);
+                'image' => 'nullable|mimes:jpeg,png,jpg,gif|image|max:2048',
+                ]);
 
             $postData = $validated;
             unset($postData['authors'], $postData['tags'], $postData['image'], $postData['hide_image']);

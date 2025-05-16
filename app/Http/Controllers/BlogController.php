@@ -212,25 +212,30 @@ class BlogController extends Controller
     {
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
 
-        $query = DB::table('posts')
+        // Query for main posts where the author is the primary author
+        $mainPosts = DB::table('posts')
+            ->select('posts.*')
             ->where('author_id', $author->id)
-            ->where('is_published', 1);
+            ->where('is_published', true)
+            ->when(!$isAdmin, function ($query) {
+                return $query->where('hide_content', false);
+            })
+            ->orderBy('created_at', 'DESC')
+            ->get();
 
-        if (!$isAdmin) {
-            $query->where('hide_content', 0);
-        }
+        // Query for co-authored posts
+        $coAuthoredPosts = DB::table('posts as p')
+            ->select('p.*')
+            ->join('post_author as pa', 'p.id', '=', 'pa.post_id')
+            ->where('pa.author_id', $author->id)
+            ->where('p.is_published', true)
+            ->when(!$isAdmin, function ($query) {
+                return $query->where('p.hide_content', false);
+            })
+            ->orderBy('p.created_at', 'DESC')
+            ->get();
 
-        $mainPosts = $query->orderBy('created_at', 'DESC')->get();
-
-        $coAuthoredPosts = DB::select("
-            SELECT p.* FROM posts p
-            JOIN post_author pa ON p.id = pa.post_id
-            WHERE pa.author_id = ?
-            AND p.is_published = 1
-            " . (!$isAdmin ? "AND p.hide_content = 0" : "") . "
-            ORDER BY p.created_at DESC
-        ", [$author->id]);
-
+        // Combine and deduplicate posts
         $postIds = [];
         $postsArray = [];
 
@@ -248,6 +253,7 @@ class BlogController extends Controller
             }
         }
 
+        // Paginate the combined results
         $posts = new \Illuminate\Pagination\LengthAwarePaginator(
             $postsArray,
             count($postsArray),
@@ -350,7 +356,7 @@ class BlogController extends Controller
                 ->select(['id', 'title', 'slug'])
                 ->with([
                     'featuredImage' => function($query) {
-                        $query->select('id', 'post_id', 'image_path', 'hide_image');
+                        $query->select('id', 'post_id', 'imagemeat', 'hide_image');
                     }
                 ])
                 ->latest()
