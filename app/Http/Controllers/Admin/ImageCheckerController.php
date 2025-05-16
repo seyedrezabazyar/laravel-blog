@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PostImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ImageCheckerController extends Controller
 {
@@ -43,6 +44,14 @@ class ImageCheckerController extends Controller
             // بررسی تصاویر در دسته‌های کوچک‌تر برای جلوگیری از خطای زمان اجرا
             $currentId = $startId;
 
+            // ثبت لاگ برای اطلاع از شروع عملیات
+            Log::info('بررسی تصاویر آغاز شد', [
+                'start_id' => $startId,
+                'end_id' => $endId,
+                'batch_size' => $batchSize,
+                'total_images' => $totalImages
+            ]);
+
             while ($currentId <= $endId) {
                 $batchEndId = min($currentId + $batchSize - 1, $endId);
 
@@ -59,7 +68,13 @@ class ImageCheckerController extends Controller
 
                         if (empty($imageUrl)) {
                             // تصویر بدون مسیر را به عنوان گمشده علامت‌گذاری می‌کنیم
-                            $image->update(['hide_image' => 'missing']);
+                            $this->markImageAsMissing($image, "مسیر تصویر خالی است");
+                            $missingCount++;
+                            continue;
+                        }
+
+                        // اگر تصویر قبلاً به عنوان گمشده علامت‌گذاری شده، آن را دوباره بررسی نمی‌کنیم
+                        if ($image->hide_image === 'missing') {
                             $missingCount++;
                             continue;
                         }
@@ -69,12 +84,12 @@ class ImageCheckerController extends Controller
 
                         if ($response->status() !== 200) {
                             // تصویر با کد پاسخ غیر 200 را به عنوان گمشده علامت‌گذاری می‌کنیم
-                            $image->update(['hide_image' => 'missing']);
+                            $this->markImageAsMissing($image, "کد پاسخ: " . $response->status());
                             $missingCount++;
                         }
                     } catch (\Exception $e) {
                         // خطا در دسترسی به تصویر، آن را به عنوان گمشده علامت‌گذاری می‌کنیم
-                        $image->update(['hide_image' => 'missing']);
+                        $this->markImageAsMissing($image, $e->getMessage());
                         $missingCount++;
                         $errors[] = "خطا در بررسی تصویر {$image->id}: " . $e->getMessage();
                     }
@@ -82,10 +97,24 @@ class ImageCheckerController extends Controller
 
                 // به روزرسانی شناسه فعلی برای دسته بعدی
                 $currentId = $batchEndId + 1;
+
+                // ثبت لاگ پیشرفت کار
+                Log::info('پیشرفت بررسی تصاویر', [
+                    'current_id' => $currentId,
+                    'processed_count' => $processedCount,
+                    'missing_count' => $missingCount
+                ]);
             }
 
             // پیام موفقیت
             $successMessage = "بررسی تصاویر به پایان رسید. {$processedCount} تصویر بررسی شد و {$missingCount} تصویر به عنوان گمشده علامت‌گذاری شد.";
+
+            // ثبت لاگ پایان عملیات
+            Log::info('بررسی تصاویر به پایان رسید', [
+                'processed_count' => $processedCount,
+                'missing_count' => $missingCount,
+                'error_count' => count($errors)
+            ]);
 
             return redirect()->route('admin.images.checker')
                 ->with('success', $successMessage)
@@ -94,12 +123,55 @@ class ImageCheckerController extends Controller
                 ->with('errors', $errors);
 
         } catch (\Exception $e) {
+            // ثبت لاگ خطا
+            Log::error('خطا در بررسی تصاویر', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'processed_count' => $processedCount,
+                'missing_count' => $missingCount
+            ]);
+
             // در صورت بروز خطای کلی
             return redirect()->route('admin.images.checker')
                 ->with('error', 'خطا در بررسی تصاویر: ' . $e->getMessage())
                 ->with('processed_count', $processedCount)
                 ->with('missing_count', $missingCount)
                 ->with('errors', $errors);
+        }
+    }
+
+    /**
+     * تابع کمکی برای علامت‌گذاری تصویر به عنوان گمشده
+     *
+     * @param PostImage $image تصویر مورد نظر
+     * @param string $reason دلیل گمشده بودن تصویر
+     * @return bool نتیجه عملیات به‌روزرسانی
+     */
+    private function markImageAsMissing(PostImage $image, string $reason = ''): bool
+    {
+        try {
+            // علامت‌گذاری به عنوان گمشده با به‌روزرسانی صریح زمان
+            $result = $image->update([
+                'hide_image' => 'missing',
+                'updated_at' => now() // به‌روزرسانی صریح زمان
+            ]);
+
+            // ثبت لاگ برای اشکال‌زدایی
+            Log::info('تصویر به عنوان گمشده علامت‌گذاری شد', [
+                'image_id' => $image->id,
+                'image_path' => $image->image_path,
+                'reason' => $reason
+            ]);
+
+            return $result;
+        } catch (\Exception $e) {
+            // ثبت لاگ خطا
+            Log::error('خطا در علامت‌گذاری تصویر به عنوان گمشده', [
+                'image_id' => $image->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return false;
         }
     }
 }

@@ -9,7 +9,6 @@
                     // استفاده از فیلدهای شمارنده به جای کوئری اضافی
                     $postsCount = $author->total_posts_count;
                 @endphp
-                <p class="text-gray-600">{{ $postsCount }} {{ $postsCount > 1 ? 'کتاب' : 'کتاب' }}</p>
             </div>
         </div>
     </div>
@@ -29,7 +28,7 @@
                             <svg class="flex-shrink-0 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
                             </svg>
-                            <span class="mr-2 text-gray-700 font-medium">نویسندگان</span>
+                            <span class="mr-2 text-gray-700 font-medium">نویسنده</span>
                         </div>
                     </li>
                     <li>
@@ -99,12 +98,6 @@
                             </div>
                         @endif
 
-                        <div class="flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14-10v2m-14 0v2" />
-                            </svg>
-                            <span>{{ $postsCount }} مجموع کتاب</span>
-                        </div>
                     </div>
                 </div>
             </div>

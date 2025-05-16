@@ -50,7 +50,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Usar Bootstrap para paginación
-        Paginator::useBootstrap();
+//        Paginator::useBootstrap();
+        Paginator::useTailwind();
 
         // Registrar componentes Blade para mejora de rendimiento
         $this->registerBladeComponents();

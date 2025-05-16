@@ -11,6 +11,7 @@ class GalleryController extends Controller
     /**
      * نمایش همه تصاویر با وضعیت null و با pagination
      */
+
     public function index()
     {
         $images = PostImage::whereNull('hide_image')
@@ -26,8 +27,7 @@ class GalleryController extends Controller
     {
         $image = PostImage::findOrFail($id);
         $image->update([
-            'hide_image' => 'visible',
-            'approved_at' => now()
+            'hide_image' => 'visible'
         ]);
 
         if ($request->wantsJson()) {
@@ -46,11 +46,11 @@ class GalleryController extends Controller
         if (!empty($imageIds)) {
             PostImage::whereIn('id', $imageIds)->update([
                 'hide_image' => 'visible',
-                'approved_at' => now()
+                'updated_at' => now()
             ]);
 
             if ($request->wantsJson()) {
-                return response()->json(['success' => true, 'message' => 'همه تصاویر تأیید شدند.']);
+                return response()->json(['success' => true, 'message' => 'همه تصاویر تأیید شدند.', 'count' => count($imageIds)]);
             }
 
             return redirect()->back()->with('success', 'همه تصاویر با موفقیت تأیید شدند.');
@@ -114,7 +114,7 @@ class GalleryController extends Controller
     public function visible()
     {
         $images = PostImage::where('hide_image', 'visible')
-            ->orderBy('id', 'asc')
+            ->orderBy('updated_at', 'desc')
             ->paginate(100);
         return view('admin.images.visible', compact('images'));
     }
@@ -125,7 +125,7 @@ class GalleryController extends Controller
     public function hidden()
     {
         $images = PostImage::where('hide_image', 'hidden')
-            ->orderBy('id', 'asc')
+            ->orderBy('updated_at', 'desc')
             ->paginate(100);
         return view('admin.images.hidden', compact('images'));
     }
@@ -136,7 +136,7 @@ class GalleryController extends Controller
     public function missing()
     {
         $images = PostImage::where('hide_image', 'missing')
-            ->orderBy('id', 'asc')
+            ->orderBy('updated_at', 'desc')
             ->paginate(100);
         return view('admin.images.missing', compact('images'));
     }

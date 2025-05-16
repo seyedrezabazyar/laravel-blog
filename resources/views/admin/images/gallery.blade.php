@@ -351,9 +351,6 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            // فوراً تصاویر را از صفحه حذف کن
-                            const imageGrid = document.getElementById('image-gallery');
-
                             // افکت محو شدن تدریجی برای تصاویر
                             const items = document.querySelectorAll('#image-gallery [data-image-id]');
                             items.forEach(item => {
@@ -363,8 +360,21 @@
 
                             // بعد از اتمام انیمیشن محو شدن، المان‌ها را حذف کن
                             setTimeout(() => {
-                                imageGrid.innerHTML = '<div class="w-full text-center py-8 bg-green-100 text-green-700"><p>تمام تصاویر با موفقیت تأیید شدند!</p></div>';
+                                // پیام موفقیت
                                 showNotification(`${imageIds.length} تصویر با موفقیت تأیید شدند`, 'success');
+
+                                // نمایش پیام خالی بودن با افکت
+                                const imageGrid = document.getElementById('image-gallery');
+                                imageGrid.innerHTML = '<div class="w-full text-center py-8 bg-green-100 text-green-700 animate-pulse"><p>تمام تصاویر با موفقیت تأیید شدند!</p><p>لطفاً صفحه را رفرش کنید یا به بخش تصاویر تایید شده بروید.</p></div>';
+
+                                // اضافه کردن دکمه ریفرش و هدایت به صفحه تأیید شده
+                                const buttonContainer = document.createElement('div');
+                                buttonContainer.className = 'flex justify-center my-4';
+                                buttonContainer.innerHTML = `
+                                <button onclick="location.reload()" class="bg-blue-500 text-white px-4 py-2 rounded mx-2">بارگذاری مجدد صفحه</button>
+                                <a href="{{ route('admin.gallery.visible') }}" class="bg-green-500 text-white px-4 py-2 rounded mx-2">مشاهده تصاویر تأیید شده</a>
+                            `;
+                                imageGrid.appendChild(buttonContainer);
                             }, 500);
                         } else {
                             showNotification('خطا در تأیید گروهی تصاویر', 'error');

@@ -291,8 +291,13 @@ class PostController extends Controller
                 'image' => 'nullable|image|max:2048',
             ]);
 
-            // به‌روزرسانی اسلاگ بر اساس عنوان
-            $validated['slug'] = Str::slug($validated['title']);
+            // به‌روزرسانی اسلاگ بر اساس عنوان (فقط برای ایجاد، نه ویرایش)
+            if (!$request->isMethod('put')) {
+                $validated['slug'] = Str::slug($validated['title']);
+            } else {
+                // حفظ اسلاگ فعلی در ویرایش
+                $validated['slug'] = DB::scalar("SELECT slug FROM posts WHERE id = ?", [$id]);
+            }
 
             // پاکسازی محتوا برای مقادیر غیر تهی با گزینه‌های محدود برای سرعت بیشتر
             if (!empty($validated['content'])) {
