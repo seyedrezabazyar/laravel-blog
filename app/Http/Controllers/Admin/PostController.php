@@ -17,9 +17,6 @@ use Mews\Purifier\Facades\Purifier;
 
 class PostController extends Controller
 {
-    /**
-     * نمایش لیست پست‌ها با کوئری بهینه‌سازی شده
-     */
     public function index(Request $request)
     {
         $filter = $request->get('filter');
@@ -38,8 +35,8 @@ class PostController extends Controller
         }
 
         $postsQuery->orderBy('id', 'desc');
-
         $cacheKey = 'posts_counts_' . md5(json_encode($request->all()));
+
         $counts = Cache::remember($cacheKey, 600, function () {
             return [
                 'published' => Post::where('is_published', true)->count(),
@@ -58,14 +55,9 @@ class PostController extends Controller
         ]);
     }
 
-    /**
-     * نمایش فرم ویرایش پست با کوئری بهینه‌سازی شده
-     */
     public function edit($id)
     {
         try {
-            DB::connection()->disableQueryLog();
-
             $post = Post::select([
                 'id', 'title', 'slug', 'english_title', 'content', 'english_content',
                 'category_id', 'author_id', 'publisher_id', 'language',
@@ -97,11 +89,9 @@ class PostController extends Controller
                 'post', 'featuredImage', 'tags_list', 'categories',
                 'authors', 'post_authors', 'publishers'
             ));
-
         } catch (\Exception $e) {
             Log::error('Error in edit post form: ' . $e->getMessage(), [
                 'post_id' => $id,
-                'trace' => $e->getTraceAsString()
             ]);
 
             return redirect()->route('admin.posts.index')
@@ -109,9 +99,6 @@ class PostController extends Controller
         }
     }
 
-    /**
-     * به‌روزرسانی پست در دیتابیس - با تمرکز بر عملیات‌های ضروری
-     */
     public function update(Request $request, $id)
     {
         // تغییر وضعیت انتشار یا نمایش
@@ -119,7 +106,6 @@ class PostController extends Controller
             try {
                 $currentPage = $request->input('current_page', 1);
                 $currentFilter = $request->input('current_filter', '');
-                $statusMessage = '';
 
                 if ($request->has('toggle_publish')) {
                     DB::statement("UPDATE posts SET is_published = NOT is_published WHERE id = ?", [$id]);
@@ -135,32 +121,21 @@ class PostController extends Controller
 
                 $this->clearCaches($id);
                 $title = $request->input('title', 'پست');
-                $redirectUrl = route('admin.posts.index');
                 $queryParams = [];
 
-                if (!empty($currentFilter)) {
-                    $queryParams['filter'] = $currentFilter;
-                }
+                if (!empty($currentFilter)) $queryParams['filter'] = $currentFilter;
+                if ($currentPage > 1) $queryParams['page'] = $currentPage;
 
-                if ($currentPage > 1) {
-                    $queryParams['page'] = $currentPage;
-                }
-
+                $redirectUrl = route('admin.posts.index');
                 if (!empty($queryParams)) {
                     $redirectUrl .= '?' . http_build_query($queryParams);
                 }
 
                 return redirect($redirectUrl)
                     ->with('success', "کتاب «{$title}» با موفقیت {$statusMessage} شد.");
-
             } catch (\Exception $e) {
-                Log::error('خطا در تغییر وضعیت پست: ' . $e->getMessage(), [
-                    'post_id' => $id,
-                    'trace' => $e->getTraceAsString()
-                ]);
-
-                return redirect()->back()
-                    ->with('error', 'خطا در به‌روزرسانی وضعیت پست: ' . $e->getMessage());
+                Log::error('خطا در تغییر وضعیت پست: ' . $e->getMessage(), ['post_id' => $id]);
+                return redirect()->back()->with('error', 'خطا در به‌روزرسانی وضعیت پست: ' . $e->getMessage());
             }
         }
 
@@ -229,64 +204,7 @@ class PostController extends Controller
                 ]);
             }
 
-            // به‌روزرسانی نویسندگان
-            if (isset($validated['authors'])) {
-                DB::table('post_author')->where('post_id', $post->id)->delete();
-
-                if (!empty($validated['authors'])) {
-                    $mainAuthorId = reset($validated['authors']);
-                    $post->update(['author_id' => $mainAuthorId]);
-
-                    $authorData = [];
-                    foreach ($validated['authors'] as $authorId) {
-                        $authorData[] = [
-                            'post_id' => $post->id,
-                            'author_id' => $authorId,
-                            'created_at' => now(),
-                            'updated_at' => now()
-                        ];
-                    }
-
-                    if (!empty($authorData)) {
-                        DB::table('post_author')->insert($authorData);
-                    }
-                }
-            }
-
-            // به‌روزرسانی تگ‌ها
-            if (isset($validated['tags'])) {
-                DB::table('post_tag')->where('post_id', $post->id)->delete();
-
-                if (!empty($validated['tags'])) {
-                    $tags = explode(',', $validated['tags']);
-
-                    foreach ($tags as $tagName) {
-                        $tagName = trim($tagName);
-                        if (empty($tagName)) continue;
-
-                        $slug = Str::slug($tagName);
-                        $tag = DB::table('tags')->where('slug', $slug)->first();
-
-                        if (!$tag) {
-                            $tagId = DB::table('tags')->insertGetId([
-                                'name' => $tagName,
-                                'slug' => $slug,
-                                'created_at' => now(),
-                                'updated_at' => now()
-                            ]);
-                        } else {
-                            $tagId = $tag->id;
-                        }
-
-                        DB::table('post_tag')->insert([
-                            'post_id' => $post->id,
-                            'tag_id' => $tagId,
-                            'created_at' => now(),
-                            'updated_at' => now()
-                        ]);
-                    }
-                }
-            }
+            $this->updateAuthorsAndTags($post, $validated);
 
             DB::commit();
             $this->clearCaches($id);
@@ -298,22 +216,77 @@ class PostController extends Controller
             return redirect()->back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('خطا در به‌روزرسانی پست: ' . $e->getMessage(), [
-                'post_id' => $id,
-                'trace' => $e->getTraceAsString()
-            ]);
-
+            Log::error('خطا در به‌روزرسانی پست: ' . $e->getMessage(), ['post_id' => $id]);
             return redirect()->back()->withInput()
                 ->with('error', 'خطا در به‌روزرسانی پست: ' . $e->getMessage());
         }
     }
 
-    /**
-     * پاک کردن کش‌های مرتبط با پست
-     */
+    private function updateAuthorsAndTags($post, $validated)
+    {
+        // به‌روزرسانی نویسندگان
+        if (isset($validated['authors'])) {
+            DB::table('post_author')->where('post_id', $post->id)->delete();
+
+            if (!empty($validated['authors'])) {
+                $mainAuthorId = reset($validated['authors']);
+                $post->update(['author_id' => $mainAuthorId]);
+
+                $authorData = [];
+                foreach ($validated['authors'] as $authorId) {
+                    $authorData[] = [
+                        'post_id' => $post->id,
+                        'author_id' => $authorId,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                }
+
+                if (!empty($authorData)) {
+                    DB::table('post_author')->insert($authorData);
+                }
+            }
+        }
+
+        // به‌روزرسانی تگ‌ها
+        if (isset($validated['tags'])) {
+            DB::table('post_tag')->where('post_id', $post->id)->delete();
+
+            if (!empty($validated['tags'])) {
+                $tags = explode(',', $validated['tags']);
+
+                foreach ($tags as $tagName) {
+                    $tagName = trim($tagName);
+                    if (empty($tagName)) continue;
+
+                    $slug = Str::slug($tagName);
+                    $tag = DB::table('tags')->where('slug', $slug)->first();
+
+                    if (!$tag) {
+                        $tagId = DB::table('tags')->insertGetId([
+                            'name' => $tagName,
+                            'slug' => $slug,
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ]);
+                    } else {
+                        $tagId = $tag->id;
+                    }
+
+                    DB::table('post_tag')->insert([
+                        'post_id' => $post->id,
+                        'tag_id' => $tagId,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
+            }
+        }
+    }
+
     private function clearCaches($id)
     {
-        $cacheKeysToForget = [
+        $cacheKeys = [
             "post_edit_{$id}_minimal_data",
             "post_edit_{$id}_content_data",
             "post_{$id}_featured_image_minimal",
@@ -326,7 +299,7 @@ class PostController extends Controller
             "post_{$id}_related_posts_user"
         ];
 
-        foreach ($cacheKeysToForget as $key) {
+        foreach ($cacheKeys as $key) {
             Cache::forget($key);
         }
 

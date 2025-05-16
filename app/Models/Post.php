@@ -25,15 +25,13 @@ class Post extends Model
         'publication_year' => 'integer',
     ];
 
-    // حذف روابط پیش‌فرض برای بهینه‌سازی
     protected $with = [];
 
     public function getSlugOptions(): SlugOptions
     {
         return SlugOptions::create()
             ->generateSlugsFrom('title')
-            ->saveSlugsTo('slug')
-            ->usingLanguage('fa');
+            ->saveSlugsTo('slug');
     }
 
     public function user()
@@ -59,18 +57,6 @@ class Post extends Model
     public function featuredImage()
     {
         $cacheKey = "post_{$this->id}_featured_image";
-
-        $cachedImage = Cache::remember($cacheKey, 60, function() {
-            return $this->hasOne(PostImage::class)
-                ->select(['id', 'post_id', 'image_path', 'caption', 'hide_image', 'sort_order'])
-                ->orderBy('sort_order')
-                ->first();
-        });
-
-        if ($cachedImage) {
-            return $this->hasOne(PostImage::class)->where('id', $cachedImage->id);
-        }
-
         return $this->hasOne(PostImage::class)
             ->select(['id', 'post_id', 'image_path', 'caption', 'hide_image', 'sort_order'])
             ->orderBy('sort_order');
@@ -98,7 +84,6 @@ class Post extends Model
     public function getPurifiedContentAttribute()
     {
         $cacheKey = "post_{$this->id}_purified_content_" . md5($this->content);
-
         return Cache::remember($cacheKey, 86400 * 7, function () {
             return Purifier::clean($this->content);
         });
@@ -106,13 +91,10 @@ class Post extends Model
 
     public function scopeVisibleToUser($query)
     {
-        $query->where('is_published', true);
-
-        if (!auth()->check() || !auth()->user()->isAdmin()) {
-            $query->where('hide_content', false);
-        }
-
-        return $query;
+        return $query->where('is_published', true)
+            ->when(!auth()->check() || !auth()->user()->isAdmin(), function ($q) {
+                $q->where('hide_content', false);
+            });
     }
 
     public function scopeInCategory($query, $categoryId)
@@ -141,7 +123,6 @@ class Post extends Model
     public function scopeFullTextSearch($query, $searchTerm)
     {
         $searchTerm = preg_replace('/[^\p{L}\p{N}_\s-]/u', '', $searchTerm);
-
         return $query->where(function($q) use ($searchTerm) {
             $q->where('title', 'like', "%{$searchTerm}%")
                 ->orWhere('english_title', 'like', "%{$searchTerm}%")

@@ -16,7 +16,6 @@ class PostImage extends Model
         'approved_at',
     ];
 
-    // کاهش زمان کش برای تصاویر به 1 روز
     protected $imageCacheTtl = 86400;
 
     public function post()
@@ -39,11 +38,6 @@ class PostImage extends Model
         return $this->hide_image === 'missing';
     }
 
-    public function isRestricted()
-    {
-        return $this->hide_image === null || $this->hide_image === 'hidden' || $this->hide_image === 'missing';
-    }
-
     public function getImageUrlAttribute()
     {
         $cacheKey = "post_image_{$this->id}_url";
@@ -53,22 +47,18 @@ class PostImage extends Model
                 return asset('images/default-book.png');
             }
 
-            // Direct URL for HTTP/HTTPS paths
             if (strpos($this->image_path, 'http://') === 0 || strpos($this->image_path, 'https://') === 0) {
                 return $this->image_path;
             }
 
-            // Handle images.balyan.ir domain
             if (strpos($this->image_path, 'images.balyan.ir/') !== false) {
                 return 'https://' . $this->image_path;
             }
 
-            // Handle images from download host
             if (strpos($this->image_path, 'post_images/') === 0 || strpos($this->image_path, 'posts/') === 0) {
                 return config('app.custom_image_host', 'https://images.balyan.ir') . '/' . $this->image_path;
             }
 
-            // Local storage fallback
             return asset('storage/' . $this->image_path);
         });
     }
@@ -85,11 +75,7 @@ class PostImage extends Model
                 return $defaultImage;
             }
 
-            if ($isAdmin) {
-                return $this->image_url;
-            }
-
-            if ($this->hide_image === 'visible') {
+            if ($isAdmin || $this->hide_image === 'visible') {
                 return $this->image_url;
             }
 

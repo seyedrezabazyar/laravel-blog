@@ -9,11 +9,10 @@ use App\Models\Tag;
 use App\Models\Publisher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB; // اضافه کردن این import برای رفع خطا
+use Illuminate\Support\Facades\DB;
 
 class BlogController extends Controller
 {
-    // Cache TTL in seconds (24 hours, configurable via .env)
     protected $cacheTtl = 86400;
 
     /**
@@ -21,7 +20,6 @@ class BlogController extends Controller
      */
     public function index()
     {
-        // فقط 12 پست آخر را با فیلدهای مورد نیاز از دیتابیس می‌گیریم
         $posts = Cache::remember('home_latest_posts', 3600, function () {
             return Post::select('id', 'title', 'slug', 'publication_year', 'format')
                 ->where('is_published', true)
@@ -31,7 +29,7 @@ class BlogController extends Controller
                 ->get();
         });
 
-        // دسته‌بندی‌های ثابت برای صفحه اصلی - بدون نیاز به کوئری دیتابیس
+        // دسته‌بندی‌های ثابت برای صفحه اصلی
         $categories = [
             (object) ['name' => 'رمان', 'slug' => 'roman', 'icon' => 'book', 'description' => 'داستان‌های خیال‌انگیز'],
             (object) ['name' => 'علمی', 'slug' => 'scientific', 'icon' => 'academic-cap', 'description' => 'دانش و پژوهش'],
@@ -51,8 +49,6 @@ class BlogController extends Controller
      */
     public function categories()
     {
-        // استفاده از آرایه ثابت به جای کوئری به دیتابیس
-        // این داده‌ها می‌توانند در یک فایل کانفیگ یا در کش دائمی ذخیره شوند
         $categories = collect([
             (object) ['id' => 1, 'name' => 'رمان', 'slug' => 'roman', 'posts_count' => 25],
             (object) ['id' => 2, 'name' => 'علمی', 'slug' => 'scientific', 'posts_count' => 18],
@@ -72,10 +68,7 @@ class BlogController extends Controller
             (object) ['id' => 16, 'name' => 'اقتصاد', 'slug' => 'economics', 'posts_count' => 11],
         ]);
 
-        // مرتب‌سازی بر اساس تعداد پست‌ها (از بیشترین به کمترین)
         $categories = $categories->sortByDesc('posts_count');
-
-        // دسته‌بندی‌های محبوب (5 مورد اول)
         $popularCategories = $categories->take(5);
 
         return view('blog.categories', compact('categories', 'popularCategories'));
@@ -86,16 +79,10 @@ class BlogController extends Controller
      */
     public function show(Post $post)
     {
-        // Check if post is published and visible
-        if (!$post->is_published) {
+        if (!$post->is_published || ($post->hide_content && !(auth()->check() && auth()->user()->isAdmin()))) {
             abort(404);
         }
 
-        if ($post->hide_content && !(auth()->check() && auth()->user()->isAdmin())) {
-            abort(404);
-        }
-
-        // Efficiently load only the relationships we need with specific columns
         $post->load([
             'category:id,name,slug',
             'featuredImage',
@@ -104,27 +91,22 @@ class BlogController extends Controller
             'authors:id,name,slug',
         ]);
 
-        // Cache key that includes post ID and whether user is admin
         $isAdmin = auth()->check() && auth()->user()->isAdmin() ? 'admin' : 'user';
         $cacheKey = "post_{$post->id}_related_posts_{$isAdmin}";
 
-        // Get related posts from cache or generate them
         $relatedPosts = Cache::remember($cacheKey, $this->cacheTtl, function () use ($post) {
-            // Find related posts in a single optimized query with eager loading
             return $this->getRelatedPosts($post);
         });
 
-        // Return the view with required data
         return view('blog.show', compact('post', 'relatedPosts'));
     }
 
     /**
      * Optimized related posts query
-     * This uses a single DB query with UNION to get all related posts
      */
     private function getRelatedPosts(Post $post)
     {
-        // Get posts from same category first (limited to 6)
+        // Get posts from same category (limit to 6)
         $categoryPosts = Post::visibleToUser()
             ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
             ->where('category_id', $post->category_id)
@@ -144,12 +126,11 @@ class BlogController extends Controller
             return $categoryPosts;
         }
 
-        // Get the IDs of posts we already have
+        // Get posts with the same tags if needed
         $existingIds = $categoryPosts->pluck('id')->toArray();
         $existingIds[] = $post->id;
-
-        // Get posts with the same tags (if any)
         $tagPosts = collect();
+
         if ($post->tags && $post->tags->isNotEmpty()) {
             $tagIds = $post->tags->pluck('id')->toArray();
 
@@ -170,10 +151,10 @@ class BlogController extends Controller
                 ->get();
         }
 
-        // Combine the results
+        // Combine results
         $result = $categoryPosts->merge($tagPosts);
 
-        // If we still need more posts, get the most recent ones
+        // Add recent posts if needed
         if ($result->count() < 6) {
             $currentIds = $result->pluck('id')->toArray();
             $currentIds[] = $post->id;
@@ -203,13 +184,10 @@ class BlogController extends Controller
      */
     public function category(Category $category)
     {
-        // پاک کردن کش قبلی
         $page = request()->get('page', 1);
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
         $cacheKey = "category_posts_{$category->id}_page_{$page}_" . ($isAdmin ? 'admin' : 'user');
-        Cache::forget($cacheKey);
 
-        // لود کردن پست‌ها با تمام فیلدهای مورد نیاز
         $posts = Post::where('is_published', true)
             ->when(!$isAdmin, function ($query) {
                 $query->where('hide_content', false);
@@ -224,16 +202,6 @@ class BlogController extends Controller
             ->latest()
             ->simplePaginate(12);
 
-        // برای اطمینان - بررسی دسترسی به داده‌های featuredImage در کنسول
-        foreach ($posts as $post) {
-            if ($post->featuredImage) {
-                \Log::info('Post Image: ' . $post->id, [
-                    'image_path' => $post->featuredImage->image_path,
-                    'hide_image' => $post->featuredImage->hide_image
-                ]);
-            }
-        }
-
         return view('blog.category', compact('posts', 'category'));
     }
 
@@ -244,25 +212,23 @@ class BlogController extends Controller
     {
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
 
-        // استفاده از کوئری‌های خام SQL به جای eloquent و کش
         $mainPosts = DB::select("
-        SELECT p.* FROM posts p
-        WHERE p.author_id = ?
-        AND p.is_published = 1
-        " . (!$isAdmin ? "AND p.hide_content = 0" : "") . "
-        ORDER BY p.created_at DESC
-    ", [$author->id]);
+            SELECT p.* FROM posts p
+            WHERE p.author_id = ?
+            AND p.is_published = 1
+            " . (!$isAdmin ? "AND p.hide_content = 0" : "") . "
+            ORDER BY p.created_at DESC
+        ", [$author->id]);
 
         $coAuthoredPosts = DB::select("
-        SELECT p.* FROM posts p
-        JOIN post_author pa ON p.id = pa.post_id
-        WHERE pa.author_id = ?
-        AND p.is_published = 1
-        " . (!$isAdmin ? "AND p.hide_content = 0" : "") . "
-        ORDER BY p.created_at DESC
-    ", [$author->id]);
+            SELECT p.* FROM posts p
+            JOIN post_author pa ON p.id = pa.post_id
+            WHERE pa.author_id = ?
+            AND p.is_published = 1
+            " . (!$isAdmin ? "AND p.hide_content = 0" : "") . "
+            ORDER BY p.created_at DESC
+        ", [$author->id]);
 
-        // ترکیب و حذف موارد تکراری
         $postIds = [];
         $postsArray = [];
 
@@ -280,12 +246,11 @@ class BlogController extends Controller
             }
         }
 
-        // تبدیل آرایه به Collection برای استفاده از paginate
         $posts = new \Illuminate\Pagination\LengthAwarePaginator(
             $postsArray,
             count($postsArray),
-            12,  // تعداد آیتم در هر صفحه
-            null, // صفحه فعلی (null برای استفاده از صفحه فعلی از request)
+            12,
+            null,
             ['path' => request()->url()]
         );
 
@@ -297,24 +262,20 @@ class BlogController extends Controller
      */
     public function publisher(Publisher $publisher)
     {
-        // کلید کش بر اساس شناسه ناشر و پارامترهای مهم
         $page = request()->get('page', 1);
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
         $cacheKey = "publisher_posts_{$publisher->id}_page_{$page}_" . ($isAdmin ? 'admin' : 'user');
 
-        // ذخیره نتایج در کش به مدت ۱ ساعت
         $posts = Cache::remember($cacheKey, 3600, function () use ($publisher, $isAdmin) {
             return Post::where('is_published', true)
                 ->when(!$isAdmin, function ($query) {
                     $query->where('hide_content', false);
                 })
                 ->where('publisher_id', $publisher->id)
-                // انتخاب فقط فیلدهای مورد نیاز
                 ->select([
                     'id', 'title', 'slug', 'category_id', 'author_id',
                     'publication_year', 'format'
                 ])
-                // بارگذاری روابط با انتخاب ستون‌های مشخص
                 ->with([
                     'featuredImage' => function($query) {
                         $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
@@ -327,15 +288,9 @@ class BlogController extends Controller
                 ->simplePaginate(12);
         });
 
-        // حذف این خط که باعث دوباره کاری می‌شود
-        // $posts->load(['author' => function($query) {
-        //     $query->select(['id', 'name', 'slug'])->without(['posts', 'coAuthoredPosts']);
-        // }]);
-
-        // افزودن هدرهای کش برای کش مرورگر
-        $etag = md5($publisher->id . $page . $isAdmin . time() / 3600); // زمان را به ساعت گرد می‌کنیم
+        $etag = md5($publisher->id . $page . $isAdmin . time() / 3600);
         $response = response()->view('blog.publisher', compact('posts', 'publisher'));
-        $response->header('Cache-Control', 'public, max-age=300'); // کش به مدت ۵ دقیقه
+        $response->header('Cache-Control', 'public, max-age=300');
         $response->header('ETag', $etag);
 
         return $response;
@@ -352,12 +307,9 @@ class BlogController extends Controller
             return redirect()->route('blog.index');
         }
 
-        // کلید کش منحصر به فرد برای این جستجو و صفحه
         $cacheKey = 'search_results_' . md5($query . '_page_' . $request->get('page', 1));
 
-        // نتایج جستجو را از کش بخوان یا محاسبه کن
         $posts = Cache::remember($cacheKey, $this->cacheTtl, function () use ($query, $request) {
-            // کد جستجو
             $postsQuery = Post::visibleToUser()
                 ->select(['id', 'title', 'slug', 'category_id', 'author_id', 'publisher_id', 'publication_year', 'format'])
                 ->with([
@@ -369,13 +321,10 @@ class BlogController extends Controller
                     'authors:id,name,slug'
                 ]);
 
-            // کد جستجو
             if (method_exists(Post::class, 'scopeFullTextSearch')) {
                 try {
                     $postsQuery->fullTextSearch($query);
                 } catch (\Exception $e) {
-                    // اگر جستجوی FULLTEXT با خطا مواجه شد، از جستجوی LIKE استفاده کن
-                    \Log::error('Search error: ' . $e->getMessage());
                     $postsQuery->where(function ($q) use ($query) {
                         $q->where('title', 'like', "%{$query}%")
                             ->orWhere('english_title', 'like', "%{$query}%")
@@ -391,12 +340,9 @@ class BlogController extends Controller
             }
 
             $result = $postsQuery->latest()->simplePaginate(12);
-
-            // مهم: اضافه کردن پارامتر جستجو به URL صفحه‌بندی
             return $result->appends(['q' => $query]);
         });
 
-        // پست‌های محبوب
         $popularPosts = Cache::remember('popular_posts', $this->cacheTtl * 24, function () {
             return Post::visibleToUser()
                 ->select(['id', 'title', 'slug'])
