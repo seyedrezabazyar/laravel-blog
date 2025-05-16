@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>تصاویر رد شده</title>
+    <title>تصاویر گمشده</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -24,7 +24,7 @@
 </head>
 <body class="bg-gray-100">
 <div class="container mx-auto p-4 rtl-content">
-    <h1 class="text-2xl font-bold mb-4">تصاویر رد شده</h1>
+    <h1 class="text-2xl font-bold mb-4">تصاویر گمشده</h1>
 
     <div class="mb-4 flex flex-wrap">
         <a href="{{ route('admin.gallery') }}" class="bg-gray-500 text-white px-4 py-2 rounded ml-2 mb-2">بررسی نشده</a>
@@ -45,8 +45,7 @@
         @forelse ($images as $image)
             <div class="bg-white p-4 rounded shadow" data-image-id="{{ $image->id }}">
                 <div class="img-wrapper mb-2">
-                    <img src="{{ $image->image_url ?? asset('storage/' . $image->image_path) }}" alt="تصویر"
-                         onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';">
+                    <img src="{{ asset('images/default-book.png') }}" alt="تصویر گمشده">
                 </div>
                 <div class="mt-2">
                     <p class="mb-1">شناسه: {{ $image->id }}</p>
@@ -61,7 +60,7 @@
             </div>
         @empty
             <div class="col-span-4 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
-                <p>هیچ تصویر رد شده‌ای یافت نشد.</p>
+                <p>هیچ تصویر گمشده‌ای یافت نشد.</p>
             </div>
         @endforelse
     </div>

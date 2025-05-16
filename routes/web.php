@@ -55,19 +55,19 @@ Route::middleware('auth')->group(function () {
         Route::delete('post-images/{image}', [PostController::class, 'destroyImage'])->name('post-images.destroy');
         Route::post('post-images/reorder', [PostController::class, 'reorderImages'])->name('post-images.reorder');
 
-        // مسیرهای گالری - بدون گروه‌بندی و با نام‌های مستقیم
-        // مسیر اصلی با نام admin.gallery
+// مسیرهای گالری
         Route::get('gallery', [GalleryController::class, 'index'])->name('gallery');
-
-        // سایر مسیرهای گالری با نام‌های مستقیم
         Route::get('gallery/visible', [GalleryController::class, 'visible'])->name('gallery.visible');
         Route::get('gallery/hidden', [GalleryController::class, 'hidden'])->name('gallery.hidden');
-        Route::get('gallery/real', [GalleryController::class, 'real'])->name('gallery.real');
+        Route::get('gallery/missing', [GalleryController::class, 'missing'])->name('gallery.missing');
 
-        // مسیرهای API برای تأیید و رد تصاویر
+// مسیرهای API برای مدیریت تصاویر
         Route::post('gallery/approve/{id}', [GalleryController::class, 'approve'])->name('gallery.approve');
         Route::post('gallery/reject/{id}', [GalleryController::class, 'reject'])->name('gallery.reject');
+        Route::post('gallery/mark-missing/{id}', [GalleryController::class, 'markMissing'])->name('gallery.mark-missing');
+        Route::post('gallery/reset/{id}', [GalleryController::class, 'reset'])->name('gallery.reset');
         Route::post('gallery/bulk-approve', [GalleryController::class, 'bulkApprove'])->name('gallery.bulk-approve');
+        Route::post('gallery/check-missing', [GalleryController::class, 'checkMissingImages'])->name('gallery.check-missing');
     });
 });
 
