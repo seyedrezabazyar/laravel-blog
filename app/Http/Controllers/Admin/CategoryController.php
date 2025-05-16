@@ -24,8 +24,8 @@ class CategoryController extends Controller
 
     public function store(Request $request)
     {
-        // ثبت تمام داده‌های درخواست در لاگ
-        Log::info('Category Store Request Data:', $request->all());
+        // ثبت مقادیر امن در لاگ - فقط اشاره به عملیات انجام شده
+        Log::info('درخواست ذخیره دسته‌بندی جدید دریافت شد');
 
         $validated = $request->validate([
             'name' => 'required|max:255|unique:categories',
@@ -33,8 +33,12 @@ class CategoryController extends Controller
             'description' => 'nullable|max:1000',
         ]);
 
-        // ثبت داده‌های اعتبارسنجی شده در لاگ
-        Log::info('Category Store Validated Data:', $validated);
+        // ثبت داده‌های امن در لاگ - بدون اطلاعات حساس
+        Log::info('داده‌های دسته‌بندی اعتبارسنجی شد', [
+            'name_length' => strlen($validated['name']),
+            'has_slug' => !empty($validated['slug']),
+            'has_description' => !empty($validated['description'])
+        ]);
 
         // اگر اسلاگ ارائه نشده باشد، آن را از نام ایجاد کنید
         if (empty($validated['slug'])) {
@@ -45,13 +49,17 @@ class CategoryController extends Controller
         }
 
         try {
-            // ثبت ساختار جدول categories در لاگ
+            // ثبت ساختار جدول categories در لاگ - فقط اطلاعات ساختاری
             $tableStructure = DB::select("DESCRIBE categories");
-            Log::info('Categories Table Structure:', $tableStructure);
+            Log::info('ساختار جدول categories بررسی شد', [
+                'column_count' => count($tableStructure)
+            ]);
 
             // بررسی مدل
             $category = new Category();
-            Log::info('Category Model Fillable:', ['fillable' => $category->getFillable()]);
+            Log::info('مدل Category آماده شد', [
+                'fillable_count' => count($category->getFillable())
+            ]);
 
             // ایجاد دسته‌بندی با استفاده از insert مستقیم به جای create
             $validated['created_at'] = now();
@@ -61,7 +69,10 @@ class CategoryController extends Controller
 
             // بررسی نتیجه درج
             $newCategory = Category::find($id);
-            Log::info('New Category Data:', ['category' => $newCategory ? $newCategory->toArray() : 'Not found']);
+            Log::info('دسته‌بندی جدید ایجاد شد', [
+                'id' => $id,
+                'name' => $newCategory ? $newCategory->name : 'Not found'
+            ]);
 
             if (!$newCategory) {
                 throw new \Exception('دسته‌بندی ایجاد شد اما قابل بازیابی نیست');
@@ -70,11 +81,10 @@ class CategoryController extends Controller
             return redirect()->route('admin.categories.index')
                 ->with('success', 'دسته‌بندی با موفقیت ایجاد شد.');
         } catch (\Exception $e) {
-            // ثبت خطا در لاگ
-            Log::error('Category Store Error:', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'data' => $validated
+            // ثبت خطا در لاگ - بدون اطلاعات حساس
+            Log::error('خطا در ایجاد دسته‌بندی', [
+                'error_message' => $e->getMessage(),
+                'error_code' => $e->getCode()
             ]);
 
             return redirect()->back()
@@ -90,17 +100,20 @@ class CategoryController extends Controller
 
     public function edit(Category $category)
     {
-        // ثبت اطلاعات دسته‌بندی موجود
-        Log::info('Editing Category:', ['category' => $category->toArray()]);
+        // ثبت اطلاعات امن - فقط شناسه
+        Log::info('صفحه ویرایش دسته‌بندی فراخوانی شد', [
+            'category_id' => $category->id
+        ]);
 
         return view('admin.categories.edit', compact('category'));
     }
 
     public function update(Request $request, Category $category)
     {
-        // ثبت تمام داده‌های درخواست در لاگ
-        Log::info('Category Update Request Data:', $request->all());
-        Log::info('Current Category Data:', ['category' => $category->toArray()]);
+        // ثبت درخواست به‌روزرسانی - بدون اطلاعات حساس
+        Log::info('درخواست به‌روزرسانی دسته‌بندی دریافت شد', [
+            'category_id' => $category->id
+        ]);
 
         $validated = $request->validate([
             'name' => 'required|max:255|unique:categories,name,' . $category->id,
@@ -108,8 +121,13 @@ class CategoryController extends Controller
             'description' => 'nullable|max:1000',
         ]);
 
-        // ثبت داده‌های اعتبارسنجی شده
-        Log::info('Category Update Validated Data:', $validated);
+        // ثبت داده‌های اعتبارسنجی شده - بدون اطلاعات حساس
+        Log::info('داده‌های به‌روزرسانی دسته‌بندی اعتبارسنجی شد', [
+            'category_id' => $category->id,
+            'name_changed' => $category->name !== $validated['name'],
+            'slug_provided' => !empty($validated['slug']),
+            'description_changed' => $category->description !== ($validated['description'] ?? null)
+        ]);
 
         // اگر اسلاگ ارائه نشده باشد، آن را از نام ایجاد کنید
         if (empty($validated['slug'])) {
@@ -125,24 +143,32 @@ class CategoryController extends Controller
                 ->where('id', $category->id)
                 ->update($validated);
 
-            Log::info('Direct DB Update Result:', ['updated_rows' => $updated]);
+            Log::info('به‌روزرسانی مستقیم دسته‌بندی انجام شد', [
+                'category_id' => $category->id,
+                'update_result' => $updated ? 'successful' : 'no changes'
+            ]);
 
             // بارگذاری مجدد دسته‌بندی برای اطمینان از به‌روزرسانی
             $refreshedCategory = Category::find($category->id);
-            Log::info('Refreshed Category After Update:', ['category' => $refreshedCategory->toArray()]);
+            Log::info('دسته‌بندی پس از به‌روزرسانی بازیابی شد', [
+                'category_id' => $refreshedCategory->id,
+                'name' => $refreshedCategory->name
+            ]);
 
             if (!$updated) {
-                Log::warning('Update had no effect on database');
+                Log::warning('به‌روزرسانی تأثیری در پایگاه داده نداشت', [
+                    'category_id' => $category->id
+                ]);
             }
 
             return redirect()->route('admin.categories.index')
                 ->with('success', 'دسته‌بندی با موفقیت بروزرسانی شد.');
         } catch (\Exception $e) {
-            // ثبت خطا در لاگ
-            Log::error('Category Update Error:', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'data' => $validated
+            // ثبت خطا در لاگ - بدون اطلاعات حساس
+            Log::error('خطا در به‌روزرسانی دسته‌بندی', [
+                'category_id' => $category->id,
+                'error_message' => $e->getMessage(),
+                'error_code' => $e->getCode()
             ]);
 
             return redirect()->back()
@@ -159,16 +185,25 @@ class CategoryController extends Controller
         }
 
         try {
-            Log::info('Attempting to delete category:', ['category' => $category->toArray()]);
+            Log::info('تلاش برای حذف دسته‌بندی', [
+                'category_id' => $category->id,
+                'category_name' => $category->name
+            ]);
+
             $deleted = $category->delete();
-            Log::info('Category deleted:', ['result' => $deleted]);
+
+            Log::info('دسته‌بندی حذف شد', [
+                'category_id' => $category->id,
+                'result' => $deleted ? 'successful' : 'failed'
+            ]);
 
             return redirect()->route('admin.categories.index')
                 ->with('success', 'دسته‌بندی با موفقیت حذف شد.');
         } catch (\Exception $e) {
-            Log::error('Category delete error:', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+            Log::error('خطا در حذف دسته‌بندی', [
+                'category_id' => $category->id,
+                'error_message' => $e->getMessage(),
+                'error_code' => $e->getCode()
             ]);
 
             return redirect()->route('admin.categories.index')

@@ -107,15 +107,30 @@ class PostController extends Controller
                 $currentPage = $request->input('current_page', 1);
                 $currentFilter = $request->input('current_filter', '');
 
+                // استفاده از روش‌های امن به جای کوئری خام SQL
                 if ($request->has('toggle_publish')) {
-                    DB::statement("UPDATE posts SET is_published = NOT is_published WHERE id = ?", [$id]);
-                    $isPublished = DB::scalar("SELECT is_published FROM posts WHERE id = ?", [$id]);
+                    // قبلاً از SQL Statement مستقیم استفاده می‌شد
+                    // DB::statement("UPDATE posts SET is_published = NOT is_published WHERE id = ?", [$id]);
+
+                    // روش امن با استفاده از Query Builder
+                    $post = Post::findOrFail($id);
+                    $post->is_published = !$post->is_published;
+                    $post->save();
+
+                    $isPublished = $post->is_published;
                     $statusMessage = $isPublished ? 'منتشر' : 'به پیش‌نویس منتقل';
                 }
 
                 if ($request->has('toggle_visibility')) {
-                    DB::statement("UPDATE posts SET hide_content = NOT hide_content WHERE id = ?", [$id]);
-                    $isHidden = DB::scalar("SELECT hide_content FROM posts WHERE id = ?", [$id]);
+                    // قبلاً از SQL Statement مستقیم استفاده می‌شد
+                    // DB::statement("UPDATE posts SET hide_content = NOT hide_content WHERE id = ?", [$id]);
+
+                    // روش امن با استفاده از Query Builder
+                    $post = Post::findOrFail($id);
+                    $post->hide_content = !$post->hide_content;
+                    $post->save();
+
+                    $isHidden = $post->hide_content;
                     $statusMessage = $isHidden ? 'مخفی' : 'قابل نمایش';
                 }
 
@@ -134,7 +149,10 @@ class PostController extends Controller
                 return redirect($redirectUrl)
                     ->with('success', "کتاب «{$title}» با موفقیت {$statusMessage} شد.");
             } catch (\Exception $e) {
-                Log::error('خطا در تغییر وضعیت پست: ' . $e->getMessage(), ['post_id' => $id]);
+                Log::error('خطا در تغییر وضعیت پست', [
+                    'post_id' => $id,
+                    'error_message' => $e->getMessage()
+                ]);
                 return redirect()->back()->with('error', 'خطا در به‌روزرسانی وضعیت پست: ' . $e->getMessage());
             }
         }
