@@ -31,6 +31,7 @@
         <a href="{{ route('admin.gallery.visible') }}" class="bg-green-500 text-white px-4 py-2 rounded ml-2 mb-2">تأیید شده</a>
         <a href="{{ route('admin.gallery.hidden') }}" class="bg-red-500 text-white px-4 py-2 rounded ml-2 mb-2">رد شده</a>
         <a href="{{ route('admin.gallery.missing') }}" class="bg-yellow-500 text-white px-4 py-2 rounded ml-2 mb-2">گمشده</a>
+        <a href="{{ route('admin.images.checker') }}" class="bg-purple-500 text-white px-4 py-2 rounded ml-2 mb-2">بررسی تصاویر گمشده</a>
     </div>
 
     <div id="notification" class="hidden fixed top-4 right-4 px-4 py-2 rounded shadow-lg z-50"></div>

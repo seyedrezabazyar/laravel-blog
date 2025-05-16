@@ -14,11 +14,13 @@ return new class extends Migration{
             $table->id();
             $table->foreignId('post_id')->constrained()->onDelete('cascade');
             $table->string('image_path');
-            $table->string('caption', 1500)->nullable(); // Longitud 1500 caracteres
+            $table->string('caption', 1500)->nullable(); // افزایش طول به 1500 کاراکتر
 
             // Enum با چهار حالت: NULL, visible, hidden, missing. پیش‌فرض NULL
+            // توجه کنید که مقدار missing اضافه شده است
             $table->enum('hide_image', ['visible', 'hidden', 'missing'])->nullable()->default(null);
 
+            $table->timestamp('approved_at')->nullable(); // زمان تایید تصویر
             $table->integer('sort_order')->default(0);
 
             // ایندکس‌های بهینه‌سازی شده

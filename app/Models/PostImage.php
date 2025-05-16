@@ -13,6 +13,7 @@ class PostImage extends Model
         'caption',
         'hide_image',
         'sort_order',
+        'approved_at',
     ];
 
     // TTL for image URL cache - 7 days
@@ -43,11 +44,19 @@ class PostImage extends Model
     }
 
     /**
+     * Check if image is missing
+     */
+    public function isMissing()
+    {
+        return $this->hide_image === 'missing';
+    }
+
+    /**
      * Check if image is restricted (NULL or hidden)
      */
     public function isRestricted()
     {
-        return $this->hide_image === null || $this->hide_image === 'hidden';
+        return $this->hide_image === null || $this->hide_image === 'hidden' || $this->hide_image === 'missing';
     }
 
     /**
@@ -95,8 +104,8 @@ class PostImage extends Model
             // Default image
             $defaultImage = asset('images/default-book.png');
 
-            // If image path is empty, return default image regardless of user role
-            if (empty($this->image_path)) {
+            // If image path is empty or marked as missing, return default image regardless of user role
+            if (empty($this->image_path) || $this->hide_image === 'missing') {
                 return $defaultImage;
             }
 
@@ -107,7 +116,7 @@ class PostImage extends Model
 
             // For non-admins:
             // - Show actual image only if hide_image is 'visible'
-            // - Show default image if hide_image is NULL or 'hidden'
+            // - Show default image if hide_image is NULL, 'hidden', or any other value
             if ($this->hide_image === 'visible') {
                 return $this->image_url;
             }

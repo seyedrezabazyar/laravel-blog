@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\PublisherController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\GalleryController;
+use App\Http\Controllers\Admin\ImageCheckerController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\RssController;
 
@@ -55,19 +56,22 @@ Route::middleware('auth')->group(function () {
         Route::delete('post-images/{image}', [PostController::class, 'destroyImage'])->name('post-images.destroy');
         Route::post('post-images/reorder', [PostController::class, 'reorderImages'])->name('post-images.reorder');
 
-// مسیرهای گالری
+        // مسیرهای گالری
         Route::get('gallery', [GalleryController::class, 'index'])->name('gallery');
         Route::get('gallery/visible', [GalleryController::class, 'visible'])->name('gallery.visible');
         Route::get('gallery/hidden', [GalleryController::class, 'hidden'])->name('gallery.hidden');
         Route::get('gallery/missing', [GalleryController::class, 'missing'])->name('gallery.missing');
 
-// مسیرهای API برای مدیریت تصاویر
+        // مسیرهای API برای مدیریت تصاویر
         Route::post('gallery/approve/{id}', [GalleryController::class, 'approve'])->name('gallery.approve');
         Route::post('gallery/reject/{id}', [GalleryController::class, 'reject'])->name('gallery.reject');
         Route::post('gallery/mark-missing/{id}', [GalleryController::class, 'markMissing'])->name('gallery.mark-missing');
         Route::post('gallery/reset/{id}', [GalleryController::class, 'reset'])->name('gallery.reset');
         Route::post('gallery/bulk-approve', [GalleryController::class, 'bulkApprove'])->name('gallery.bulk-approve');
-        Route::post('gallery/check-missing', [GalleryController::class, 'checkMissingImages'])->name('gallery.check-missing');
+
+        // مسیرهای بررسی تصاویر گمشده (جدید)
+        Route::get('images/checker', [ImageCheckerController::class, 'index'])->name('images.checker');
+        Route::post('images/check', [ImageCheckerController::class, 'check'])->name('images.check');
     });
 });
 
