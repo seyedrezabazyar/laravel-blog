@@ -25,16 +25,41 @@ class GalleryController extends Controller
      */
     public function approve(Request $request, $id)
     {
-        $image = PostImage::findOrFail($id);
-        $image->update([
-            'hide_image' => 'visible'
-        ]);
+        try {
+            $image = PostImage::findOrFail($id);
+            $image->update([
+                'hide_image' => 'visible',
+                'updated_at' => now() // به‌روزرسانی زمان
+            ]);
 
-        if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'تصویر تأیید شد.']);
+            // لاگ کردن عملیات موفق
+            Log::info('تصویر تأیید شد', [
+                'user_id' => auth()->id(),
+                'image_id' => $id,
+                'post_id' => $image->post_id,
+                'ip' => $request->ip(),
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => true, 'message' => 'تصویر تأیید شد.']);
+            }
+
+            return redirect()->back()->with('success', 'تصویر با موفقیت تأیید شد.');
+        } catch (\Exception $e) {
+            // لاگ کردن خطا
+            Log::error('خطا در تأیید تصویر', [
+                'user_id' => auth()->id(),
+                'image_id' => $id,
+                'error' => $e->getMessage(),
+                'ip' => $request->ip(),
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'خطا در تأیید تصویر: ' . $e->getMessage()], 500);
+            }
+
+            return redirect()->back()->with('error', 'خطا در تأیید تصویر: ' . $e->getMessage());
         }
-
-        return redirect()->back()->with('success', 'تصویر با موفقیت تأیید شد.');
     }
 
     /**

@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Console\Scheduling\Schedule;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Middleware\CompressSitemapXml;
+use App\Http\Middleware\GalleryRateLimiter;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => IsAdmin::class,
             'compress.sitemap' => CompressSitemapXml::class,
+            'gallery.rate.limit' => GalleryRateLimiter::class,
         ]);
 
         $middleware->web([
@@ -39,4 +41,5 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         // تنظیمات مدیریت استثناها
     })
+    // در لاراول 12، می‌توانیم با استفاده از bootstrapWith یا withBootstrappers، رفتار bootstrap را تغییر دهیم
     ->create();

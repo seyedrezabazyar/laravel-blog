@@ -62,16 +62,20 @@ Route::middleware('auth')->group(function () {
         Route::get('gallery/hidden', [GalleryController::class, 'hidden'])->name('gallery.hidden');
         Route::get('gallery/missing', [GalleryController::class, 'missing'])->name('gallery.missing');
 
-        // مسیرهای API برای مدیریت تصاویر
-        Route::post('gallery/approve/{id}', [GalleryController::class, 'approve'])->name('gallery.approve');
-        Route::post('gallery/reject/{id}', [GalleryController::class, 'reject'])->name('gallery.reject');
-        Route::post('gallery/mark-missing/{id}', [GalleryController::class, 'markMissing'])->name('gallery.mark-missing');
-        Route::post('gallery/reset/{id}', [GalleryController::class, 'reset'])->name('gallery.reset');
-        Route::post('gallery/bulk-approve', [GalleryController::class, 'bulkApprove'])->name('gallery.bulk-approve');
+        // مسیرهای API برای مدیریت تصاویر با محدودیت نرخ
+        Route::middleware('gallery.rate.limit')->group(function () {
+            Route::post('gallery/approve/{id}', [GalleryController::class, 'approve'])->name('gallery.approve');
+            Route::post('gallery/reject/{id}', [GalleryController::class, 'reject'])->name('gallery.reject');
+            Route::post('gallery/mark-missing/{id}', [GalleryController::class, 'markMissing'])->name('gallery.mark-missing');
+            Route::post('gallery/reset/{id}', [GalleryController::class, 'reset'])->name('gallery.reset');
+            Route::post('gallery/bulk-approve', [GalleryController::class, 'bulkApprove'])->name('gallery.bulk-approve');
+        });
 
-        // مسیرهای بررسی تصاویر گمشده (جدید)
+        // مسیرهای بررسی تصاویر گمشده (جدید) - اضافه کردن محدودیت نرخ به ثبت نیز
         Route::get('images/checker', [ImageCheckerController::class, 'index'])->name('images.checker');
-        Route::post('images/check', [ImageCheckerController::class, 'check'])->name('images.check');
+        Route::post('images/check', [ImageCheckerController::class, 'check'])
+            ->middleware('gallery.rate.limit')
+            ->name('images.check');
     });
 });
 

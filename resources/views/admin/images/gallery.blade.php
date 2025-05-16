@@ -402,8 +402,38 @@
         document.body.style.overflow = 'auto';
     }
 
+    // مدیریت خطای محدودیت نرخ
+    function handleRateLimitError(error, action) {
+        if (error && error.status === 429) {
+            // نمایش پیام محدودیت نرخ
+            showNotification(`تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً چند لحظه صبر کنید.`, 'warning', 6000);
+
+            // غیرفعال کردن موقت همه دکمه‌های عملیاتی
+            const actionButtons = document.querySelectorAll('.approve-btn, .reject-btn, .reset-btn, .bulk-approve');
+            actionButtons.forEach(button => {
+                button.disabled = true;
+                button.classList.add('opacity-50', 'cursor-not-allowed');
+            });
+
+            // فعال‌سازی مجدد پس از 30 ثانیه
+            setTimeout(() => {
+                actionButtons.forEach(button => {
+                    button.disabled = false;
+                    button.classList.remove('opacity-50', 'cursor-not-allowed');
+                });
+                showNotification('اکنون می‌توانید عملیات را از سر بگیرید.', 'info');
+            }, 30000); // 30 ثانیه انتظار
+
+            return true; // خطای محدودیت نرخ مدیریت شد
+        }
+        return false; // خطای دیگری است
+    }
+
     // تأیید تصویر
     function approveImage(imageId) {
+        // نمایش وضعیت در حال انجام
+        const loadingState = showNotification('در حال ارسال درخواست...', 'info', 0);
+
         fetch('{{ url("admin/gallery/approve") }}/' + imageId, {
             method: 'POST',
             headers: {
@@ -413,12 +443,25 @@
             },
         })
             .then(response => {
+                // بررسی محدودیت نرخ
+                if (response.status === 429) {
+                    // دریافت داده‌های پاسخ برای استخراج پیام خطا
+                    return response.json().then(data => {
+                        throw { status: 429, message: data.message };
+                    });
+                }
+
                 if (!response.ok) {
                     throw new Error(`خطای HTTP: ${response.status}`);
                 }
                 return response.json();
             })
             .then(data => {
+                // حذف وضعیت در حال انجام
+                if (loadingState) {
+                    loadingState.remove();
+                }
+
                 if (data.success) {
                     const element = document.querySelector(`[data-image-id="${imageId}"]`);
                     element.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
@@ -442,13 +485,26 @@
                 }
             })
             .catch(error => {
+                // حذف وضعیت در حال انجام
+                if (loadingState) {
+                    loadingState.remove();
+                }
+
                 console.error(error);
-                showNotification('خطا در تأیید تصویر', 'error');
+
+                // بررسی خطای محدودیت نرخ
+                if (!handleRateLimitError(error, 'approve')) {
+                    // اگر خطای دیگری بود نمایش پیام خطا
+                    showNotification('خطا در تأیید تصویر: ' + (error.message || 'خطای نامشخص'), 'error');
+                }
             });
     }
 
     // رد تصویر
     function rejectImage(imageId) {
+        // نمایش وضعیت در حال انجام
+        const loadingState = showNotification('در حال ارسال درخواست...', 'info', 0);
+
         fetch('{{ url("admin/gallery/reject") }}/' + imageId, {
             method: 'POST',
             headers: {
@@ -458,12 +514,24 @@
             },
         })
             .then(response => {
+                // بررسی محدودیت نرخ
+                if (response.status === 429) {
+                    return response.json().then(data => {
+                        throw { status: 429, message: data.message };
+                    });
+                }
+
                 if (!response.ok) {
                     throw new Error(`خطای HTTP: ${response.status}`);
                 }
                 return response.json();
             })
             .then(data => {
+                // حذف وضعیت در حال انجام
+                if (loadingState) {
+                    loadingState.remove();
+                }
+
                 if (data.success) {
                     const element = document.querySelector(`[data-image-id="${imageId}"]`);
                     element.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
@@ -487,8 +555,17 @@
                 }
             })
             .catch(error => {
+                // حذف وضعیت در حال انجام
+                if (loadingState) {
+                    loadingState.remove();
+                }
+
                 console.error(error);
-                showNotification('خطا در رد تصویر', 'error');
+
+                // بررسی خطای محدودیت نرخ
+                if (!handleRateLimitError(error, 'reject')) {
+                    showNotification('خطا در رد تصویر: ' + (error.message || 'خطای نامشخص'), 'error');
+                }
             });
     }
 
@@ -500,7 +577,7 @@
         if (imageIds.length > 0) {
             if (confirm(`آیا از تایید همه ${imageIds.length} تصویر اطمینان دارید؟`)) {
                 // نمایش وضعیت در حال انجام
-                showNotification('در حال تأیید تصاویر...', 'info');
+                const loadingState = showNotification('در حال تأیید تصاویر...', 'info', 0);
 
                 // غیرفعال کردن دکمه برای جلوگیری از کلیک مجدد
                 const bulkButton = document.querySelector('.bulk-approve');
@@ -519,16 +596,26 @@
                     body: formData
                 })
                     .then(response => {
-                        // ابتدا وضعیت HTTP را بررسی کنیم
+                        // بررسی محدودیت نرخ
+                        if (response.status === 429) {
+                            return response.json().then(data => {
+                                throw { status: 429, message: data.message };
+                            });
+                        }
+
                         if (!response.ok) {
                             throw new Error(`خطای HTTP: ${response.status}`);
                         }
                         return response.json();
                     })
                     .then(data => {
-                        console.log('پاسخ سرور:', data); // برای دیباگ
+                        // حذف وضعیت در حال انجام
+                        if (loadingState) {
+                            loadingState.remove();
+                        }
 
-                        // حتی اگر data.success نبود، باز هم عملیات را موفق در نظر بگیریم
+                        console.log('پاسخ سرور:', data);
+
                         // افکت محو شدن تدریجی برای تصاویر
                         const items = document.querySelectorAll('#image-gallery [data-image-id]');
                         items.forEach(item => {
@@ -550,9 +637,9 @@
                             const buttonContainer = document.createElement('div');
                             buttonContainer.className = 'flex justify-center my-4';
                             buttonContainer.innerHTML = `
-                            <button onclick="location.reload()" class="bg-blue-500 text-white px-4 py-2 rounded mx-2 hover:bg-blue-600 transition">بارگذاری مجدد صفحه</button>
-                            <a href="{{ route('admin.gallery.visible') }}" class="bg-green-500 text-white px-4 py-2 rounded mx-2 hover:bg-green-600 transition">مشاهده تصاویر تأیید شده</a>
-                        `;
+                        <button onclick="location.reload()" class="bg-blue-500 text-white px-4 py-2 rounded mx-2 hover:bg-blue-600 transition">بارگذاری مجدد صفحه</button>
+                        <a href="{{ route('admin.gallery.visible') }}" class="bg-green-500 text-white px-4 py-2 rounded mx-2 hover:bg-green-600 transition">مشاهده تصاویر تأیید شده</a>
+                    `;
                             imageGrid.appendChild(buttonContainer);
 
                             // دکمه تأیید گروهی را مخفی کنیم
@@ -560,19 +647,27 @@
                         }, 500);
                     })
                     .catch(error => {
+                        // حذف وضعیت در حال انجام
+                        if (loadingState) {
+                            loadingState.remove();
+                        }
+
                         console.error('خطا در درخواست:', error);
 
                         // فعال کردن مجدد دکمه
                         if (bulkButton) bulkButton.disabled = false;
 
-                        // با وجود خطا، باز هم فرض کنیم عملیات موفق بوده است
-                        // (چون احتمالاً سمت سرور عملیات انجام شده)
-                        showNotification('تصاویر تأیید شدند، اما خطایی در پاسخ رخ داد. لطفاً صفحه را رفرش کنید.', 'warning');
+                        // بررسی خطای محدودیت نرخ
+                        if (!handleRateLimitError(error, 'bulk')) {
+                            // با وجود خطا، باز هم فرض کنیم عملیات موفق بوده است
+                            // (چون احتمالاً سمت سرور عملیات انجام شده)
+                            showNotification('تصاویر تأیید شدند، اما خطایی در پاسخ رخ داد. لطفاً صفحه را رفرش کنید.', 'warning');
 
-                        // رفرش صفحه بعد از چند ثانیه
-                        setTimeout(() => {
-                            location.reload();
-                        }, 3000);
+                            // رفرش صفحه بعد از چند ثانیه
+                            setTimeout(() => {
+                                location.reload();
+                            }, 3000);
+                        }
                     });
             }
         } else {
@@ -580,8 +675,8 @@
         }
     }
 
-    // نمایش اعلان‌ها
-    function showNotification(message, type = 'success') {
+    // نمایش اعلان‌ها با قابلیت تنظیم زمان نمایش و بازگشت المان
+    function showNotification(message, type = 'success', duration = 3000) {
         const notification = document.getElementById('notification');
         notification.textContent = message;
         notification.style.transform = 'translateY(0)';
@@ -605,8 +700,8 @@
             notification.style.opacity = '1';
         }, 10);
 
-        // حذف اعلان بعد از 3 ثانیه (به جز حالت info)
-        if (type !== 'info') {
+        // حذف خودکار اعلان پس از زمان مشخص شده (اگر 0 باشد، حذف نمی‌شود)
+        if (duration > 0) {
             setTimeout(() => {
                 notification.style.opacity = '0';
                 notification.style.transform = 'translateY(-10px)';
@@ -614,8 +709,11 @@
                 setTimeout(() => {
                     notification.style.display = 'none';
                 }, 300);
-            }, 3000);
+            }, duration);
         }
+
+        // بازگشت المان اعلان برای کنترل در جاهای دیگر
+        return notification;
     }
 
     // کلیدهای میانبر
