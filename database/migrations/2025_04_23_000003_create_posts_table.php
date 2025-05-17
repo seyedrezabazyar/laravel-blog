@@ -60,6 +60,10 @@ return new class extends Migration
             $table->index(['author_id', 'is_published', 'hide_content'], 'posts_author_visibility_index');
             $table->index(['is_published', 'hide_content', 'created_at'], 'posts_published_created_index');
 
+            // شاخص‌های بهینه‌سازی شده برای نویسنده
+            $table->index(['author_id', 'is_published', 'hide_content', 'created_at'], 'idx_posts_by_author_status');
+            $table->index(['author_id', 'created_at'], 'idx_author_post_created');
+
             $table->index(['author_id', 'is_published']);
             $table->index(['publisher_id', 'is_published']);
             $table->index(['format', 'publication_year']);
@@ -72,6 +76,12 @@ return new class extends Migration
         // ایندکس‌های FULLTEXT برای جستجوی متنی سریع
         DB::statement('ALTER TABLE posts ADD FULLTEXT posts_title_fulltext (title, english_title)');
         DB::statement('ALTER TABLE posts ADD FULLTEXT posts_content_fulltext (content, english_content)');
+
+        // ایندکس FULLTEXT بهینه‌سازی شده فقط برای عنوان
+        DB::statement('ALTER TABLE posts ADD FULLTEXT posts_title_only_fulltext (title)');
+
+        // ایندکس جامع برای همه فیلدهای متنی
+        DB::statement('ALTER TABLE posts ADD FULLTEXT posts_all_fulltext (title, english_title, book_codes, content)');
     }
 
     /**

@@ -216,29 +216,50 @@ class BlogController extends Controller
     public function author(Author $author): View
     {
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
+        $page = request()->get('page', 1);
+        $cacheKey = "author_posts_{$author->id}_page_{$page}_" . ($isAdmin ? 'admin' : 'user');
 
-        // کوئری برای پست‌هایی که نویسنده، نویسنده اصلی است
-        $query = Post::where('is_published', true)
-            ->when(!$isAdmin, function ($q) {
-                return $q->where('hide_content', false);
-            })
-            ->where(function ($q) use ($author) {
-                $q->where('author_id', $author->id)
-                    ->orWhereHas('authors', function ($query) use ($author) {
-                        $query->where('authors.id', $author->id);
-                    });
-            })
-            ->with([
-                'featuredImage',
-                'category:id,name,slug',
+        $posts = Cache::remember($cacheKey, 3600, function () use ($author, $isAdmin) {
+            // استفاده از union برای بهبود کارایی
+            $mainPosts = Post::select([
+                'posts.id', 'posts.title', 'posts.slug', 'posts.category_id', 'posts.author_id',
+                'posts.publication_year', 'posts.format', 'posts.created_at'
             ])
-            ->select([
-                'id', 'title', 'slug', 'category_id', 'author_id',
-                'publication_year', 'format', 'created_at'
-            ])
-            ->orderBy('created_at', 'DESC');
+                ->where('posts.is_published', true)
+                ->when(!$isAdmin, function ($q) {
+                    return $q->where('posts.hide_content', false);
+                })
+                ->where('posts.author_id', $author->id);
 
-        $posts = $query->paginate(12);
+            $coAuthorPosts = Post::select([
+                'posts.id', 'posts.title', 'posts.slug', 'posts.category_id', 'posts.author_id',
+                'posts.publication_year', 'posts.format', 'posts.created_at'
+            ])
+                ->join('post_author', 'posts.id', '=', 'post_author.post_id')
+                ->where('post_author.author_id', $author->id)
+                ->where('posts.is_published', true)
+                ->when(!$isAdmin, function ($q) {
+                    return $q->where('posts.hide_content', false);
+                })
+                ->whereNotIn('posts.id', function($query) use ($author) {
+                    $query->select('id')
+                        ->from('posts')
+                        ->where('author_id', $author->id);
+                });
+
+            // جلوگیری از شمارش اضافه با استفاده از simplePaginate
+            $query = $mainPosts->union($coAuthorPosts);
+
+            return $query
+                ->orderBy('created_at', 'DESC')
+                ->with([
+                    'featuredImage' => function($q) {
+                        $q->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
+                    },
+                    'category:id,name,slug'
+                ])
+                ->simplePaginate(12);
+        });
 
         return view('blog.author', compact('posts', 'author'));
     }

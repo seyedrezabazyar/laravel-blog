@@ -20,11 +20,19 @@ return new class extends Migration
             $table->string('image')->nullable();
             $table->unsignedInteger('posts_count')->default(0); // شمارنده پست‌های اصلی
             $table->unsignedInteger('coauthored_count')->default(0); // شمارنده پست‌های همکاری
+
+            // ایندکس‌های جدید برای بهبود عملکرد
+            $table->index('slug');
+            $table->index(['posts_count', 'coauthored_count']); // برای مرتب‌سازی بر اساس تعداد پست‌ها
+
             $table->timestamps();
         });
 
         // ایندکس محدود شده برای نام (با توجه به محدودیت طول ایندکس در InnoDB)
         DB::statement('CREATE INDEX idx_authors_name ON authors(name(768))');
+
+        // ایندکس جستجوی متنی برای نام
+        DB::statement('ALTER TABLE authors ADD FULLTEXT authors_name_fulltext (name)');
     }
 
     /**
