@@ -6,9 +6,22 @@
         @php
             $isAdmin = auth()->check() && auth()->user()->isAdmin();
 
-            // استفاده مستقیم از اطلاعات دیتابیس به جای رابطه eloquent
-            $dbImage = DB::select('SELECT * FROM post_images WHERE post_id = ? ORDER BY sort_order ASC LIMIT 1', [$post->id]);
-            $imageInfo = !empty($dbImage) ? $dbImage[0] : null;
+            // بهبود استفاده از رابطه eloquent به جای کوئری مستقیم
+            $imageInfo = null;
+            $featuredImage = null;
+
+            // روش اول: استفاده از رابطه
+            if (method_exists($post, 'featuredImage') && $post->featuredImage) {
+                $featuredImage = $post->featuredImage;
+                $imageInfo = $featuredImage;
+            }
+            // روش دوم: اگر رابطه در دسترس نیست از کوئری استفاده کن
+            else {
+                $dbImage = DB::select('SELECT * FROM post_images WHERE post_id = ? ORDER BY sort_order ASC LIMIT 1', [$post->id]);
+                if (!empty($dbImage)) {
+                    $imageInfo = $dbImage[0];
+                }
+            }
 
             $showDefaultImage = true;
             $isHidden = false;
@@ -20,17 +33,19 @@
                         // برای مدیران همیشه تصویر را نمایش بده
                         $imageUrl = $imageInfo->image_path;
                         if (strpos($imageUrl, 'http') !== 0) {
-                            $imageUrl = 'https://images.balyan.ir/' . $imageUrl;
+                            // اصلاح مسیر تصویر
+                            $imageUrl = config('app.custom_image_host', 'https://images.balyan.ir') . '/' . $imageUrl;
                         }
                         $showDefaultImage = false;
                         // بررسی اینکه آیا تصویر مخفی است
                         $isHidden = $imageInfo->hide_image === 'hidden';
                     }
-                    else if ($imageInfo->hide_image === 'visible') {
-                        // برای کاربران عادی فقط تصاویر visible را نمایش بده
+                    else if ($imageInfo->hide_image === 'visible' || $imageInfo->hide_image === null) {
+                        // برای کاربران عادی تصاویر visible یا بدون وضعیت را نمایش بده
                         $imageUrl = $imageInfo->image_path;
                         if (strpos($imageUrl, 'http') !== 0) {
-                            $imageUrl = 'https://images.balyan.ir/' . $imageUrl;
+                            // اصلاح مسیر تصویر
+                            $imageUrl = config('app.custom_image_host', 'https://images.balyan.ir') . '/' . $imageUrl;
                         }
                         $showDefaultImage = false;
                     }
@@ -38,30 +53,20 @@
             }
         @endphp
 
-        @if($showDefaultImage)
-            <!-- نمایش تصویر پیش‌فرض -->
-            <img
-                src="{{ asset('images/default-book.png') }}"
-                alt="{{ $post->title }}"
-                class="w-full h-full object-cover"
-                loading="lazy"
-            >
-        @else
-            <!-- نمایش تصویر واقعی -->
-            <img
-                src="{{ $imageUrl }}"
-                alt="{{ $post->title }}"
-                class="w-full h-full object-cover"
-                loading="lazy"
-                onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
-            >
+            <!-- نمایش تصویر کتاب -->
+        <img
+            src="{{ $imageUrl }}"
+            alt="{{ $post->title }}"
+            class="w-full h-full object-cover"
+            loading="lazy"
+            onerror="this.onerror=null;this.src='{{ asset('images/default-book.png') }}';"
+        >
 
-            @if($isAdmin && $isHidden)
-                <!-- نمایش اخطار تصویر مخفی برای مدیران -->
-                <div class="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center">
-                    <span class="bg-red-600 text-white px-2 py-1 rounded-md text-xs font-bold shadow">تصویر مخفی شده</span>
-                </div>
-            @endif
+        @if($isAdmin && $isHidden)
+            <!-- نمایش اخطار تصویر مخفی برای مدیران -->
+            <div class="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center">
+                <span class="bg-red-600 text-white px-2 py-1 rounded-md text-xs font-bold shadow">تصویر مخفی شده</span>
+            </div>
         @endif
     </div>
 

@@ -90,7 +90,7 @@ class PublisherController extends Controller
             // لاگ برای اشکال‌زدایی
             Log::info('Update publisher request', [
                 'publisher_id' => $id,
-                'data' => $request->all()
+                'fields' => array_keys($request->all())
             ]);
 
             // دریافت ناشر با ID

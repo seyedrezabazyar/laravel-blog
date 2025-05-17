@@ -22,9 +22,9 @@
             <div class="mb-6 rounded-xl shadow hover:shadow-lg transition-shadow">
                 @php
                     $isAdmin = auth()->check() && auth()->user()->isAdmin();
-                    $dbImage = DB::select('SELECT * FROM post_images WHERE post_id = ? ORDER BY sort_order ASC LIMIT 1', [$post->id])[0] ?? null;
-                    $imageUrl = $dbImage && $dbImage->image_path && ($isAdmin || $dbImage->hide_image === 'visible') ? (strpos($dbImage->image_path, 'http') === 0 ? $dbImage->image_path : 'https://images.balyan.ir/' . $dbImage->image_path) : asset('images/default-book.png');
-                    $isHidden = $isAdmin && $dbImage && $dbImage->hide_image === 'hidden';
+                    $featuredImage = $post->featuredImage;
+                    $imageUrl = $featuredImage ? $featuredImage->display_url : asset('images/default-book.png');
+                    $isHidden = $isAdmin && $featuredImage && $featuredImage->isHidden();
                 @endphp
                 <div class="relative">
                     <img src="{{ $imageUrl }}" alt="{{ $post->title }}" class="w-full h-auto rounded-t-xl" loading="lazy" onerror="this.src='{{ asset('images/default-book.png') }}'">
@@ -34,7 +34,7 @@
                         </div>
                     @endif
                     @if($post->publication_year)
-                        <div class="absolute top-4 right-4 bg-white px-3 py-1.5 rounded-md text-sm font-semibold text-gray-700 shadow-sm">{{ $post-> publication_year }}</div>
+                        <div class="absolute top-4 right-4 bg-white px-3 py-1.5 rounded-md text-sm font-semibold text-gray-700 shadow-sm">{{ $post->publication_year }}</div>
                     @endif
                 </div>
             </div>
@@ -195,9 +195,9 @@
                             <div class="aspect-[2/3] relative overflow-hidden">
                                 @php
                                     $isAdmin = auth()->check() && auth()->user()->isAdmin();
-                                    $dbRelatedImage = DB::select('SELECT * FROM post_images WHERE post_id = ? ORDER BY sort_order ASC LIMIT 1', [$relatedPost->id])[0] ?? null;
-                                    $imageUrl = $dbRelatedImage && $dbRelatedImage->image_path && ($isAdmin || $dbRelatedImage->hide_image === 'visible') ? (strpos($dbRelatedImage->image_path, 'http') === 0 ? $dbRelatedImage->image_path : 'https://images.balyan.ir/' . $dbRelatedImage->image_path) : asset('images/default-book.png');
-                                    $isHidden = $isAdmin && $dbRelatedImage && $dbRelatedImage->hide_image === 'hidden';
+                                    $relatedImage = $relatedPost->featuredImage;
+                                    $imageUrl = $relatedImage ? $relatedImage->display_url : asset('images/default-book.png');
+                                    $isHidden = $isAdmin && $relatedImage && $relatedImage->isHidden();
                                 @endphp
                                 <img src="{{ $imageUrl }}" alt="{{ $relatedPost->title }}" class="w-full h-full object-cover" loading="lazy" onerror="this.src='{{ asset('images/default-book.png') }}'">
                                 @if($isAdmin && $isHidden)

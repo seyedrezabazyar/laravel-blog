@@ -10,6 +10,7 @@ use App\Models\Publisher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 
 class BlogController extends Controller
 {
@@ -18,7 +19,7 @@ class BlogController extends Controller
     /**
      * نمایش صفحه اصلی وبلاگ با حداقل کوئری به دیتابیس
      */
-    public function index()
+    public function index(): View
     {
         $posts = Cache::remember('home_latest_posts', 3600, function () {
             return Post::select('id', 'title', 'slug', 'publication_year', 'format')
@@ -47,7 +48,7 @@ class BlogController extends Controller
     /**
      * نمایش تمام دسته‌بندی‌ها - با بهینه‌سازی کوئری
      */
-    public function categories()
+    public function categories(): View
     {
         $categories = collect([
             (object) ['id' => 1, 'name' => 'رمان', 'slug' => 'roman', 'posts_count' => 25],
@@ -75,22 +76,29 @@ class BlogController extends Controller
     }
 
     /**
-     * Display post details with optimized performance
+     * نمایش جزئیات پست با عملکرد بهینه‌سازی شده
+     *
+     * در Laravel 12، Route Model Binding به‌طور پیش‌فرض slug را بررسی می‌کند،
+     * مگر اینکه در RouteServiceProvider به‌صورت دیگری پیکربندی شده باشد.
      */
-    public function show(Post $post)
+    public function show(Post $post): View
     {
+        // بررسی مجوزهای دسترسی
         if (!$post->is_published || ($post->hide_content && !(auth()->check() && auth()->user()->isAdmin()))) {
             abort(404);
         }
 
+        // بارگذاری روابط مورد نیاز
         $post->load([
             'category:id,name,slug',
             'featuredImage',
             'tags:id,name,slug',
             'author:id,name,slug',
             'authors:id,name,slug',
+            'publisher:id,name,slug',
         ]);
 
+        // استفاده از کش برای پست‌های مرتبط
         $isAdmin = auth()->check() && auth()->user()->isAdmin() ? 'admin' : 'user';
         $cacheKey = "post_{$post->id}_related_posts_{$isAdmin}";
 
@@ -102,31 +110,30 @@ class BlogController extends Controller
     }
 
     /**
-     * Optimized related posts query
+     * کوئری بهینه‌سازی شده برای پست‌های مرتبط
      */
     private function getRelatedPosts(Post $post)
     {
-        // Get posts from same category (limit to 6)
+        // دریافت پست‌ها از همان دسته‌بندی (محدود به 6 مورد)
         $categoryPosts = Post::visibleToUser()
             ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
             ->where('category_id', $post->category_id)
             ->where('id', '!=', $post->id)
             ->with([
                 'featuredImage' => function($query) {
-                    $query->select('id', 'post_id', 'image_path', 'hide_image');
-                },
-                'author:id,name,slug',
-                'authors:id,name,slug'
+                    $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
+                }
             ])
+            ->latest()
             ->limit(6)
             ->get();
 
-        // If we already have 6 posts, return them
+        // اگر به تعداد کافی پست داریم، آنها را برگردانیم
         if ($categoryPosts->count() >= 6) {
             return $categoryPosts;
         }
 
-        // Get posts with the same tags if needed
+        // دریافت پست‌های با برچسب‌های مشابه در صورت نیاز
         $existingIds = $categoryPosts->pluck('id')->toArray();
         $existingIds[] = $post->id;
         $tagPosts = collect();
@@ -142,19 +149,18 @@ class BlogController extends Controller
                 ->whereNotIn('id', $existingIds)
                 ->with([
                     'featuredImage' => function($query) {
-                        $query->select('id', 'post_id', 'image_path', 'hide_image');
-                    },
-                    'author:id,name,slug',
-                    'authors:id,name,slug'
+                        $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
+                    }
                 ])
+                ->latest()
                 ->limit(6 - $categoryPosts->count())
                 ->get();
         }
 
-        // Combine results
+        // ترکیب نتایج
         $result = $categoryPosts->merge($tagPosts);
 
-        // Add recent posts if needed
+        // در صورت نیاز، پست‌های اخیر را اضافه کنیم
         if ($result->count() < 6) {
             $currentIds = $result->pluck('id')->toArray();
             $currentIds[] = $post->id;
@@ -164,10 +170,8 @@ class BlogController extends Controller
                 ->whereNotIn('id', $currentIds)
                 ->with([
                     'featuredImage' => function($query) {
-                        $query->select('id', 'post_id', 'image_path', 'hide_image');
-                    },
-                    'author:id,name,slug',
-                    'authors:id,name,slug'
+                        $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
+                    }
                 ])
                 ->latest()
                 ->limit(6 - $result->count())
@@ -180,9 +184,9 @@ class BlogController extends Controller
     }
 
     /**
-     * Display posts from a specific category - optimized version
+     * نمایش پست‌های یک دسته‌بندی خاص - نسخه بهینه‌سازی شده
      */
-    public function category(Category $category)
+    public function category(Category $category): View
     {
         $page = request()->get('page', 1);
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
@@ -208,59 +212,32 @@ class BlogController extends Controller
     /**
      * نمایش پست‌های یک نویسنده خاص
      */
-    public function author(Author $author)
+    public function author(Author $author): View
     {
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
 
-        // Query for main posts where the author is the primary author
-        $mainPosts = DB::table('posts')
-            ->select('posts.*')
-            ->where('author_id', $author->id)
-            ->where('is_published', true)
-            ->when(!$isAdmin, function ($query) {
-                return $query->where('hide_content', false);
+        // کوئری برای پست‌هایی که نویسنده، نویسنده اصلی است
+        $query = Post::where('is_published', true)
+            ->when(!$isAdmin, function ($q) {
+                return $q->where('hide_content', false);
             })
-            ->orderBy('created_at', 'DESC')
-            ->get();
-
-        // Query for co-authored posts
-        $coAuthoredPosts = DB::table('posts as p')
-            ->select('p.*')
-            ->join('post_author as pa', 'p.id', '=', 'pa.post_id')
-            ->where('pa.author_id', $author->id)
-            ->where('p.is_published', true)
-            ->when(!$isAdmin, function ($query) {
-                return $query->where('p.hide_content', false);
+            ->where(function ($q) use ($author) {
+                $q->where('author_id', $author->id)
+                    ->orWhereHas('authors', function ($query) use ($author) {
+                        $query->where('authors.id', $author->id);
+                    });
             })
-            ->orderBy('p.created_at', 'DESC')
-            ->get();
+            ->with([
+                'featuredImage',
+                'category:id,name,slug',
+            ])
+            ->select([
+                'id', 'title', 'slug', 'category_id', 'author_id',
+                'publication_year', 'format', 'created_at'
+            ])
+            ->orderBy('created_at', 'DESC');
 
-        // Combine and deduplicate posts
-        $postIds = [];
-        $postsArray = [];
-
-        foreach ($mainPosts as $post) {
-            if (!in_array($post->id, $postIds)) {
-                $postIds[] = $post->id;
-                $postsArray[] = $post;
-            }
-        }
-
-        foreach ($coAuthoredPosts as $post) {
-            if (!in_array($post->id, $postIds)) {
-                $postIds[] = $post->id;
-                $postsArray[] = $post;
-            }
-        }
-
-        // Paginate the combined results
-        $posts = new \Illuminate\Pagination\LengthAwarePaginator(
-            $postsArray,
-            count($postsArray),
-            12,
-            null,
-            ['path' => request()->url()]
-        );
+        $posts = $query->paginate(12);
 
         return view('blog.author', compact('posts', 'author'));
     }
@@ -268,7 +245,7 @@ class BlogController extends Controller
     /**
      * نمایش پست‌های یک ناشر خاص - نسخه نهایی بهینه‌سازی شده
      */
-    public function publisher(Publisher $publisher)
+    public function publisher(Publisher $publisher): View
     {
         $page = request()->get('page', 1);
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
@@ -307,7 +284,7 @@ class BlogController extends Controller
     /**
      * جستجو در وبلاگ - نسخه بهینه‌سازی شده با حفظ پارامترهای جستجو
      */
-    public function search(Request $request)
+    public function search(Request $request): View
     {
         $query = $request->input('q');
 
@@ -356,7 +333,7 @@ class BlogController extends Controller
                 ->select(['id', 'title', 'slug'])
                 ->with([
                     'featuredImage' => function($query) {
-                        $query->select('id', 'post_id', 'imagemeat', 'hide_image');
+                        $query->select('id', 'post_id', 'image_path', 'hide_image');
                     }
                 ])
                 ->latest()
@@ -370,7 +347,7 @@ class BlogController extends Controller
     /**
      * نمایش پست‌های یک برچسب خاص
      */
-    public function tag(Tag $tag)
+    public function tag(Tag $tag): View
     {
         $posts = $tag->posts()
             ->visibleToUser()

@@ -46,7 +46,7 @@ class User extends Authenticatable
      * @param User|null $actor The user performing the action (for authorization)
      * @return bool True if the role was set successfully, false otherwise
      */
-    public function setRole(string $role, ?User $actor = null): bool
+    public function setRole(string $role, User $actor): bool
     {
         // Define allowed roles
         $allowedRoles = ['user', 'admin'];
