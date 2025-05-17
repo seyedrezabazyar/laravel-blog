@@ -8,6 +8,7 @@ use App\Models\Author;
 use App\Models\Tag;
 use App\Models\Publisher;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -245,7 +246,7 @@ class BlogController extends Controller
     /**
      * نمایش پست‌های یک ناشر خاص - نسخه نهایی بهینه‌سازی شده
      */
-    public function publisher(Publisher $publisher): View
+    public function publisher(Publisher $publisher): Response
     {
         $page = request()->get('page', 1);
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
