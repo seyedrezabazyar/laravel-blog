@@ -25,9 +25,9 @@ return new class extends Migration
             $table->string('english_title', 1500)->nullable(); // English title - 1500 characters
             $table->string('slug')->unique();
 
-            // Book contents
-            $table->text('content'); // Persian content
-            $table->text('english_content')->nullable(); // English content
+            // Book contents - تغییر به longText برای پشتیبانی از داده‌های بزرگ
+            $table->longText('content'); // Persian content
+            $table->longText('english_content')->nullable(); // English content
 
             // Book details
             $table->string('language', 70)->nullable(); // Language of the book
