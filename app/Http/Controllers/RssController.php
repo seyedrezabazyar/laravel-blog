@@ -6,7 +6,6 @@ use App\Models\Post;
 use App\Models\Category;
 use App\Models\Author;
 use App\Models\Publisher;
-use App\Models\Tag;
 use Illuminate\Http\Request;
 
 class RssController extends Controller
@@ -78,26 +77,6 @@ class RssController extends Controller
             'posts' => $posts,
             'title' => "مطالب {$author->name}",
             'description' => "آخرین مطالب نوشته شده توسط {$author->name} در وبلاگ کتابستان"
-        ])->header('Content-Type', 'application/atom+xml; charset=UTF-8');
-    }
-
-    /**
-     * ساخت فید RSS برای یک تگ خاص
-     */
-    public function tag(Tag $tag)
-    {
-        $posts = $tag->posts()
-            ->where('is_published', true)
-            ->where('hide_content', false)
-            ->with(['category', 'author', 'featuredImage'])
-            ->orderBy('created_at', 'desc')
-            ->take(50)
-            ->get();
-
-        return response()->view('feeds.posts', [
-            'posts' => $posts,
-            'title' => "مطالب با برچسب {$tag->name}",
-            'description' => "آخرین مطالب با برچسب {$tag->name} در وبلاگ کتابستان"
         ])->header('Content-Type', 'application/atom+xml; charset=UTF-8');
     }
 }

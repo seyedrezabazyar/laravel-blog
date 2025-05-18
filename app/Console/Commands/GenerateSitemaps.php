@@ -7,7 +7,6 @@ use App\Models\Category;
 use App\Models\Post;
 use App\Models\PostImage;
 use App\Models\Publisher;
-use App\Models\Tag;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -53,7 +52,6 @@ class GenerateSitemaps extends Command
             'categories' => 'generateCategoriesSitemap',
             'authors' => 'generateAuthorsSitemap',
             'publishers' => 'generatePublishersSitemap',
-            'tags' => 'generateTagsSitemap'
         ];
 
         foreach ($generators as $key => $method) {
@@ -93,7 +91,6 @@ class GenerateSitemaps extends Command
             '/categories' => ['weekly', 0.8],
             '/authors' => ['weekly', 0.8],
             '/publishers' => ['weekly', 0.8],
-            '/tags' => ['weekly', 0.8],
         ];
 
         foreach ($staticPages as $url => [$changeFreq, $priority]) {
@@ -376,54 +373,12 @@ class GenerateSitemaps extends Command
     }
 
     /**
-     * تولید سایت‌مپ برچسب‌ها
-     */
-    protected function generateTagsSitemap()
-    {
-        $totalTags = Tag::count();
-        $totalSitemaps = ceil($totalTags / $this->itemsPerSitemap);
-        $this->info("تعداد کل برچسب‌ها: {$totalTags} - تعداد سایت‌مپ‌ها: {$totalSitemaps}");
-
-        $sitemapIndex = SitemapIndex::create();
-
-        for ($page = 1; $page <= $totalSitemaps; $page++) {
-            $this->info("تولید سایت‌مپ برچسب‌ها - صفحه {$page} از {$totalSitemaps}");
-
-            $sitemap = Sitemap::create();
-            $tags = Tag::select(['id', 'slug', 'updated_at', 'created_at'])
-                ->withCount(['posts' => function($query) {
-                    $query->where('is_published', true)
-                        ->where('hide_content', false);
-                }])
-                ->orderBy('id')
-                ->offset(($page - 1) * $this->itemsPerSitemap)
-                ->limit($this->itemsPerSitemap)
-                ->get();
-
-            foreach ($tags as $tag) {
-                $priority = $this->calculatePriorityByCount($tag->posts_count);
-
-                $sitemap->add(Url::create("/tag/{$tag->slug}")
-                    ->setLastModificationDate($tag->updated_at ?? $tag->created_at)
-                    ->setChangeFrequency(Url::CHANGE_FREQUENCY_WEEKLY)
-                    ->setPriority($priority));
-            }
-
-            $fileName = "sitemap-tags-{$page}.xml";
-            $sitemap->writeToFile(Storage::path("{$this->storageDir}/{$fileName}"));
-            $sitemapIndex->add("{$this->baseUrl}/{$fileName}");
-        }
-
-        $sitemapIndex->writeToFile(Storage::path("{$this->storageDir}/sitemap-tags.xml"));
-    }
-
-    /**
      * تولید ایندکس اصلی سایت‌مپ
      */
     protected function generateMainIndex()
     {
         $sitemapIndex = SitemapIndex::create();
-        $sitemapTypes = ['pages', 'posts', 'post-images', 'categories', 'authors', 'publishers', 'tags'];
+        $sitemapTypes = ['pages', 'posts', 'post-images', 'categories', 'authors', 'publishers'];
 
         foreach ($sitemapTypes as $type) {
             $fileName = "sitemap-{$type}.xml";

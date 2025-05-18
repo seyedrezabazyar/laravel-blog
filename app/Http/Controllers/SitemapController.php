@@ -133,27 +133,6 @@ class SitemapController extends Controller
     }
 
     /**
-     * نمایش ایندکس سایت‌مپ برچسب‌ها
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function tags()
-    {
-        return $this->serveSitemap('sitemap-tags.xml');
-    }
-
-    /**
-     * نمایش سایت‌مپ برچسب‌های یک صفحه خاص
-     *
-     * @param int $page شماره صفحه
-     * @return \Illuminate\Http\Response
-     */
-    public function tagsPage($page)
-    {
-        return $this->serveSitemap("sitemap-tags-{$page}.xml");
-    }
-
-    /**
      * ارائه فایل سایت‌مپ
      *
      * @param string $filename نام فایل

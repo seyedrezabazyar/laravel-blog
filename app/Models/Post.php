@@ -126,15 +126,6 @@ class Post extends Model
     }
 
     /**
-     * رابطه با برچسب‌ها
-     */
-    public function tags(): BelongsToMany
-    {
-        return $this->belongsToMany(Tag::class)
-            ->select(['tags.id', 'name', 'slug']);
-    }
-
-    /**
      * محتوای پاکسازی شده
      *
      * accessor برای دریافت محتوای پاکسازی شده

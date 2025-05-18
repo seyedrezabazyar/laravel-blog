@@ -70,12 +70,6 @@ class PostController extends Controller
                 ->orderBy('sort_order')
                 ->first();
 
-            $tags_list = DB::table('post_tag')
-                ->join('tags', 'post_tag.tag_id', '=', 'tags.id')
-                ->where('post_tag.post_id', $id)
-                ->pluck('tags.name')
-                ->implode(', ');
-
             $post_authors = DB::table('post_author')
                 ->where('post_id', $id)
                 ->pluck('author_id')
@@ -86,7 +80,7 @@ class PostController extends Controller
             $publishers = Publisher::select('id', 'name')->orderBy('name')->get();
 
             return view('admin.posts.edit', compact(
-                'post', 'featuredImage', 'tags_list', 'categories',
+                'post', 'featuredImage', 'categories',
                 'authors', 'post_authors', 'publishers'
             ));
         } catch (\Exception $e) {
@@ -177,12 +171,11 @@ class PostController extends Controller
                 'hide_image' => 'nullable|boolean',
                 'authors' => 'nullable|array',
                 'authors.*' => 'exists:authors,id',
-                'tags' => 'nullable|string|max:500',
                 'image' => 'nullable|mimes:jpeg,png,jpg,gif|image|max:2048',
-                ]);
+            ]);
 
             $postData = $validated;
-            unset($postData['authors'], $postData['tags'], $postData['image'], $postData['hide_image']);
+            unset($postData['authors'], $postData['image'], $postData['hide_image']);
             $postData['slug'] = Str::slug($validated['title']);
 
             DB::beginTransaction();
@@ -222,7 +215,7 @@ class PostController extends Controller
                 ]);
             }
 
-            $this->updateAuthorsAndTags($post, $validated);
+            $this->updateAuthors($post, $validated);
 
             DB::commit();
             $this->clearCaches($id);
@@ -240,7 +233,7 @@ class PostController extends Controller
         }
     }
 
-    private function updateAuthorsAndTags($post, $validated)
+    private function updateAuthors($post, $validated)
     {
         // به‌روزرسانی نویسندگان
         if (isset($validated['authors'])) {
@@ -265,41 +258,6 @@ class PostController extends Controller
                 }
             }
         }
-
-        // به‌روزرسانی تگ‌ها
-        if (isset($validated['tags'])) {
-            DB::table('post_tag')->where('post_id', $post->id)->delete();
-
-            if (!empty($validated['tags'])) {
-                $tags = explode(',', $validated['tags']);
-
-                foreach ($tags as $tagName) {
-                    $tagName = trim($tagName);
-                    if (empty($tagName)) continue;
-
-                    $slug = Str::slug($tagName);
-                    $tag = DB::table('tags')->where('slug', $slug)->first();
-
-                    if (!$tag) {
-                        $tagId = DB::table('tags')->insertGetId([
-                            'name' => $tagName,
-                            'slug' => $slug,
-                            'created_at' => now(),
-                            'updated_at' => now()
-                        ]);
-                    } else {
-                        $tagId = $tag->id;
-                    }
-
-                    DB::table('post_tag')->insert([
-                        'post_id' => $post->id,
-                        'tag_id' => $tagId,
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ]);
-                }
-            }
-        }
     }
 
     private function clearCaches($id)
@@ -308,7 +266,6 @@ class PostController extends Controller
             "post_edit_{$id}_minimal_data",
             "post_edit_{$id}_content_data",
             "post_{$id}_featured_image_minimal",
-            "post_{$id}_tags_string",
             "post_{$id}_coauthors_ids",
             "post_{$id}_featured_image_id",
             "admin_posts_page_1",

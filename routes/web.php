@@ -7,7 +7,6 @@ use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\PublisherController;
-use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\ImageCheckerController;
 use App\Http\Controllers\SitemapController;
@@ -34,11 +33,6 @@ Route::middleware('auth')->group(function () {
         Route::resource('posts', PostController::class)->except(['show', 'destroy']);
         Route::resource('categories', CategoryController::class);
         Route::resource('authors', AuthorController::class)->except(['show', 'destroy', 'create', 'store']);
-
-        // مسیرهای تگ‌ها - فقط index، edit و update
-        Route::get('tags', [TagController::class, 'index'])->name('tags.index');
-        Route::get('tags/{id}/edit', [TagController::class, 'edit'])->name('tags.edit');
-        Route::put('tags/{id}', [TagController::class, 'update'])->name('tags.update');
 
         // مسیرهای ناشر
         Route::resource('publishers', PublisherController::class)->except(['show']);
@@ -81,10 +75,6 @@ Route::get('/author/{author:slug}', [BlogController::class, 'author'])->name('bl
 Route::get('/publishers', [BlogController::class, 'publishers'])->name('blog.publishers');
 Route::get('/publisher/{publisher:slug}', [BlogController::class, 'publisher'])->name('blog.publisher');
 
-// مسیرهای تگ
-Route::get('/tags', [BlogController::class, 'tags'])->name('blog.tags');
-Route::get('/tag/{tag:slug}', [BlogController::class, 'tag'])->name('blog.tag');
-
 // جستجو
 Route::get('/search', [BlogController::class, 'search'])->name('blog.search');
 
@@ -102,8 +92,6 @@ Route::middleware('compress.sitemap')->group(function() {
     Route::get('sitemap-authors-{page}.xml', [SitemapController::class, 'authorsPage'])->where('page', '[0-9]+');
     Route::get('sitemap-publishers.xml', [SitemapController::class, 'publishers']);
     Route::get('sitemap-publishers-{page}.xml', [SitemapController::class, 'publishersPage'])->where('page', '[0-9]+');
-    Route::get('sitemap-tags.xml', [SitemapController::class, 'tags']);
-    Route::get('sitemap-tags-{page}.xml', [SitemapController::class, 'tagsPage'])->where('page', '[0-9]+');
 });
 
 // مسیرهای فید RSS
@@ -111,7 +99,6 @@ Route::prefix('feed')->name('feed.')->group(function () {
     Route::get('/', [RssController::class, 'index'])->name('index');
     Route::get('/category/{category:slug}', [RssController::class, 'category'])->name('category');
     Route::get('/author/{author:slug}', [RssController::class, 'author'])->name('author');
-    Route::get('/tag/{tag:slug}', [RssController::class, 'tag'])->name('tag');
 });
 
 // کش هدر و فوتر

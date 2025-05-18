@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\Category;
 use App\Models\Author;
-use App\Models\Tag;
 use App\Models\Publisher;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -93,7 +92,6 @@ class BlogController extends Controller
         $post->load([
             'category:id,name,slug',
             'featuredImage',
-            'tags:id,name,slug',
             'author:id,name,slug',
             'authors:id,name,slug',
             'publisher:id,name,slug',
@@ -134,54 +132,23 @@ class BlogController extends Controller
             return $categoryPosts;
         }
 
-        // دریافت پست‌های با برچسب‌های مشابه در صورت نیاز
-        $existingIds = $categoryPosts->pluck('id')->toArray();
-        $existingIds[] = $post->id;
-        $tagPosts = collect();
+        // در صورت نیاز به پست‌های بیشتر، پست‌های اخیر را اضافه کنیم
+        $currentIds = $categoryPosts->pluck('id')->toArray();
+        $currentIds[] = $post->id;
 
-        if ($post->tags && $post->tags->isNotEmpty()) {
-            $tagIds = $post->tags->pluck('id')->toArray();
+        $otherPosts = Post::visibleToUser()
+            ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
+            ->whereNotIn('id', $currentIds)
+            ->with([
+                'featuredImage' => function($query) {
+                    $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
+                }
+            ])
+            ->latest()
+            ->limit(6 - $categoryPosts->count())
+            ->get();
 
-            $tagPosts = Post::visibleToUser()
-                ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
-                ->whereHas('tags', function ($query) use ($tagIds) {
-                    $query->whereIn('tags.id', $tagIds);
-                })
-                ->whereNotIn('id', $existingIds)
-                ->with([
-                    'featuredImage' => function($query) {
-                        $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
-                    }
-                ])
-                ->latest()
-                ->limit(6 - $categoryPosts->count())
-                ->get();
-        }
-
-        // ترکیب نتایج
-        $result = $categoryPosts->merge($tagPosts);
-
-        // در صورت نیاز، پست‌های اخیر را اضافه کنیم
-        if ($result->count() < 6) {
-            $currentIds = $result->pluck('id')->toArray();
-            $currentIds[] = $post->id;
-
-            $otherPosts = Post::visibleToUser()
-                ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
-                ->whereNotIn('id', $currentIds)
-                ->with([
-                    'featuredImage' => function($query) {
-                        $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
-                    }
-                ])
-                ->latest()
-                ->limit(6 - $result->count())
-                ->get();
-
-            $result = $result->merge($otherPosts);
-        }
-
-        return $result;
+        return $categoryPosts->merge($otherPosts);
     }
 
     /**
@@ -364,19 +331,5 @@ class BlogController extends Controller
         });
 
         return view('blog.search', compact('posts', 'query', 'popularPosts'));
-    }
-
-    /**
-     * نمایش پست‌های یک برچسب خاص
-     */
-    public function tag(Tag $tag): View
-    {
-        $posts = $tag->posts()
-            ->visibleToUser()
-            ->with(['category', 'featuredImage', 'author', 'authors'])
-            ->latest()
-            ->paginate(12);
-
-        return view('blog.tag', compact('posts', 'tag'));
     }
 }
