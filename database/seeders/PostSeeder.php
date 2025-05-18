@@ -8,7 +8,6 @@ use App\Models\PostImage;
 use App\Models\User;
 use App\Models\Author;
 use App\Models\Publisher;
-use App\Models\Tag;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -27,8 +26,6 @@ class PostSeeder extends Seeder
             $categories = Category::all();
             $authors = Author::all();
             $publishers = Publisher::all();
-            $tags = Tag::all();
-            $tagCollection = collect($tags);
 
             $bookTitles = [
                 'راهنمای برنامه‌نویسی وب',
@@ -83,10 +80,6 @@ class PostSeeder extends Seeder
                         $post->authors()->attach($coAuthors);
                     }
 
-                    $randomTagCount = rand(2, 5);
-                    $randomTags = $tagCollection->random($randomTagCount);
-                    $post->tags()->attach($randomTags->pluck('id')->toArray());
-
                     // تغییر مقدار hide_image از false/0 به 'visible'
                     PostImage::create([
                         'post_id' => $post->id,
@@ -104,14 +97,9 @@ class PostSeeder extends Seeder
             $this->command->info("{$postsToCreate} پست تستی با موفقیت ایجاد شد.");
         } else {
             $posts = Post::all();
-            $tagCollection = collect(Tag::all());
+            // $tagCollection = collect(Tag::all()); // حذف شده
 
             foreach ($posts as $post) {
-                if ($post->tags()->count() == 0) {
-                    $randomTagCount = rand(2, 5);
-                    $randomTags = $tagCollection->random($randomTagCount);
-                    $post->tags()->attach($randomTags->pluck('id')->toArray());
-                }
 
                 if ($post->images()->count() == 0) {
                     // تغییر مقدار hide_image از false/0 به 'visible'
@@ -125,7 +113,7 @@ class PostSeeder extends Seeder
                 }
             }
 
-            $this->command->info("تصاویر و تگ‌ها با موفقیت به پست‌های موجود اضافه شدند.");
+            $this->command->info("تصاویر با موفقیت به پست‌های موجود اضافه شدند.");
         }
     }
 

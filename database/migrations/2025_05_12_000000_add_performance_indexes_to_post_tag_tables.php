@@ -30,11 +30,6 @@ return new class extends Migration
                     DB::statement('CREATE INDEX idx_posts_status ON posts(id, is_published, hide_content)');
                 }
 
-                // ایندکس برای بهبود کارایی جستجوی تگ‌ها
-                if (!$this->hasIndex('post_tag', 'idx_post_tag_search')) {
-                    DB::statement('CREATE INDEX idx_post_tag_search ON post_tag(post_id)');
-                }
-
                 // ایندکس برای بهبود کارایی جستجوی نویسندگان همکار
                 if (!$this->hasIndex('post_author', 'idx_post_author_search')) {
                     DB::statement('CREATE INDEX idx_post_author_search ON post_author(post_id)');
@@ -63,10 +58,6 @@ return new class extends Migration
 
                 if ($this->hasIndex('posts', 'idx_posts_status')) {
                     DB::statement('DROP INDEX idx_posts_status ON posts');
-                }
-
-                if ($this->hasIndex('post_tag', 'idx_post_tag_search')) {
-                    DB::statement('DROP INDEX idx_post_tag_search ON post_tag');
                 }
 
                 if ($this->hasIndex('post_author', 'idx_post_author_search')) {

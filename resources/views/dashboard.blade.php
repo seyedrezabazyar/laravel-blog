@@ -227,7 +227,7 @@
             </div>
 
             <!-- بخش‌های اصلی مدیریت -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                 <!-- دسته‌بندی‌ها -->
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6 text-center bg-gradient-to-br from-indigo-50 to-purple-50 h-full">
@@ -290,28 +290,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- تگ‌ها -->
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 text-center bg-gradient-to-br from-yellow-50 to-amber-50 h-full">
-                        <div class="mb-4">
-                            <div class="bg-yellow-100 inline-flex p-3 rounded-full mx-auto">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.243 3.03a1 1 0 01.727 1.213L9.53 6h2.94l.56-2.243a1 1 0 111.936.486L14.53 6H17a1 1 0 110 2h-2.97l-1 4H15a1 1 0 110 2h-2.47l-.56 2.242a1 1 0 11-1.936-.485L10.47 14H7.53l-.56 2.242a1 1 0 11-1.936-.485L5.47 14H3a1 1 0 110-2h2.97l1-4H5a1 1 0 110-2h2.47l.56-2.243a1 1 0 011.213-.727zM9.03 8l-1 4h2.938l1-4H9.031z" />
-                                </svg>
-                            </div>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-800 mb-2">تگ‌ها</h3>
-                        <p class="text-gray-600 mb-4">مدیریت برچسب‌های محتوا</p>
-                        <div class="flex justify-between items-center">
-                            <span class="text-yellow-600 font-semibold">{{ \App\Models\Tag::count() }} تگ</span>
-                            <a href="{{ route('admin.tags.index') }}" class="bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700 transition">
-                                مشاهده
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
             </div>
 
             <!-- مدیریت گالری تصاویر -->
