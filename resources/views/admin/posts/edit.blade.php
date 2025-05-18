@@ -242,9 +242,6 @@
                 <!-- فیلدهای مخفی برای نویسنده، ناشر و تگ -->
                 <input type="hidden" name="author_id" value="{{ $post->author_id }}">
                 <input type="hidden" name="publisher_id" value="{{ $post->publisher_id }}">
-                @if(isset($tags_list))
-                    <input type="hidden" name="tags" value="{{ $tags_list }}">
-                @endif
             </form>
         </div>
     </div>

@@ -27,10 +27,6 @@
 
             <category term="{{ $post->category->slug }}" label="{{ $post->category->name }}"/>
 
-            @foreach($post->tags as $tag)
-                <category term="{{ $tag->slug }}" label="{{ $tag->name }}"/>
-            @endforeach
-
             <summary type="html">
                 <![CDATA[
                 @if($post->featuredImage && !$post->featuredImage->hide_image)
