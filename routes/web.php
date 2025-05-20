@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\PublisherController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\ImageCheckerController;
+use App\Http\Controllers\Admin\ContentFilterController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\RssController;
 
@@ -57,6 +58,16 @@ Route::middleware('auth')->group(function () {
         Route::post('images/check', [ImageCheckerController::class, 'check'])
             ->middleware('gallery.rate.limit')
             ->name('images.check');
+
+        // مسیرهای فیلتر محتوا
+        Route::prefix('content-filter')->name('content-filter.')->group(function () {
+            Route::get('/', [ContentFilterController::class, 'index'])->name('index');
+            Route::post('/', [ContentFilterController::class, 'filter'])->name('filter');
+            Route::post('/search', [ContentFilterController::class, 'search'])->name('search');
+            Route::post('/hide-post/{id}', [ContentFilterController::class, 'hidePost'])->name('hide-post');
+            Route::post('/show-post/{id}', [ContentFilterController::class, 'showPost'])->name('show-post');
+            Route::post('/bulk-hide', [ContentFilterController::class, 'bulkHide'])->name('bulk-hide');
+        });
     });
 });
 

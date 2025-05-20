@@ -227,7 +227,7 @@
             </div>
 
             <!-- بخش‌های اصلی مدیریت -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 <!-- دسته‌بندی‌ها -->
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6 text-center bg-gradient-to-br from-indigo-50 to-purple-50 h-full">
@@ -285,6 +285,32 @@
                         <div class="flex justify-between items-center">
                             <span class="text-green-600 font-semibold">{{ \App\Models\Author::count() }} نویسنده</span>
                             <a href="{{ route('admin.authors.index') }}" class="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition">
+                                مشاهده
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- فیلتر محتوا -->
+                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                    <div class="p-6 text-center bg-gradient-to-br from-red-50 to-orange-50 h-full">
+                        <div class="mb-4">
+                            <div class="bg-red-100 inline-flex p-3 rounded-full mx-auto">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                </svg>
+                            </div>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">فیلتر محتوا</h3>
+                        <p class="text-gray-600 mb-4">فیلتر و مخفی‌سازی محتوای غیرمجاز</p>
+                        <div class="flex justify-between items-center">
+                <span class="text-red-600 font-semibold">
+                    @php
+                        $hiddenCount = \App\Models\Post::where('hide_content', true)->count();
+                    @endphp
+                    {{ $hiddenCount }} پست مخفی
+                </span>
+                            <a href="{{ url('/admin/content-filter') }}" class="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition">
                                 مشاهده
                             </a>
                         </div>

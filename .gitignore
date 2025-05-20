@@ -23,6 +23,7 @@ yarn-error.log
 /.zed
 **/.DS_Store
 lib_import.php
+lib_import_liara.php
 import_progress.txt
 categories.php
 
