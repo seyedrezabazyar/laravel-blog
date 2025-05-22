@@ -6,40 +6,26 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     * For books with multiple authors
-     */
     public function up(): void
     {
         Schema::create('post_author', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('post_id')->constrained()->onDelete('cascade');
-            $table->foreignId('author_id')->constrained()->onDelete('cascade');
-            $table->timestamps();
+            $table->unsignedInteger('post_id');
+            $table->unsignedMediumInteger('author_id');
+            $table->timestamp('created_at')->useCurrent();
 
-            // Make sure a book can't have the same author twice
-            $table->unique(['post_id', 'author_id']);
+            // کلید اصلی ترکیبی
+            $table->primary(['post_id', 'author_id']);
 
-            // ایندکس‌های اضافی برای بهبود عملکرد
-            $table->index('post_id');
+            // ایندکس‌های بهینه
             $table->index('author_id');
+            $table->index(['author_id', 'created_at']);
 
-            // شاخص مرکب برای جستجوی سریع‌تر بر اساس نویسنده در جدول پیوت
-            $table->index(['author_id', 'post_id'], 'post_author_author_post_index');
-
-            // شاخص‌های بهینه‌سازی شده برای بهبود کارایی صفحه نویسنده
-            $table->index(['author_id', 'post_id'], 'idx_author_posts');
-            $table->index(['post_id', 'author_id'], 'idx_post_authors');
-
-            // شاخص برای کوئری‌های مرتب‌سازی شده
-            $table->index(['author_id', 'created_at'], 'idx_author_post_date');
+            // کلیدهای خارجی
+            $table->foreign('post_id')->references('id')->on('posts')->onDelete('cascade');
+            $table->foreign('author_id')->references('id')->on('authors')->onDelete('cascade');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('post_author');

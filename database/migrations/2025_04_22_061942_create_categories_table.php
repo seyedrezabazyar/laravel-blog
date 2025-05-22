@@ -7,60 +7,33 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     * جدول دسته‌بندی‌ها - کاملاً بهینه‌سازی شده
-     */
     public function up(): void
     {
         Schema::create('categories', function (Blueprint $table) {
-            // ID بهینه - تبدیل از bigint به unsignedInteger
-            $table->unsignedInteger('id', true)->primary();
-
-            // نام دسته‌بندی بهینه‌شده
-            $table->string('name', 255)->charset('utf8mb4')->collation('utf8mb4_unicode_ci');
-
-            // slug بهینه شده
-            $table->string('slug', 150)->unique()->charset('ascii')->collation('ascii_general_ci');
-
-            // توضیحات کوتاه به جای text
-            $table->string('description', 1000)->nullable()->charset('utf8mb4')->collation('utf8mb4_unicode_ci');
-
-            // مسیر تصویر بهینه‌شده
-            $table->string('image', 191)->nullable()->charset('ascii')->collation('ascii_general_ci');
-
-            // شمارنده پست‌ها - mediumint کافی است
-            $table->unsignedMediumInteger('posts_count')->default(0);
-
-            // timestamps بهینه‌سازی شده
+            $table->mediumIncrements('id');
+            $table->string('name', 100)->charset('utf8mb4');
+            $table->string('slug', 100)->unique()->charset('ascii');
+            $table->string('description', 500)->nullable()->charset('utf8mb4');
+            $table->string('image', 150)->nullable()->charset('ascii');
+            $table->unsignedSmallInteger('posts_count')->default(0);
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
 
-            // ایندکس‌های بهینه
-            $table->index('name', 'idx_categories_name');
-            $table->index('posts_count', 'idx_categories_posts_count');
-            $table->index('created_at', 'idx_categories_created');
-
-            // تنظیمات جدول
-            $table->engine = 'InnoDB';
-            $table->charset = 'utf8mb4';
-            $table->collation = 'utf8mb4_unicode_ci';
+            $table->index('name');
+            $table->index(['posts_count', 'name']);
+            $table->index('created_at');
         });
 
-        // ایندکس FULLTEXT برای جستجو در نام و توضیحات
+        // ایندکس FULLTEXT برای جستجو
         if (DB::connection()->getDriverName() === 'mysql') {
             try {
-                DB::statement('ALTER TABLE categories ADD FULLTEXT INDEX categories_search_fulltext (name, description) WITH PARSER ngram');
+                DB::statement('ALTER TABLE categories ADD FULLTEXT INDEX categories_fulltext (name, description)');
             } catch (\Exception $e) {
-                // fallback برای سرورهایی که ngram ندارند
-                DB::statement('ALTER TABLE categories ADD FULLTEXT INDEX categories_search_fulltext (name, description)');
+                \Log::info('FULLTEXT index creation failed: ' . $e->getMessage());
             }
         }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('categories');

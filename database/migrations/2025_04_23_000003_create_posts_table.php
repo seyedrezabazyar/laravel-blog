@@ -7,86 +7,71 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up()
+    public function up(): void
     {
         Schema::create('posts', function (Blueprint $table) {
-            $table->id();
-            $table->string('md5_hash')->unique(); // Unique MD5 hash for each book
-            $table->foreignId('user_id')->constrained();
-            $table->foreignId('category_id')->constrained('categories');
-            $table->foreignId('author_id')->nullable()->constrained('authors')->nullOnDelete();
-            $table->foreignId('publisher_id')->nullable()->constrained('publishers')->nullOnDelete();
+            $table->increments('id');
+            $table->string('md5_hash', 32)->unique()->charset('ascii');
+            $table->unsignedMediumInteger('user_id');
+            $table->unsignedMediumInteger('category_id');
+            $table->unsignedMediumInteger('author_id')->nullable();
+            $table->unsignedMediumInteger('publisher_id')->nullable();
 
-            // Book titles - updating based on your requirements
-            $table->string('title', 1500); // Persian title - 1500 characters
-            $table->string('english_title', 1500)->nullable(); // English title - 1500 characters
-            $table->string('slug')->unique();
+            // عناوین کتاب
+            $table->string('title', 800)->charset('utf8mb4');
+            $table->string('english_title', 800)->nullable()->charset('utf8mb4');
+            $table->string('slug', 800)->unique()->charset('ascii');
 
-            // Book contents - تغییر به longText برای پشتیبانی از داده‌های بزرگ
-            $table->longText('content'); // Persian content
-            $table->longText('english_content')->nullable(); // English content
+            // محتوای کتاب
+            $table->longText('content')->charset('utf8mb4');
+            $table->longText('english_content')->nullable()->charset('utf8mb4');
 
-            // Book details
-            $table->string('language', 70)->nullable(); // Language of the book
-            $table->string('publication_year', 14)->nullable(); // Publication year
-            $table->string('format', 7)->nullable(); // Book format
-            $table->string('book_codes', 300)->nullable(); // ISBN codes
+            // جزئیات کتاب
+            $table->string('language', 50)->nullable()->charset('ascii');
+            $table->unsignedSmallInteger('publication_year')->nullable();
+            $table->enum('format', ['pdf', 'epub', 'mobi', 'doc', 'txt', 'other'])->nullable();
+            $table->string('book_codes', 200)->nullable()->charset('ascii');
+            $table->string('edition', 50)->nullable()->charset('utf8mb4');
+            $table->string('pages', 10)->nullable()->charset('ascii');
+            $table->string('size', 10)->nullable()->charset('ascii');
 
-            // Additional fields
-            $table->string('edition', 60)->nullable(); // Book edition
-            $table->string('pages', 100)->nullable(); // Book pages
-            $table->string('size', 10)->nullable(); // Book size
+            // لینک خرید
+            $table->string('purchase_link', 500)->nullable()->charset('ascii');
 
-            // Purchase information
-            $table->string('purchase_link')->nullable(); // Link to purchase the book
-
-            // Publication status
-            $table->boolean('hide_content')->default(false); // Flag to hide the content
+            // وضعیت انتشار
+            $table->boolean('hide_content')->default(false);
             $table->boolean('is_published')->default(false);
 
-            // شاخص‌های بهینه‌سازی شده
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            // ایندکس‌های بهینه
             $table->index(['is_published', 'hide_content', 'created_at']);
-
-            // شاخص اصلی برای کوئری‌های دسته‌بندی - بهینه‌سازی شده برای کوئری کند
-            $table->index(['category_id', 'is_published', 'hide_content']); // بهبود شاخص مخصوص دسته‌بندی‌ها
-
-            // افزودن شاخص بهینه برای صفحه ناشر
-            $table->index(['publisher_id', 'is_published', 'hide_content', 'created_at'], 'idx_publisher_posts');
-
-            // شاخص بهینه‌سازی شده برای صفحه نویسنده
-            $table->index(['author_id', 'is_published', 'hide_content'], 'posts_author_visibility_index');
-            $table->index(['is_published', 'hide_content', 'created_at'], 'posts_published_created_index');
-
-            // شاخص‌های بهینه‌سازی شده برای نویسنده
-            $table->index(['author_id', 'is_published', 'hide_content', 'created_at'], 'idx_posts_by_author_status');
-            $table->index(['author_id', 'created_at'], 'idx_author_post_created');
-
-            $table->index(['author_id', 'is_published']);
-            $table->index(['publisher_id', 'is_published']);
-            $table->index(['format', 'publication_year']);
+            $table->index(['category_id', 'is_published', 'hide_content']);
+            $table->index(['author_id', 'is_published', 'hide_content']);
+            $table->index(['publisher_id', 'is_published', 'hide_content']);
+            $table->index(['publication_year', 'format']);
             $table->index('book_codes');
-            $table->index('slug');
+            $table->index('created_at');
 
-            $table->timestamps();
+            // کلیدهای خارجی
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('category_id')->references('id')->on('categories');
+            $table->foreign('author_id')->references('id')->on('authors')->nullOnDelete();
+            $table->foreign('publisher_id')->references('id')->on('publishers')->nullOnDelete();
         });
 
-        // ایندکس‌های FULLTEXT برای جستجوی متنی سریع
-        DB::statement('ALTER TABLE posts ADD FULLTEXT posts_title_fulltext (title, english_title)');
-        DB::statement('ALTER TABLE posts ADD FULLTEXT posts_content_fulltext (content, english_content)');
-
-        // ایندکس FULLTEXT بهینه‌سازی شده فقط برای عنوان
-        DB::statement('ALTER TABLE posts ADD FULLTEXT posts_title_only_fulltext (title)');
-
-        // ایندکس جامع برای همه فیلدهای متنی
-        DB::statement('ALTER TABLE posts ADD FULLTEXT posts_all_fulltext (title, english_title, book_codes, content)');
+        // ایندکس‌های FULLTEXT برای جستجو
+        if (DB::connection()->getDriverName() === 'mysql') {
+            try {
+                DB::statement('ALTER TABLE posts ADD FULLTEXT INDEX posts_title_fulltext (title, english_title)');
+                DB::statement('ALTER TABLE posts ADD FULLTEXT INDEX posts_search_fulltext (title, english_title, book_codes)');
+            } catch (\Exception $e) {
+                \Log::info('FULLTEXT index creation failed: ' . $e->getMessage());
+            }
+        }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('posts');

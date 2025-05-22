@@ -7,48 +7,34 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     * جدول نویسندگان بهینه‌سازی شده
-     */
     public function up(): void
     {
         Schema::create('authors', function (Blueprint $table) {
-            $table->unsignedInteger('id', true)->primary();
-
-            $table->string('name', 255)->charset('utf8mb4')->collation('utf8mb4_unicode_ci');
-
-            $table->string('slug', 100)->unique()->charset('ascii')->collation('ascii_general_ci');
-
-            $table->unsignedMediumInteger('posts_count')->default(0);
-
+            $table->mediumIncrements('id');
+            $table->string('name', 150)->charset('utf8mb4');
+            $table->string('slug', 150)->unique()->charset('ascii');
+            $table->text('biography')->nullable()->charset('utf8mb4');
+            $table->string('image', 150)->nullable()->charset('ascii');
+            $table->unsignedSmallInteger('posts_count')->default(0);
+            $table->unsignedSmallInteger('coauthored_count')->default(0);
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
 
-            $table->index('name', 'idx_authors_name');
-            $table->index('posts_count', 'idx_authors_posts_count');
-            $table->index('created_at', 'idx_authors_created');
-
-            $table->engine = 'InnoDB';
-            $table->charset = 'utf8mb4';
-            $table->collation = 'utf8mb4_unicode_ci';
+            $table->index('name');
+            $table->index(['posts_count', 'coauthored_count']);
+            $table->index('created_at');
         });
 
-        // ایندکس FULLTEXT فقط در صورت ضرورت
+        // ایندکس FULLTEXT برای جستجو
         if (DB::connection()->getDriverName() === 'mysql') {
             try {
-                // ایندکس FULLTEXT بهینه شده برای فارسی
-                DB::statement('ALTER TABLE authors ADD FULLTEXT INDEX authors_name_fulltext (name) WITH PARSER ngram');
+                DB::statement('ALTER TABLE authors ADD FULLTEXT INDEX authors_fulltext (name, biography)');
             } catch (\Exception $e) {
-                // اگر ngram parser در دسترس نباشد، از parser معمولی استفاده کنیم
-                DB::statement('ALTER TABLE authors ADD FULLTEXT INDEX authors_name_fulltext (name)');
+                \Log::info('FULLTEXT index creation failed: ' . $e->getMessage());
             }
         }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('authors');

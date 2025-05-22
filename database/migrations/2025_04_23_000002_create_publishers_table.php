@@ -6,25 +6,24 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('publishers', function (Blueprint $table) {
-            $table->id();
-            $table->string('name', 400); // Updating to 400 characters
-            $table->string('slug')->unique();
-            $table->text('description')->nullable();
-            $table->string('logo')->nullable();
-            $table->index('name'); // ایندکس برای جستجو بر اساس نام
-            $table->timestamps();
+            $table->mediumIncrements('id');
+            $table->string('name', 200)->charset('utf8mb4');
+            $table->string('slug', 200)->unique()->charset('ascii');
+            $table->text('description')->nullable()->charset('utf8mb4');
+            $table->string('logo', 150)->nullable()->charset('ascii');
+            $table->unsignedSmallInteger('posts_count')->default(0);
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->index('name');
+            $table->index(['posts_count', 'name']);
+            $table->index('created_at');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('publishers');
