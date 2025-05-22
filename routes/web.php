@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BlogController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\AuthorController;
@@ -68,6 +69,12 @@ Route::middleware('auth')->group(function () {
             Route::post('/show-post/{id}', [ContentFilterController::class, 'showPost'])->name('show-post');
             Route::post('/bulk-hide', [ContentFilterController::class, 'bulkHide'])->name('bulk-hide');
         });
+
+        // مسیرهای مدیریت Elasticsearch
+        Route::prefix('search')->name('search.')->group(function () {
+            Route::get('/stats', [SearchController::class, 'stats'])->name('stats');
+            Route::post('/reindex', [SearchController::class, 'reindex'])->name('reindex');
+        });
     });
 });
 
@@ -86,8 +93,17 @@ Route::get('/author/{author:slug}', [BlogController::class, 'author'])->name('bl
 Route::get('/publishers', [BlogController::class, 'publishers'])->name('blog.publishers');
 Route::get('/publisher/{publisher:slug}', [BlogController::class, 'publisher'])->name('blog.publisher');
 
-// جستجو
-Route::get('/search', [BlogController::class, 'search'])->name('blog.search');
+// مسیرهای جستجو
+Route::prefix('search')->name('search.')->group(function () {
+    Route::get('/', [SearchController::class, 'index'])->name('index');
+    Route::get('/advanced', [SearchController::class, 'advanced'])->name('advanced');
+    Route::get('/autocomplete', [SearchController::class, 'autocomplete'])->name('autocomplete');
+});
+
+// جستجوی قدیمی (redirect به جستجوی جدید)
+Route::get('/blog/search', function() {
+    return redirect()->route('search.index', request()->query());
+})->name('blog.search');
 
 // مسیرهای نقشه سایت با میدل‌ور کش فشرده‌سازی
 Route::middleware('compress.sitemap')->group(function() {
