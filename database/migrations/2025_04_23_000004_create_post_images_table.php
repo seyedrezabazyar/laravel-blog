@@ -16,11 +16,11 @@ return new class extends Migration
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
 
-            // ایندکس‌های بهینه - حذف sort_order
+            // ایندکس‌های بهینه
             $table->index('post_id');
-            $table->index(['post_id', 'hide_image'], 'idx_post_images_visibility');
+            $table->index(['post_id', 'hide_image']);
             $table->index('hide_image');
-            $table->index('updated_at'); // استفاده از updated_at به جای approved_at
+            $table->index('updated_at');
 
             // کلید خارجی
             $table->foreign('post_id')->references('id')->on('posts')->onDelete('cascade');

@@ -18,13 +18,14 @@ return new class extends Migration {
 
             $table->index('name');
             $table->index('posts_count');
+            $table->index(['posts_count', 'coauthored_count']); // ✅ ویرایش شد
             $table->index('created_at');
         });
 
-        // ایندکس FULLTEXT برای جستجو - فقط روی نام
+        // ایندکس FULLTEXT شامل biography
         if (DB::connection()->getDriverName() === 'mysql') {
             try {
-                DB::statement('ALTER TABLE authors ADD FULLTEXT INDEX authors_fulltext (name)');
+                DB::statement('ALTER TABLE authors ADD FULLTEXT INDEX authors_fulltext (name, biography)'); // ✅ ویرایش شد
             } catch (\Exception $e) {
                 \Log::info('FULLTEXT index creation failed: ' . $e->getMessage());
             }

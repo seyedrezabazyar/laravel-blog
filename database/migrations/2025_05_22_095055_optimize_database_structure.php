@@ -10,7 +10,11 @@ return new class extends Migration
         if (DB::connection()->getDriverName() === 'mysql') {
             try {
                 // تنظیمات بهینه‌سازی جداول
-                $tables = ['users', 'categories', 'authors', 'publishers', 'posts', 'post_images', 'post_author', 'settings'];
+                $tables = [
+                    'users', 'categories', 'authors', 'publishers',
+                    'posts', 'post_images', 'post_author', 'settings',
+                    'elasticsearch_configs', 'elasticsearch_logs', 'user_activities'
+                ];
 
                 foreach ($tables as $table) {
                     // تنظیم موتور InnoDB و charset
@@ -22,7 +26,7 @@ return new class extends Migration
 
                 // تنظیمات خاص برای جداول پرترافیک
                 DB::statement("ALTER TABLE posts ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8");
-                DB::statement("ALTER TABLE post_images ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=4");
+                DB::statement("ALTER TABLE elasticsearch_logs ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=4");
 
                 // تنظیمات کش جداول
                 DB::statement("ALTER TABLE cache ENGINE=MEMORY");
@@ -38,10 +42,9 @@ return new class extends Migration
 
     public function down(): void
     {
-        // برگشت تنظیمات در صورت نیاز
         if (DB::connection()->getDriverName() === 'mysql') {
             try {
-                $tables = ['posts', 'post_images'];
+                $tables = ['posts', 'elasticsearch_logs'];
                 foreach ($tables as $table) {
                     DB::statement("ALTER TABLE {$table} ROW_FORMAT=DEFAULT");
                 }
