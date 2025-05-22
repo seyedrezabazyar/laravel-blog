@@ -30,11 +30,6 @@ return new class extends Migration
             $table->string('size', 10)->nullable()->charset('ascii');
             $table->string('purchase_link', 500)->nullable()->charset('ascii');
 
-            // آمار محاسبه شده از Elasticsearch
-            $table->unsignedInteger('content_word_count')->default(0);
-            $table->unsignedSmallInteger('reading_time_minutes')->default(0);
-            $table->boolean('has_english_content')->default(false);
-
             // وضعیت
             $table->boolean('hide_content')->default(false);
             $table->boolean('is_published')->default(false);

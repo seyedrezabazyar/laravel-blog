@@ -18,7 +18,6 @@ return new class extends Migration {
 
             $table->index('name');
             $table->index('posts_count');
-            $table->index(['posts_count']);
             $table->index('created_at');
         });
 
