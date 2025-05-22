@@ -16,12 +16,12 @@ return new class extends Migration {
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
 
+            // ایندکس‌های بهینه
             $table->index('name');
-            $table->index('posts_count');
-            $table->index('created_at');
+            $table->index(['posts_count', 'id'], 'authors_display_idx');
         });
 
-        // ایندکس FULLTEXT شامل biography
+        // ایندکس FULLTEXT برای جستجو
         if (DB::connection()->getDriverName() === 'mysql') {
             try {
                 DB::statement('ALTER TABLE authors ADD FULLTEXT INDEX authors_fulltext (name)');

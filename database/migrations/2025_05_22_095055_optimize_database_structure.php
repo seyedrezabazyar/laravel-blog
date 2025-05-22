@@ -13,7 +13,7 @@ return new class extends Migration
                 $tables = [
                     'users', 'categories', 'authors', 'publishers',
                     'posts', 'post_images', 'post_author', 'settings',
-                    'elasticsearch_configs', 'elasticsearch_logs', 'user_activities'
+                    'elasticsearch_configs', 'elasticsearch_errors'
                 ];
 
                 foreach ($tables as $table) {
@@ -26,7 +26,9 @@ return new class extends Migration
 
                 // تنظیمات خاص برای جداول پرترافیک
                 DB::statement("ALTER TABLE posts ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8");
-                DB::statement("ALTER TABLE elasticsearch_logs ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=4");
+
+                // ایندکس FULLTEXT برای جستجوی سریع
+                DB::statement('ALTER TABLE posts ADD FULLTEXT INDEX posts_title_fulltext (title)');
 
                 // تنظیمات کش جداول
                 DB::statement("ALTER TABLE cache ENGINE=MEMORY");
@@ -44,11 +46,7 @@ return new class extends Migration
     {
         if (DB::connection()->getDriverName() === 'mysql') {
             try {
-                $tables = ['posts', 'elasticsearch_logs'];
-                foreach ($tables as $table) {
-                    DB::statement("ALTER TABLE {$table} ROW_FORMAT=DEFAULT");
-                }
-
+                DB::statement("ALTER TABLE posts ROW_FORMAT=DEFAULT");
                 DB::statement("ALTER TABLE cache ENGINE=InnoDB");
                 DB::statement("ALTER TABLE cache_locks ENGINE=InnoDB");
 

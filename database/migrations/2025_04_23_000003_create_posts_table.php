@@ -16,24 +16,35 @@ return new class extends Migration
             $table->unsignedMediumInteger('author_id')->nullable()->index();
             $table->unsignedMediumInteger('publisher_id')->nullable()->index();
 
-            // فقط اطلاعات ضروری برای مدیریت
-            $table->string('title', 255)->charset('utf8mb4'); // برای admin panel
-            $table->string('slug', 100)->unique()->charset('ascii'); // برای URL
+            // اطلاعات اصلی کتاب
+            $table->string('title', 255)->charset('utf8mb4');
+            $table->string('slug', 100)->unique()->charset('ascii');
+
+            // فیلدهای جدید برای جستجو
+            $table->unsignedSmallInteger('publication_year')->nullable();
+            $table->enum('format', ['PDF', 'EPUB', 'MOBI', 'DOCX', 'TXT', 'AUDIO', 'VIDEO', 'OTHER'])->nullable();
+            $table->enum('language', ['persian', 'english', 'arabic', 'mixed', 'other'])->default('persian');
+            $table->string('isbn', 20)->nullable()->charset('ascii');
+            $table->unsignedSmallInteger('pages_count')->nullable();
 
             // وضعیت‌ها
             $table->boolean('hide_content')->default(false);
             $table->boolean('is_published')->default(false);
-            $table->boolean('is_indexed')->default(false); // آیا در Elasticsearch است؟
+            $table->boolean('is_indexed')->default(false);
 
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
-            $table->timestamp('indexed_at')->nullable(); // آخرین بار که در ES به‌روز شد
+            $table->timestamp('indexed_at')->nullable();
 
-            // ایندکس‌های ضروری
-            $table->index(['is_published', 'hide_content', 'is_indexed']);
-            $table->index(['category_id', 'is_published']);
+            // ایندکس‌های بهینه برای جستجو
+            $table->index(['is_published', 'hide_content'], 'posts_visibility_idx');
+            $table->index(['category_id', 'is_published', 'hide_content'], 'posts_category_idx');
+            $table->index(['author_id', 'is_published', 'hide_content'], 'posts_author_idx');
+            $table->index(['publisher_id', 'is_published', 'hide_content'], 'posts_publisher_idx');
+            $table->index(['publication_year', 'is_published'], 'posts_year_idx');
+            $table->index(['format', 'language', 'is_published'], 'posts_format_idx');
+            $table->index('isbn');
             $table->index('elasticsearch_id');
-            $table->index('created_at');
 
             // کلیدهای خارجی
             $table->foreign('user_id')->references('id')->on('users');
