@@ -9,7 +9,7 @@ return new class extends Migration
     {
         if (DB::connection()->getDriverName() === 'mysql') {
             try {
-                // تنظیمات بهینه‌سازی جداول
+                // فقط charset و engine
                 $tables = [
                     'users', 'categories', 'authors', 'publishers',
                     'posts', 'post_images', 'post_author', 'settings',
@@ -17,22 +17,11 @@ return new class extends Migration
                 ];
 
                 foreach ($tables as $table) {
-                    // تنظیم موتور InnoDB و charset
                     DB::statement("ALTER TABLE {$table} ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-
-                    // بهینه‌سازی جدول
-                    DB::statement("OPTIMIZE TABLE {$table}");
                 }
 
-                // تنظیمات خاص برای جداول پرترافیک
-                DB::statement("ALTER TABLE posts ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8");
-
-                // ایندکس FULLTEXT برای جستجوی سریع
+                // ایندکس FULLTEXT برای posts
                 DB::statement('ALTER TABLE posts ADD FULLTEXT INDEX posts_title_fulltext (title)');
-
-                // تنظیمات کش جداول
-                DB::statement("ALTER TABLE cache ENGINE=MEMORY");
-                DB::statement("ALTER TABLE cache_locks ENGINE=MEMORY");
 
                 \Log::info('Database optimization completed successfully');
 
@@ -44,15 +33,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (DB::connection()->getDriverName() === 'mysql') {
-            try {
-                DB::statement("ALTER TABLE posts ROW_FORMAT=DEFAULT");
-                DB::statement("ALTER TABLE cache ENGINE=InnoDB");
-                DB::statement("ALTER TABLE cache_locks ENGINE=InnoDB");
-
-            } catch (\Exception $e) {
-                \Log::warning('Rollback of database optimizations failed: ' . $e->getMessage());
-            }
-        }
+        //
     }
 };

@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('posts', function (Blueprint $table) {
-            $table->increments('id');
+            $table->unsignedInteger('id')->autoIncrement()->primary();
             $table->string('elasticsearch_id', 50)->unique()->charset('ascii');
             $table->unsignedMediumInteger('user_id')->index();
             $table->unsignedMediumInteger('category_id')->index();
