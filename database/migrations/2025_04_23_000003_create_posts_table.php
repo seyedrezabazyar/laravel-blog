@@ -22,8 +22,8 @@ return new class extends Migration
 
             // فیلدهای جدید برای جستجو
             $table->unsignedSmallInteger('publication_year')->nullable();
-            $table->enum('format', ['PDF', 'EPUB', 'MOBI', 'DOCX', 'TXT', 'AUDIO', 'VIDEO', 'OTHER'])->nullable();
-            $table->enum('language', ['persian', 'english', 'arabic', 'mixed', 'other'])->default('persian');
+            $table->string('format', 15)->nullable()->charset('ascii'); // pdf, epub, mobi, etc.
+            $table->string('languages', 50)->nullable()->charset('ascii'); // fa,en,ar or fa or en
             $table->string('isbn', 20)->nullable()->charset('ascii');
             $table->unsignedSmallInteger('pages_count')->nullable();
 
@@ -42,7 +42,8 @@ return new class extends Migration
             $table->index(['author_id', 'is_published', 'hide_content'], 'posts_author_idx');
             $table->index(['publisher_id', 'is_published', 'hide_content'], 'posts_publisher_idx');
             $table->index(['publication_year', 'is_published'], 'posts_year_idx');
-            $table->index(['format', 'language', 'is_published'], 'posts_format_idx');
+            $table->index(['format', 'is_published'], 'posts_format_idx');
+            $table->index(['languages', 'is_published'], 'posts_languages_idx');
             $table->index('isbn');
             $table->index('elasticsearch_id');
 
