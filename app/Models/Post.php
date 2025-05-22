@@ -3,14 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
-use Mews\Purifier\Facades\Purifier;
+use Illuminate\Support\Str;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
@@ -18,45 +13,24 @@ class Post extends Model
 {
     use HasSlug;
 
-    /**
-     * فیلدهای قابل پر شدن
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
-        'user_id',
-        'category_id',
-        'author_id',
-        'publisher_id',
-        'title',
-        'english_title',
-        'slug',
-        'content',
-        'english_content',
-        'language',
-        'publication_year',
-        'format',
-        'book_codes',
-        'purchase_link',
-        'hide_content',
-        'is_published',
-        'md5_hash',
+        'md5_hash', 'user_id', 'category_id', 'author_id', 'publisher_id',
+        'title', 'english_title', 'slug', 'language', 'publication_year',
+        'format', 'book_codes', 'purchase_link', 'summary', 'english_summary',
+        'content_file_path', 'english_content_file_path',
+        'hide_content', 'is_published'
     ];
 
-    /**
-     * فیلدهایی که باید به نوع خاص تبدیل شوند
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'is_published' => 'boolean',
         'hide_content' => 'boolean',
         'publication_year' => 'integer',
     ];
 
-    /**
-     * گزینه‌های ایجاد اسلاگ
-     */
+    private $contentDir = 'posts/content';
+    private $englishContentDir = 'posts/content_en';
+
+    // تنظیم slug
     public function getSlugOptions(): SlugOptions
     {
         return SlugOptions::create()
@@ -64,133 +38,171 @@ class Post extends Model
             ->saveSlugsTo('slug');
     }
 
-    /**
-     * رابطه با کاربر
-     */
-    public function user(): BelongsTo
+    // Scope برای لیست‌ها (فقط فیلدهای ضروری)
+    public function scopeForListing($query)
     {
-        return $this->belongsTo(User::class)->select(['id', 'name', 'email']);
+        return $query->select([
+            'id', 'title', 'english_title', 'slug', 'category_id',
+            'author_id', 'publisher_id', 'publication_year', 'format',
+            'summary', 'english_summary', 'is_published', 'hide_content', 'created_at'
+        ]);
     }
 
-    /**
-     * رابطه با دسته‌بندی
-     */
-    public function category(): BelongsTo
+    // Scope برای جستجو
+    public function scopeSearch($query, $term)
+    {
+        return $query->where(function($q) use ($term) {
+            $q->where('title', 'like', "%{$term}%")
+                ->orWhere('english_title', 'like', "%{$term}%")
+                ->orWhere('summary', 'like', "%{$term}%")
+                ->orWhere('book_codes', 'like', "%{$term}%");
+        });
+    }
+
+    // روابط
+    public function category()
     {
         return $this->belongsTo(Category::class)->select(['id', 'name', 'slug']);
     }
 
-    /**
-     * رابطه با نویسنده اصلی
-     */
-    public function author(): BelongsTo
+    public function author()
     {
         return $this->belongsTo(Author::class)->select(['id', 'name', 'slug']);
     }
 
-    /**
-     * رابطه با ناشر
-     */
-    public function publisher(): BelongsTo
+    public function publisher()
     {
-        return $this->belongsTo(Publisher::class)->select(['id', 'name', 'slug', 'logo']);
+        return $this->belongsTo(Publisher::class)->select(['id', 'name', 'slug']);
     }
 
-    /**
-     * رابطه با تصویر شاخص
-     */
-    public function featuredImage(): HasOne
-    {
-        return $this->hasOne(PostImage::class)
-            ->select(['id', 'post_id', 'image_path', 'caption', 'hide_image', 'sort_order'])
-            ->orderBy('sort_order');
-    }
-
-    /**
-     * رابطه با تمام تصاویر
-     */
-    public function images(): HasMany
-    {
-        return $this->hasMany(PostImage::class)
-            ->select(['id', 'post_id', 'image_path', 'caption', 'hide_image', 'sort_order'])
-            ->orderBy('sort_order');
-    }
-
-    /**
-     * رابطه با تمام نویسندگان همکار
-     */
-    public function authors(): BelongsToMany
+    public function authors()
     {
         return $this->belongsToMany(Author::class, 'post_author')
             ->select(['authors.id', 'name', 'slug']);
     }
 
-    /**
-     * محتوای پاکسازی شده
-     *
-     * accessor برای دریافت محتوای پاکسازی شده
-     */
-    public function getPurifiedContentAttribute(): string
+    public function featuredImage()
     {
-        $cacheKey = "post_{$this->id}_purified_content_" . md5($this->content);
-        return Cache::remember($cacheKey, 86400 * 7, function () {
-            return Purifier::clean($this->content ?? '');
+        return $this->hasOne(PostImage::class)
+            ->select(['id', 'post_id', 'image_path', 'hide_image'])
+            ->where('hide_image', '!=', 'hidden')
+            ->orderBy('sort_order');
+    }
+
+    public function images()
+    {
+        return $this->hasMany(PostImage::class)->orderBy('sort_order');
+    }
+
+    // Accessors برای بارگذاری محتوا از فایل
+    public function getContentAttribute()
+    {
+        if (empty($this->content_file_path)) {
+            return '';
+        }
+
+        $cacheKey = "post_content_{$this->id}";
+
+        return Cache::remember($cacheKey, 1800, function() {
+            return $this->loadContentFromFile($this->content_file_path, $this->contentDir);
         });
     }
 
-    /**
-     * محدود کردن کوئری به پست‌های قابل نمایش برای کاربر
-     */
-    public function scopeVisibleToUser(Builder $query): Builder
+    public function getEnglishContentAttribute()
     {
-        return $query->where('is_published', true)
-            ->when(!auth()->check() || !auth()->user()->isAdmin(), function ($q) {
-                $q->where('hide_content', false);
-            });
-    }
+        if (empty($this->english_content_file_path)) {
+            return '';
+        }
 
-    /**
-     * محدود کردن کوئری به پست‌های یک دسته‌بندی خاص
-     */
-    public function scopeInCategory(Builder $query, int $categoryId): Builder
-    {
-        return $query->where('category_id', $categoryId);
-    }
+        $cacheKey = "post_english_content_{$this->id}";
 
-    /**
-     * محدود کردن کوئری به پست‌های یک نویسنده خاص
-     */
-    public function scopeByAuthor(Builder $query, int $authorId): Builder
-    {
-        return $query->where(function($q) use ($authorId) {
-            $q->where('author_id', $authorId)
-                ->orWhereExists(function ($subq) use ($authorId) {
-                    $subq->select(DB::raw(1))
-                        ->from('post_author')
-                        ->whereRaw('post_author.post_id = posts.id')
-                        ->where('post_author.author_id', $authorId);
-                });
+        return Cache::remember($cacheKey, 1800, function() {
+            return $this->loadContentFromFile($this->english_content_file_path, $this->englishContentDir);
         });
     }
 
-    /**
-     * محدود کردن کوئری به پست‌های یک ناشر خاص
-     */
-    public function scopeByPublisher(Builder $query, int $publisherId): Builder
+    // Helper method برای بارگذاری محتوا
+    private function loadContentFromFile($fileName, $directory)
     {
-        return $query->where('publisher_id', $publisherId);
+        if (empty($fileName)) {
+            return '';
+        }
+
+        $filePath = "{$directory}/{$fileName}";
+
+        try {
+            if (!Storage::exists($filePath)) {
+                \Log::warning("Content file not found: {$filePath}");
+                return '';
+            }
+
+            $compressedContent = Storage::get($filePath);
+            $content = gzuncompress($compressedContent);
+
+            if ($content === false) {
+                \Log::error("Failed to decompress content from: {$filePath}");
+                return '';
+            }
+
+            return $content;
+
+        } catch (\Exception $e) {
+            \Log::error("Error loading content from {$filePath}: " . $e->getMessage());
+            return '';
+        }
     }
 
-    /**
-     * جستجوی متن کامل
-     */
-    public function scopeFullTextSearch(Builder $query, string $searchTerm): Builder
+    // Helper method برای ذخیره محتوا در فایل
+    public function saveContentToFile($content, $language = 'fa')
     {
-        $searchTerm = preg_replace('/[^\p{L}\p{N}_\s-]/u', '', $searchTerm);
-        return $query->where(function($q) use ($searchTerm) {
-            $q->where('title', 'like', "%{$searchTerm}%")
-                ->orWhere('english_title', 'like', "%{$searchTerm}%")
-                ->orWhere('book_codes', 'like', "%{$searchTerm}%");
+        if (empty($content)) {
+            return null;
+        }
+
+        $directory = $language === 'en' ? $this->englishContentDir : $this->contentDir;
+        $hash = md5($content);
+        $fileName = "{$this->id}_{$hash}.txt";
+        $filePath = "{$directory}/{$fileName}";
+
+        try {
+            $compressedContent = gzcompress($content, 9);
+            Storage::put($filePath, $compressedContent);
+
+            // پاک کردن کش
+            $cacheKey = $language === 'en' ? "post_english_content_{$this->id}" : "post_content_{$this->id}";
+            Cache::forget($cacheKey);
+
+            return $fileName;
+
+        } catch (\Exception $e) {
+            \Log::error("Error saving content to file for post {$this->id}: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    // Helper method برای حذف فایل‌های محتوا
+    public function deleteContentFiles()
+    {
+        if ($this->content_file_path) {
+            Storage::delete("{$this->contentDir}/{$this->content_file_path}");
+        }
+
+        if ($this->english_content_file_path) {
+            Storage::delete("{$this->englishContentDir}/{$this->english_content_file_path}");
+        }
+
+        // پاک کردن کش
+        Cache::forget("post_content_{$this->id}");
+        Cache::forget("post_english_content_{$this->id}");
+    }
+
+    // Event handlers
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($post) {
+            $post->deleteContentFiles();
         });
     }
 }
