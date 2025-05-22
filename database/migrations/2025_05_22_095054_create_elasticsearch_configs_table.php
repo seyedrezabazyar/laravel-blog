@@ -1,3 +1,4 @@
+ا
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -23,12 +24,14 @@ return new class extends Migration
             $table->index(['index_name', 'status']);
         });
 
-        // درج تنظیمات پیش‌فرض برای posts_content
+        // درج تنظیمات بهینه شده برای posts_content
         DB::table('elasticsearch_configs')->insert([
             'index_name' => 'posts_content',
             'mapping_config' => json_encode([
                 'properties' => [
                     'post_id' => ['type' => 'integer'],
+
+                    // محتوای کتاب
                     'content' => [
                         'properties' => [
                             'fa' => [
@@ -42,6 +45,8 @@ return new class extends Migration
                             ]
                         ]
                     ],
+
+                    // اطلاعات اصلی کتاب
                     'metadata' => [
                         'properties' => [
                             'title' => [
@@ -49,21 +54,57 @@ return new class extends Migration
                                 'analyzer' => 'persian_analyzer',
                                 'fields' => [
                                     'keyword' => ['type' => 'keyword'],
-                                    'suggest' => ['type' => 'completion', 'analyzer' => 'persian_analyzer']
+                                    'suggest' => [
+                                        'type' => 'completion',
+                                        'analyzer' => 'persian_analyzer'
+                                    ]
                                 ]
                             ],
                             'english_title' => [
                                 'type' => 'text',
-                                'analyzer' => 'english_analyzer'
+                                'analyzer' => 'english_analyzer',
+                                'fields' => [
+                                    'keyword' => ['type' => 'keyword']
+                                ]
                             ],
-                            'author' => ['type' => 'keyword'],
-                            'category' => ['type' => 'keyword'],
-                            'publisher' => ['type' => 'keyword'],
+                            'author' => [
+                                'type' => 'text',
+                                'analyzer' => 'persian_analyzer',
+                                'fields' => [
+                                    'keyword' => ['type' => 'keyword']
+                                ]
+                            ],
+                            'category' => [
+                                'type' => 'text',
+                                'analyzer' => 'persian_analyzer',
+                                'fields' => [
+                                    'keyword' => ['type' => 'keyword']
+                                ]
+                            ],
+                            'publisher' => [
+                                'type' => 'text',
+                                'analyzer' => 'persian_analyzer',
+                                'fields' => [
+                                    'keyword' => ['type' => 'keyword']
+                                ]
+                            ],
                             'publication_year' => ['type' => 'integer'],
                             'language' => ['type' => 'keyword'],
-                            'format' => ['type' => 'keyword']
+                            'format' => ['type' => 'keyword'],
+                            'book_codes' => [
+                                'type' => 'text',
+                                'analyzer' => 'keyword',
+                                'fields' => [
+                                    'search' => [
+                                        'type' => 'text',
+                                        'analyzer' => 'standard'
+                                    ]
+                                ]
+                            ]
                         ]
                     ],
+
+                    // داده‌های جستجو
                     'search_data' => [
                         'properties' => [
                             'summary' => [
@@ -73,20 +114,6 @@ return new class extends Migration
                             'keywords' => ['type' => 'keyword'],
                             'topics' => ['type' => 'keyword']
                         ]
-                    ],
-                    'statistics' => [
-                        'properties' => [
-                            'word_count' => ['type' => 'integer'],
-                            'reading_time' => ['type' => 'integer'],
-                            'content_length' => ['type' => 'integer']
-                        ]
-                    ],
-                    'timestamps' => [
-                        'properties' => [
-                            'created_at' => ['type' => 'date'],
-                            'updated_at' => ['type' => 'date'],
-                            'indexed_at' => ['type' => 'date']
-                        ]
                     ]
                 ]
             ]),
@@ -94,6 +121,8 @@ return new class extends Migration
                 'number_of_shards' => 2,
                 'number_of_replicas' => 1,
                 'refresh_interval' => '30s',
+                'max_result_window' => 50000,
+
                 'analysis' => [
                     'analyzer' => [
                         'persian_analyzer' => [
@@ -102,23 +131,36 @@ return new class extends Migration
                             'filter' => [
                                 'lowercase',
                                 'persian_stop',
-                                'persian_normalizer'
+                                'persian_normalizer',
+                                'persian_stemmer'
                             ]
                         ],
                         'english_analyzer' => [
-                            'type' => 'english'
+                            'type' => 'custom',
+                            'tokenizer' => 'standard',
+                            'filter' => [
+                                'lowercase',
+                                'stop',
+                                'stemmer'
+                            ]
                         ]
                     ],
+
                     'filter' => [
                         'persian_stop' => [
                             'type' => 'stop',
                             'stopwords' => [
                                 'و', 'در', 'به', 'از', 'که', 'با', 'این', 'آن', 'را', 'است',
-                                'یک', 'برای', 'تا', 'کی', 'چه', 'چی', 'کجا', 'کدام'
+                                'یک', 'برای', 'تا', 'کی', 'چه', 'چی', 'کجا', 'کدام', 'هم',
+                                'نیز', 'یا', 'اما', 'ولی', 'پس', 'اگر', 'چون', 'زیرا'
                             ]
                         ],
                         'persian_normalizer' => [
                             'type' => 'persian_normalization'
+                        ],
+                        'persian_stemmer' => [
+                            'type' => 'stemmer',
+                            'language' => 'light_english'
                         ]
                     ]
                 ]

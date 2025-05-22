@@ -3,7 +3,6 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -17,36 +16,23 @@ return new class extends Migration
             $table->unsignedMediumInteger('author_id')->nullable()->index();
             $table->unsignedMediumInteger('publisher_id')->nullable()->index();
 
-            // اطلاعات اصلی کتاب (بدون محتوا)
-            $table->string('title', 255)->charset('utf8mb4');
-            $table->string('english_title', 255)->nullable()->charset('utf8mb4');
-            $table->string('slug', 100)->unique()->charset('ascii');
-            $table->char('language', 2)->default('fa')->charset('ascii');
-            $table->unsignedSmallInteger('publication_year')->nullable();
-            $table->enum('format', ['pdf', 'epub', 'mobi', 'doc', 'txt', 'other'])->nullable();
-            $table->string('book_codes', 200)->nullable()->charset('ascii');
-            $table->string('edition', 50)->nullable()->charset('utf8mb4');
-            $table->unsignedSmallInteger('pages')->nullable();
-            $table->string('size', 10)->nullable()->charset('ascii');
-            $table->string('purchase_link', 500)->nullable()->charset('ascii');
+            // فقط اطلاعات ضروری برای مدیریت
+            $table->string('title', 255)->charset('utf8mb4'); // برای admin panel
+            $table->string('slug', 100)->unique()->charset('ascii'); // برای URL
 
-            // وضعیت
+            // وضعیت‌ها
             $table->boolean('hide_content')->default(false);
             $table->boolean('is_published')->default(false);
-            $table->boolean('is_indexed')->default(false);
+            $table->boolean('is_indexed')->default(false); // آیا در Elasticsearch است؟
 
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
-            $table->timestamp('indexed_at')->nullable();
+            $table->timestamp('indexed_at')->nullable(); // آخرین بار که در ES به‌روز شد
 
-            // ایندکس‌های بهینه شده
+            // ایندکس‌های ضروری
             $table->index(['is_published', 'hide_content', 'is_indexed']);
-            $table->index(['category_id', 'is_published', 'hide_content']);
-            $table->index(['author_id', 'is_published']);
-            $table->index(['publisher_id', 'is_published']);
-            $table->index(['publication_year', 'format']);
+            $table->index(['category_id', 'is_published']);
             $table->index('elasticsearch_id');
-            $table->index('book_codes');
             $table->index('created_at');
 
             // کلیدهای خارجی
@@ -55,15 +41,6 @@ return new class extends Migration
             $table->foreign('author_id')->references('id')->on('authors')->nullOnDelete();
             $table->foreign('publisher_id')->references('id')->on('publishers')->nullOnDelete();
         });
-
-        // ایندکس FULLTEXT فقط برای عناوین و کدها
-        if (DB::connection()->getDriverName() === 'mysql') {
-            try {
-                DB::statement('ALTER TABLE posts ADD FULLTEXT INDEX posts_search (title, english_title, book_codes)');
-            } catch (\Exception $e) {
-                \Log::info('FULLTEXT index creation failed: ' . $e->getMessage());
-            }
-        }
     }
 
     public function down(): void
