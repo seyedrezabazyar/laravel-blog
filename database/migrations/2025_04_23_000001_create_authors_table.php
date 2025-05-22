@@ -9,30 +9,41 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     * جدول نویسندگان بهینه‌سازی شده
      */
     public function up(): void
     {
         Schema::create('authors', function (Blueprint $table) {
-            $table->id();
-            $table->string('name', 1024);
-            $table->string('slug')->unique();
-            $table->text('biography')->nullable();
-            $table->string('image')->nullable();
-            $table->unsignedInteger('posts_count')->default(0); // شمارنده پست‌های اصلی
-            $table->unsignedInteger('coauthored_count')->default(0); // شمارنده پست‌های همکاری
+            $table->unsignedInteger('id', true)->primary();
 
-            // ایندکس‌های جدید برای بهبود عملکرد
-            $table->index('slug');
-            $table->index(['posts_count', 'coauthored_count']); // برای مرتب‌سازی بر اساس تعداد پست‌ها
+            $table->string('name', 255)->charset('utf8mb4')->collation('utf8mb4_unicode_ci');
 
-            $table->timestamps();
+            $table->string('slug', 100)->unique()->charset('ascii')->collation('ascii_general_ci');
+
+            $table->unsignedMediumInteger('posts_count')->default(0);
+
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->index('name', 'idx_authors_name');
+            $table->index('posts_count', 'idx_authors_posts_count');
+            $table->index('created_at', 'idx_authors_created');
+
+            $table->engine = 'InnoDB';
+            $table->charset = 'utf8mb4';
+            $table->collation = 'utf8mb4_unicode_ci';
         });
 
-        // ایندکس محدود شده برای نام (با توجه به محدودیت طول ایندکس در InnoDB)
-        DB::statement('CREATE INDEX idx_authors_name ON authors(name(768))');
-
-        // ایندکس جستجوی متنی برای نام
-        DB::statement('ALTER TABLE authors ADD FULLTEXT authors_name_fulltext (name)');
+        // ایندکس FULLTEXT فقط در صورت ضرورت
+        if (DB::connection()->getDriverName() === 'mysql') {
+            try {
+                // ایندکس FULLTEXT بهینه شده برای فارسی
+                DB::statement('ALTER TABLE authors ADD FULLTEXT INDEX authors_name_fulltext (name) WITH PARSER ngram');
+            } catch (\Exception $e) {
+                // اگر ngram parser در دسترس نباشد، از parser معمولی استفاده کنیم
+                DB::statement('ALTER TABLE authors ADD FULLTEXT INDEX authors_name_fulltext (name)');
+            }
+        }
     }
 
     /**
