@@ -20,7 +20,6 @@ return new class extends Migration
 
             $table->index('key');
             $table->index('type');
-            $table->index('type');
         });
 
         // درج تنظیمات پیش‌فرض
