@@ -13,13 +13,13 @@ return new class extends Migration
             $table->string('name', 100)->charset('utf8mb4');
             $table->string('email', 100)->unique()->charset('ascii');
             $table->timestamp('email_verified_at')->nullable();
-            $table->string('password', 60)->charset('ascii');
+            $table->string('password', 255)->charset('ascii');
             $table->enum('role', ['user', 'admin'])->default('user')->index();
             $table->string('remember_token', 100)->nullable()->charset('ascii');
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
 
-            $table->index('email');
+            // حذف ایندکس اضافی email (unique خودش ایندکس ایجاد می‌کند)
             $table->index(['role', 'created_at']);
         });
 

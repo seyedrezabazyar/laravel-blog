@@ -13,22 +13,19 @@ return new class extends Migration
             $table->mediumIncrements('id');
             $table->string('name', 150)->charset('utf8mb4');
             $table->string('slug', 150)->unique()->charset('ascii');
-            $table->text('biography')->nullable()->charset('utf8mb4');
-            $table->string('image', 150)->nullable()->charset('ascii');
             $table->unsignedSmallInteger('posts_count')->default(0);
-            $table->unsignedSmallInteger('coauthored_count')->default(0);
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
 
             $table->index('name');
-            $table->index(['posts_count', 'coauthored_count']);
+            $table->index('posts_count');
             $table->index('created_at');
         });
 
-        // ایندکس FULLTEXT برای جستجو
+        // ایندکس FULLTEXT برای جستجو - فقط روی نام
         if (DB::connection()->getDriverName() === 'mysql') {
             try {
-                DB::statement('ALTER TABLE authors ADD FULLTEXT INDEX authors_fulltext (name, biography)');
+                DB::statement('ALTER TABLE authors ADD FULLTEXT INDEX authors_fulltext (name)');
             } catch (\Exception $e) {
                 \Log::info('FULLTEXT index creation failed: ' . $e->getMessage());
             }
