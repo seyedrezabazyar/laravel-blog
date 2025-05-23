@@ -19,20 +19,19 @@ return new class extends Migration
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
 
             $table->index('key');
-            $table->index('type');
         });
 
-        // درج تنظیمات پیش‌فرض
+        // تنظیمات پیش‌فرض سیستم
         $defaultSettings = [
             [
                 'key' => 'site_name',
-                'value' => 'کتابستان',
+                'value' => 'کتابستان دیجیتال',
                 'description' => 'نام سایت',
                 'type' => 'string'
             ],
             [
                 'key' => 'posts_per_page',
-                'value' => '12',
+                'value' => '24',
                 'description' => 'تعداد پست در هر صفحه',
                 'type' => 'integer'
             ],
@@ -43,14 +42,14 @@ return new class extends Migration
                 'type' => 'boolean'
             ],
             [
-                'key' => 'search_suggestions_count',
-                'value' => '5',
-                'description' => 'تعداد پیشنهادات جستجو',
+                'key' => 'elasticsearch_batch_size',
+                'value' => '2000',
+                'description' => 'تعداد رکورد در هر batch برای Elasticsearch',
                 'type' => 'integer'
             ],
             [
                 'key' => 'cache_timeout',
-                'value' => '3600',
+                'value' => '7200',
                 'description' => 'مدت زمان کش (ثانیه)',
                 'type' => 'integer'
             ]

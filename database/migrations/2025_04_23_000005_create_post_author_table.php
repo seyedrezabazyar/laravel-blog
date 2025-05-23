@@ -9,16 +9,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('post_author', function (Blueprint $table) {
-            $table->unsignedInteger('post_id');
+            $table->unsignedBigInteger('post_id');
             $table->unsignedMediumInteger('author_id');
             $table->timestamp('created_at')->useCurrent();
 
             // کلید اصلی ترکیبی
             $table->primary(['post_id', 'author_id']);
 
-            // ایندکس‌های بهینه
+            // ایندکس برای reverse lookup
             $table->index('author_id');
-            $table->index(['author_id', 'created_at']);
 
             // کلیدهای خارجی
             $table->foreign('post_id')->references('id')->on('posts')->onDelete('cascade');

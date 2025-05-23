@@ -12,14 +12,19 @@ return new class extends Migration
             $table->mediumIncrements('id');
             $table->string('name', 200)->charset('utf8mb4');
             $table->string('slug', 200)->unique()->charset('ascii');
-            $table->unsignedSmallInteger('posts_count')->default(0);
+            $table->unsignedMediumInteger('posts_count')->default(0);
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
 
-            // ایندکس‌های بهینه
-            $table->index('name');
-            $table->index(['posts_count', 'id'], 'publishers_display_idx');
+            // ایندکس‌های بهینه برای میلیون‌ها رکورد
+            $table->index(['posts_count', 'id']);
+            $table->index('slug');
         });
+
+        // ایندکس FULLTEXT برای جستجو
+        if (DB::connection()->getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE publishers ADD FULLTEXT INDEX publishers_fulltext (name)');
+        }
     }
 
     public function down(): void

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->json('mapping_config');
             $table->json('settings_config');
             $table->enum('status', ['active', 'inactive', 'rebuilding'])->default('active');
-            $table->unsignedInteger('document_count')->default(0);
+            $table->unsignedBigInteger('document_count')->default(0);
             $table->timestamp('last_sync_at')->nullable();
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
@@ -23,71 +23,70 @@ return new class extends Migration
             $table->index(['index_name', 'status']);
         });
 
-        // درج تنظیمات ساده برای posts_content
+        // تنظیمات Elasticsearch برای محتوای کتاب‌ها
         DB::table('elasticsearch_configs')->insert([
-            'index_name' => 'posts_content',
+            'index_name' => 'books_content',
             'mapping_config' => json_encode([
                 'properties' => [
-                    'post_id' => ['type' => 'integer'],
+                    'id' => ['type' => 'long'],
+                    'post_id' => ['type' => 'long'],
 
-                    // توضیحات کتاب (فارسی و انگلیسی)
-                    'description' => [
-                        'properties' => [
-                            'persian' => [
-                                'type' => 'text',
-                                'analyzer' => 'persian_analyzer'
-                            ],
-                            'english' => [
-                                'type' => 'text',
-                                'analyzer' => 'english'
-                            ]
-                        ]
-                    ],
-
-                    // فیلدهای جستجو (از MySQL کپی می‌شوند برای سرعت)
-                    'title' => [
+                    // عنوان‌ها (فارسی و انگلیسی) - فقط در Elasticsearch
+                    'title_fa' => [
                         'type' => 'text',
                         'analyzer' => 'persian_analyzer',
                         'fields' => [
                             'keyword' => ['type' => 'keyword'],
-                            'suggest' => [
-                                'type' => 'completion',
-                                'analyzer' => 'persian_analyzer'
-                            ]
+                            'suggest' => ['type' => 'completion']
+                        ]
+                    ],
+                    'title_en' => [
+                        'type' => 'text',
+                        'analyzer' => 'english',
+                        'fields' => [
+                            'keyword' => ['type' => 'keyword'],
+                            'suggest' => ['type' => 'completion']
                         ]
                     ],
 
-                    'author' => [
+                    // توضیحات (فارسی و انگلیسی) - فقط در Elasticsearch
+                    'description_fa' => [
                         'type' => 'text',
-                        'analyzer' => 'persian_analyzer',
-                        'fields' => ['keyword' => ['type' => 'keyword']]
+                        'analyzer' => 'persian_analyzer'
+                    ],
+                    'description_en' => [
+                        'type' => 'text',
+                        'analyzer' => 'english'
                     ],
 
-                    'category' => [
-                        'type' => 'text',
-                        'analyzer' => 'persian_analyzer',
-                        'fields' => ['keyword' => ['type' => 'keyword']]
-                    ],
-
-                    'publisher' => [
-                        'type' => 'text',
-                        'analyzer' => 'persian_analyzer',
-                        'fields' => ['keyword' => ['type' => 'keyword']]
-                    ],
-
-                    // فیلدهای فیلتر و جستجو
-                    'publication_year' => ['type' => 'integer'],
+                    // فیلدهای کپی‌شده از MySQL برای فیلتر سریع
+                    'category' => ['type' => 'keyword'],
+                    'author' => ['type' => 'keyword'],
+                    'publisher' => ['type' => 'keyword'],
                     'format' => ['type' => 'keyword'],
                     'language' => ['type' => 'keyword'],
+                    'year' => ['type' => 'integer'],
+                    'pages_count' => ['type' => 'integer'],
+
+                    // فیلدهای فقط در Elasticsearch - کاهش حجم MySQL
                     'isbn' => ['type' => 'keyword'],
-                    'pages_count' => ['type' => 'integer']
+                    'edition' => ['type' => 'keyword'],
+
+                    // متادیتای اضافی
+                    'file_size' => ['type' => 'long'],
+                    'download_count' => ['type' => 'integer'],
+                    'rating' => ['type' => 'float'],
+
+                    // فیلدهای زمانی
+                    'created_at' => ['type' => 'date'],
+                    'updated_at' => ['type' => 'date']
                 ]
             ]),
             'settings_config' => json_encode([
-                'number_of_shards' => 1,    // برای یک سرور
-                'number_of_replicas' => 0,  // برای یک سرور
+                'number_of_shards' => 5,    // برای میلیون‌ها رکورد
+                'number_of_replicas' => 1,
                 'refresh_interval' => '30s',
-                'max_result_window' => 10000,
+                'max_result_window' => 50000,
 
                 'analysis' => [
                     'analyzer' => [
@@ -107,7 +106,7 @@ return new class extends Migration
                             'type' => 'stop',
                             'stopwords' => [
                                 'و', 'در', 'به', 'از', 'که', 'با', 'این', 'آن', 'را', 'است',
-                                'یک', 'برای', 'تا', 'بر', 'کرد', 'شد', 'نیز', 'پس', 'اما'
+                                'یک', 'برای', 'تا', 'بر', 'کرد', 'شد', 'نیز', 'پس', 'اما', 'کتاب'
                             ]
                         ],
                         'persian_normalize_filter' => [
@@ -117,6 +116,7 @@ return new class extends Migration
                 ]
             ]),
             'status' => 'active',
+            'document_count' => 0,
             'created_at' => now(),
             'updated_at' => now()
         ]);

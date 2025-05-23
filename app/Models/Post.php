@@ -348,4 +348,32 @@ class Post extends Model
     {
         return 'slug';
     }
+
+    /**
+     * رابطه با محتوای فشرده
+     */
+    public function compressedContent(): HasOne
+    {
+        return $this->hasOne(PostContentCompressed::class);
+    }
+
+    /**
+     * دریافت توضیحات (خودکار از حالت فشرده)
+     */
+    public function getDescriptionAttribute(): ?string
+    {
+        if ($this->compressedContent) {
+            return app(ContentCompressionService::class)->decompressContent($this->id);
+        }
+
+        return null;
+    }
+
+    /**
+     * تنظیم توضیحات (خودکار فشرده‌سازی)
+     */
+    public function setDescriptionAttribute(string $value): void
+    {
+        app(ContentCompressionService::class)->compressPostContent($this, $value);
+    }
 }
