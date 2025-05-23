@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Publisher;
+use App\Services\ElasticsearchService;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -25,6 +26,11 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production')) {
             DB::disableQueryLog();
         }
+
+        // ثبت ElasticsearchService
+        $this->app->singleton(ElasticsearchService::class, function ($app) {
+            return new ElasticsearchService();
+        });
     }
 
     /**
@@ -42,7 +48,7 @@ class AppServiceProvider extends ServiceProvider
 
         // بارگذاری بهینه مدل‌های رایج در مسیرها
         Route::bind('publisher', function (string $value) {
-            return Publisher::select(['id', 'name', 'slug', 'description', 'logo'])
+            return Publisher::select(['id', 'name', 'slug', 'description', 'posts_count'])
                 ->where('slug', $value)
                 ->firstOrFail();
         });

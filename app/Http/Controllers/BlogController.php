@@ -14,20 +14,31 @@ use Illuminate\View\View;
 
 class BlogController extends Controller
 {
-    protected $cacheTtl = 86400;
+    protected $cacheTtl = 3600; // 1 ساعت
 
     /**
-     * نمایش صفحه اصلی وبلاگ با حداقل کوئری به دیتابیس
+     * نمایش صفحه اصلی وبلاگ
      */
     public function index(): View
     {
-        $posts = Cache::remember('home_latest_posts', 3600, function () {
-            return Post::select('id', 'title', 'slug', 'publication_year', 'format')
-                ->where('is_published', true)
-                ->where('hide_content', false)
-                ->latest()
-                ->take(12)
-                ->get();
+        // دریافت آخرین پست‌ها با کش
+        $posts = Cache::remember('home_latest_posts', $this->cacheTtl, function () {
+            try {
+                return Post::visibleToUser()
+                    ->forListing()
+                    ->with([
+                        'category:id,name,slug',
+                        'author:id,name,slug',
+                        'publisher:id,name,slug',
+                        'featuredImage'
+                    ])
+                    ->latest('created_at')
+                    ->take(12)
+                    ->get();
+            } catch (\Exception $e) {
+                \Log::error('خطا در دریافت آخرین پست‌ها: ' . $e->getMessage());
+                return collect(); // مجموعه خالی برگردان
+            }
         });
 
         // دسته‌بندی‌های ثابت برای صفحه اصلی
@@ -46,45 +57,31 @@ class BlogController extends Controller
     }
 
     /**
-     * نمایش تمام دسته‌بندی‌ها - با بهینه‌سازی کوئری
+     * نمایش تمام دسته‌بندی‌ها
      */
     public function categories(): View
     {
-        $categories = collect([
-            (object) ['id' => 1, 'name' => 'رمان', 'slug' => 'roman', 'posts_count' => 25],
-            (object) ['id' => 2, 'name' => 'علمی', 'slug' => 'scientific', 'posts_count' => 18],
-            (object) ['id' => 3, 'name' => 'تاریخی', 'slug' => 'historical', 'posts_count' => 15],
-            (object) ['id' => 4, 'name' => 'فلسفه', 'slug' => 'philosophy', 'posts_count' => 12],
-            (object) ['id' => 5, 'name' => 'روانشناسی', 'slug' => 'psychology', 'posts_count' => 20],
-            (object) ['id' => 6, 'name' => 'کودک', 'slug' => 'children', 'posts_count' => 10],
-            (object) ['id' => 7, 'name' => 'موفقیت', 'slug' => 'success', 'posts_count' => 22],
-            (object) ['id' => 8, 'name' => 'هنر', 'slug' => 'art', 'posts_count' => 15],
-            (object) ['id' => 9, 'name' => 'ادبیات', 'slug' => 'literature', 'posts_count' => 30],
-            (object) ['id' => 10, 'name' => 'زندگینامه', 'slug' => 'biography', 'posts_count' => 8],
-            (object) ['id' => 11, 'name' => 'خودیاری', 'slug' => 'self-help', 'posts_count' => 14],
-            (object) ['id' => 12, 'name' => 'مذهبی', 'slug' => 'religious', 'posts_count' => 16],
-            (object) ['id' => 13, 'name' => 'آشپزی', 'slug' => 'cooking', 'posts_count' => 7],
-            (object) ['id' => 14, 'name' => 'سفر', 'slug' => 'travel', 'posts_count' => 9],
-            (object) ['id' => 15, 'name' => 'ورزش', 'slug' => 'sports', 'posts_count' => 5],
-            (object) ['id' => 16, 'name' => 'اقتصاد', 'slug' => 'economics', 'posts_count' => 11],
-        ]);
+        $categories = Cache::remember('all_categories', $this->cacheTtl, function () {
+            return Category::select(['id', 'name', 'slug', 'posts_count'])
+                ->where('posts_count', '>', 0)
+                ->orderByDesc('posts_count')
+                ->get();
+        });
 
-        $categories = $categories->sortByDesc('posts_count');
         $popularCategories = $categories->take(5);
 
         return view('blog.categories', compact('categories', 'popularCategories'));
     }
 
     /**
-     * نمایش جزئیات پست با عملکرد بهینه‌سازی شده
-     *
-     * در Laravel 12، Route Model Binding به‌طور پیش‌فرض slug را بررسی می‌کند،
-     * مگر اینکه در RouteServiceProvider به‌صورت دیگری پیکربندی شده باشد.
+     * نمایش جزئیات پست
      */
     public function show(Post $post): View
     {
         // بررسی مجوزهای دسترسی
-        if (!$post->is_published || ($post->hide_content && !(auth()->check() && auth()->user()->isAdmin()))) {
+        $isAdmin = auth()->check() && auth()->user()->isAdmin();
+
+        if (!$post->is_published || ($post->hide_content && !$isAdmin)) {
             abort(404);
         }
 
@@ -97,54 +94,64 @@ class BlogController extends Controller
             'publisher:id,name,slug',
         ]);
 
-        // استفاده از کش برای پست‌های مرتبط
-        $isAdmin = auth()->check() && auth()->user()->isAdmin() ? 'admin' : 'user';
-        $cacheKey = "post_{$post->id}_related_posts_{$isAdmin}";
+        // فورس کردن لود شدن همه داده‌های Elasticsearch
+        try {
+            // بارگذاری داده‌های Elasticsearch
+            $post->purified_content;
+            $post->english_content;
+            $post->elasticsearch_title;
+            $post->elasticsearch_author;
+            $post->elasticsearch_category;
+            $post->elasticsearch_publisher;
+            $post->elasticsearch_publication_year;
+            $post->elasticsearch_format;
+            $post->elasticsearch_language;
+            $post->elasticsearch_isbn;
+            $post->elasticsearch_pages_count;
+        } catch (\Exception $e) {
+            \Log::warning("خطا در بارگذاری داده‌های Elasticsearch برای پست {$post->id}: " . $e->getMessage());
+        }
 
-        $relatedPosts = Cache::remember($cacheKey, $this->cacheTtl, function () use ($post) {
-            return $this->getRelatedPosts($post);
+        // دریافت پست‌های مرتبط با کش
+        $cacheKey = "post_{$post->id}_related_posts_" . ($isAdmin ? 'admin' : 'user');
+
+        $relatedPosts = Cache::remember($cacheKey, $this->cacheTtl, function () use ($post, $isAdmin) {
+            return $this->getRelatedPosts($post, $isAdmin);
         });
 
         return view('blog.show', compact('post', 'relatedPosts'));
     }
 
     /**
-     * کوئری بهینه‌سازی شده برای پست‌های مرتبط
+     * دریافت پست‌های مرتبط
      */
-    private function getRelatedPosts(Post $post)
+    private function getRelatedPosts(Post $post, bool $isAdmin = false)
     {
-        // دریافت پست‌ها از همان دسته‌بندی (محدود به 6 مورد)
-        $categoryPosts = Post::visibleToUser()
-            ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
+        $query = Post::where('id', '!=', $post->id)
+            ->forListing()
+            ->with(['featuredImage']);
+
+        if ($isAdmin) {
+            $query->visibleToAdmin();
+        } else {
+            $query->visibleToUser();
+        }
+
+        // ابتدا از همان دسته‌بندی
+        $categoryPosts = (clone $query)
             ->where('category_id', $post->category_id)
-            ->where('id', '!=', $post->id)
-            ->with([
-                'featuredImage' => function($query) {
-                    $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
-                }
-            ])
-            ->latest()
+            ->latest('created_at')
             ->limit(6)
             ->get();
 
-        // اگر به تعداد کافی پست داریم، آنها را برگردانیم
         if ($categoryPosts->count() >= 6) {
             return $categoryPosts;
         }
 
-        // در صورت نیاز به پست‌های بیشتر، پست‌های اخیر را اضافه کنیم
-        $currentIds = $categoryPosts->pluck('id')->toArray();
-        $currentIds[] = $post->id;
-
-        $otherPosts = Post::visibleToUser()
-            ->select('id', 'title', 'slug', 'category_id', 'publication_year', 'format')
-            ->whereNotIn('id', $currentIds)
-            ->with([
-                'featuredImage' => function($query) {
-                    $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
-                }
-            ])
-            ->latest()
+        // اگر کافی نبود، از سایر دسته‌بندی‌ها
+        $otherPosts = (clone $query)
+            ->whereNotIn('id', $categoryPosts->pluck('id')->toArray())
+            ->latest('created_at')
             ->limit(6 - $categoryPosts->count())
             ->get();
 
@@ -152,118 +159,124 @@ class BlogController extends Controller
     }
 
     /**
-     * نمایش پست‌های یک دسته‌بندی خاص - نسخه بهینه‌سازی شده
+     * نمایش پست‌های یک دسته‌بندی
      */
     public function category(Category $category): View
     {
-        $page = request()->get('page', 1);
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
-        $cacheKey = "category_posts_{$category->id}_page_{$page}_" . ($isAdmin ? 'admin' : 'user');
 
-        $posts = Post::where('is_published', true)
-            ->when(!$isAdmin, function ($query) {
-                $query->where('hide_content', false);
-            })
-            ->where('category_id', $category->id)
+        $query = Post::where('category_id', $category->id)
+            ->forListing()
             ->with([
-                'featuredImage' => function($query) {
-                    $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
-                },
+                'featuredImage',
                 'author:id,name,slug'
-            ])
-            ->latest()
-            ->simplePaginate(12);
+            ]);
+
+        if ($isAdmin) {
+            $query->visibleToAdmin();
+        } else {
+            $query->visibleToUser();
+        }
+
+        $posts = $query->latest('created_at')->simplePaginate(12);
 
         return view('blog.category', compact('posts', 'category'));
     }
 
     /**
-     * نمایش پست‌های یک نویسنده خاص
+     * نمایش پست‌های یک نویسنده
      */
     public function author(Author $author): View
     {
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
-        $page = request()->get('page', 1);
-        $cacheKey = "author_posts_{$author->id}_page_{$page}_" . ($isAdmin ? 'admin' : 'user');
 
-        $posts = Cache::remember($cacheKey, 3600, function () use ($author, $isAdmin) {
-            // استفاده از union برای بهبود کارایی
-            $mainPosts = Post::select([
-                'posts.id', 'posts.title', 'posts.slug', 'posts.category_id', 'posts.author_id',
-                'posts.publication_year', 'posts.format', 'posts.created_at'
+        // پست‌های نویسنده اصلی
+        $mainPostsQuery = Post::where('author_id', $author->id)
+            ->forListing();
+
+        // پست‌های نویسنده همکار
+        $coAuthorPostsQuery = Post::select([
+            'posts.id', 'posts.title', 'posts.slug', 'posts.category_id',
+            'posts.author_id', 'posts.publication_year', 'posts.format',
+            'posts.created_at'
+        ])
+            ->join('post_author', 'posts.id', '=', 'post_author.post_id')
+            ->where('post_author.author_id', $author->id)
+            ->where('posts.author_id', '!=', $author->id);
+
+        if ($isAdmin) {
+            $mainPostsQuery->visibleToAdmin();
+            $coAuthorPostsQuery->where('posts.is_published', true);
+        } else {
+            $mainPostsQuery->visibleToUser();
+            $coAuthorPostsQuery->where('posts.is_published', true)
+                ->where('posts.hide_content', false);
+        }
+
+        // ترکیب هر دو نوع پست
+        $mainPosts = $mainPostsQuery->get();
+        $coAuthorPosts = $coAuthorPostsQuery->get();
+
+        $allPosts = $mainPosts->merge($coAuthorPosts)
+            ->sortByDesc('created_at')
+            ->values();
+
+        // صفحه‌بندی دستی
+        $perPage = 12;
+        $currentPage = request()->get('page', 1);
+        $offset = ($currentPage - 1) * $perPage;
+
+        $paginatedPosts = $allPosts->slice($offset, $perPage);
+
+        // بارگذاری روابط برای پست‌های صفحه‌بندی شده
+        $postIds = $paginatedPosts->pluck('id')->toArray();
+        $postsWithRelations = Post::whereIn('id', $postIds)
+            ->with([
+                'featuredImage',
+                'category:id,name,slug'
             ])
-                ->where('posts.is_published', true)
-                ->when(!$isAdmin, function ($q) {
-                    return $q->where('posts.hide_content', false);
-                })
-                ->where('posts.author_id', $author->id);
+            ->get()
+            ->keyBy('id');
 
-            $coAuthorPosts = Post::select([
-                'posts.id', 'posts.title', 'posts.slug', 'posts.category_id', 'posts.author_id',
-                'posts.publication_year', 'posts.format', 'posts.created_at'
-            ])
-                ->join('post_author', 'posts.id', '=', 'post_author.post_id')
-                ->where('post_author.author_id', $author->id)
-                ->where('posts.is_published', true)
-                ->when(!$isAdmin, function ($q) {
-                    return $q->where('posts.hide_content', false);
-                })
-                ->whereNotIn('posts.id', function($query) use ($author) {
-                    $query->select('id')
-                        ->from('posts')
-                        ->where('author_id', $author->id);
-                });
-
-            // جلوگیری از شمارش اضافه با استفاده از simplePaginate
-            $query = $mainPosts->union($coAuthorPosts);
-
-            return $query
-                ->orderBy('created_at', 'DESC')
-                ->with([
-                    'featuredImage' => function($q) {
-                        $q->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
-                    },
-                    'category:id,name,slug'
-                ])
-                ->simplePaginate(12);
+        // جایگزینی پست‌ها با نسخه‌های دارای رابطه
+        $posts = $paginatedPosts->map(function($post) use ($postsWithRelations) {
+            return $postsWithRelations[$post->id] ?? $post;
         });
 
-        return view('blog.author', compact('posts', 'author'));
+        // شبیه‌سازی pagination
+        $hasMorePages = $allPosts->count() > ($currentPage * $perPage);
+
+        return view('blog.author', compact('posts', 'author'))
+            ->with('hasMorePages', $hasMorePages)
+            ->with('currentPage', $currentPage);
     }
 
     /**
-     * نمایش پست‌های یک ناشر خاص - نسخه نهایی بهینه‌سازی شده
+     * نمایش پست‌های یک ناشر
      */
     public function publisher(Publisher $publisher): Response
     {
-        $page = request()->get('page', 1);
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
-        $cacheKey = "publisher_posts_{$publisher->id}_page_{$page}_" . ($isAdmin ? 'admin' : 'user');
 
-        $posts = Cache::remember($cacheKey, 3600, function () use ($publisher, $isAdmin) {
-            return Post::where('is_published', true)
-                ->when(!$isAdmin, function ($query) {
-                    $query->where('hide_content', false);
-                })
-                ->where('publisher_id', $publisher->id)
-                ->select([
-                    'id', 'title', 'slug', 'category_id', 'author_id',
-                    'publication_year', 'format'
-                ])
-                ->with([
-                    'featuredImage' => function($query) {
-                        $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
-                    },
-                    'author' => function($query) {
-                        $query->select(['id', 'name', 'slug'])->without(['posts', 'coAuthoredPosts']);
-                    }
-                ])
-                ->latest()
-                ->simplePaginate(12);
-        });
+        $query = Post::where('publisher_id', $publisher->id)
+            ->forListing()
+            ->with([
+                'featuredImage',
+                'author:id,name,slug'
+            ]);
 
-        $etag = md5($publisher->id . $page . $isAdmin . time() / 3600);
+        if ($isAdmin) {
+            $query->visibleToAdmin();
+        } else {
+            $query->visibleToUser();
+        }
+
+        $posts = $query->latest('created_at')->simplePaginate(12);
+
         $response = response()->view('blog.publisher', compact('posts', 'publisher'));
+
+        // تنظیم هدرهای کش
+        $etag = md5($publisher->id . request()->get('page', 1) . $isAdmin . time() / 3600);
         $response->header('Cache-Control', 'public, max-age=300');
         $response->header('ETag', $etag);
 
@@ -271,7 +284,7 @@ class BlogController extends Controller
     }
 
     /**
-     * جستجو در وبلاگ - نسخه بهینه‌سازی شده با حفظ پارامترهای جستجو
+     * جستجو در وبلاگ
      */
     public function search(Request $request): View
     {
@@ -281,53 +294,43 @@ class BlogController extends Controller
             return redirect()->route('blog.index');
         }
 
-        $cacheKey = 'search_results_' . md5($query . '_page_' . $request->get('page', 1));
+        $isAdmin = auth()->check() && auth()->user()->isAdmin();
+        $cacheKey = 'search_results_' . md5($query . '_page_' . $request->get('page', 1) . '_' . ($isAdmin ? 'admin' : 'user'));
 
-        $posts = Cache::remember($cacheKey, $this->cacheTtl, function () use ($query, $request) {
-            $postsQuery = Post::visibleToUser()
-                ->select(['id', 'title', 'slug', 'category_id', 'author_id', 'publisher_id', 'publication_year', 'format'])
+        $posts = Cache::remember($cacheKey, $this->cacheTtl, function () use ($query, $isAdmin) {
+            $searchQuery = Post::search($query)
+                ->forListing()
                 ->with([
                     'category:id,name,slug',
-                    'featuredImage' => function($query) {
-                        $query->select('id', 'post_id', 'image_path', 'hide_image', 'sort_order');
-                    },
+                    'featuredImage',
                     'author:id,name,slug',
                     'authors:id,name,slug'
                 ]);
 
-            if (method_exists(Post::class, 'scopeFullTextSearch')) {
-                try {
-                    $postsQuery->fullTextSearch($query);
-                } catch (\Exception $e) {
-                    $postsQuery->where(function ($q) use ($query) {
-                        $q->where('title', 'like', "%{$query}%")
-                            ->orWhere('english_title', 'like', "%{$query}%")
-                            ->orWhere('book_codes', 'like', "%{$query}%");
-                    });
-                }
+            if ($isAdmin) {
+                $searchQuery->visibleToAdmin();
             } else {
-                $postsQuery->where(function ($q) use ($query) {
-                    $q->where('title', 'like', "%{$query}%")
-                        ->orWhere('english_title', 'like', "%{$query}%")
-                        ->orWhere('book_codes', 'like', "%{$query}%");
-                });
+                $searchQuery->visibleToUser();
             }
 
-            $result = $postsQuery->latest()->simplePaginate(12);
+            $result = $searchQuery->latest('created_at')->simplePaginate(12);
             return $result->appends(['q' => $query]);
         });
 
-        $popularPosts = Cache::remember('popular_posts', $this->cacheTtl * 24, function () {
-            return Post::visibleToUser()
+        $popularPosts = Cache::remember('popular_posts', $this->cacheTtl * 24, function () use ($isAdmin) {
+            $query = Post::forListing()
                 ->select(['id', 'title', 'slug'])
-                ->with([
-                    'featuredImage' => function($query) {
-                        $query->select('id', 'post_id', 'image_path', 'hide_image');
-                    }
-                ])
-                ->latest()
-                ->take(3)
-                ->get();
+                ->with(['featuredImage'])
+                ->latest('created_at')
+                ->take(3);
+
+            if ($isAdmin) {
+                $query->visibleToAdmin();
+            } else {
+                $query->visibleToUser();
+            }
+
+            return $query->get();
         });
 
         return view('blog.search', compact('posts', 'query', 'popularPosts'));

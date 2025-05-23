@@ -10,13 +10,10 @@ class PostImage extends Model
     protected $fillable = [
         'post_id',
         'image_path',
-        'caption',
         'hide_image',
-        'sort_order',
-        'approved_at',
     ];
 
-    protected $imageCacheTtl = 86400;
+    protected $imageCacheTtl = 86400; // 24 ساعت
 
     /**
      * رابطه با پست
@@ -52,8 +49,6 @@ class PostImage extends Model
 
     /**
      * دریافت URL کامل تصویر
-     *
-     * @return string
      */
     public function getImageUrlAttribute()
     {
@@ -65,17 +60,17 @@ class PostImage extends Model
             }
 
             // اگر آدرس کامل باشد آن را برگردان
-            if (strpos($this->image_path, 'http://') === 0 || strpos($this->image_path, 'https://') === 0) {
+            if (str_starts_with($this->image_path, 'http://') || str_starts_with($this->image_path, 'https://')) {
                 return $this->image_path;
             }
 
             // اگر آدرس شامل دامنه مخصوص باشد
-            if (strpos($this->image_path, 'images.balyan.ir/') !== false) {
+            if (str_contains($this->image_path, 'images.balyan.ir/')) {
                 return 'https://' . $this->image_path;
             }
 
             // اگر آدرس با پوشه تصاویر شروع شود
-            if (strpos($this->image_path, 'post_images/') === 0 || strpos($this->image_path, 'posts/') === 0) {
+            if (str_starts_with($this->image_path, 'post_images/') || str_starts_with($this->image_path, 'posts/')) {
                 return config('app.custom_image_host', 'https://images.balyan.ir') . '/' . $this->image_path;
             }
 
@@ -85,10 +80,7 @@ class PostImage extends Model
     }
 
     /**
-     * دریافت URL تصویر برای نمایش
-     * با در نظر گرفتن وضعیت مخفی بودن
-     *
-     * @return string
+     * دریافت URL تصویر برای نمایش با در نظر گرفتن وضعیت مخفی بودن
      */
     public function getDisplayUrlAttribute()
     {
@@ -108,5 +100,21 @@ class PostImage extends Model
 
             return $defaultImage;
         });
+    }
+
+    /**
+     * پاکسازی کش تصویر
+     */
+    public function clearImageCache()
+    {
+        $cacheKeys = [
+            "post_image_{$this->id}_url",
+            "post_image_{$this->id}_display_url_admin",
+            "post_image_{$this->id}_display_url_user",
+        ];
+
+        foreach ($cacheKeys as $key) {
+            Cache::forget($key);
+        }
     }
 }

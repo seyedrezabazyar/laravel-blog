@@ -11,10 +11,11 @@ class Author extends Model
     protected $fillable = [
         'name',
         'slug',
-        'biography',
-        'image',
         'posts_count',
-        'coauthored_count',
+    ];
+
+    protected $casts = [
+        'posts_count' => 'integer',
     ];
 
     /**
@@ -26,7 +27,7 @@ class Author extends Model
     }
 
     /**
-     * رابطه با پست‌هایی که این نویسنده به عنوان یکی از نویسندگان در آن‌ها حضور دارد
+     * رابطه با پست‌هایی که این نویسنده به عنوان همکار در آن‌ها حضور دارد
      */
     public function coAuthoredPosts()
     {
@@ -35,9 +36,7 @@ class Author extends Model
 
     /**
      * دریافت همه پست‌های این نویسنده
-     * (چه به عنوان نویسنده اصلی و چه به عنوان یکی از نویسندگان)
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
+     * (چه به عنوان نویسنده اصلی و چه به عنوان همکار)
      */
     public function getAllPostsAttribute()
     {
@@ -49,26 +48,24 @@ class Author extends Model
 
     /**
      * دریافت تعداد کل پست‌های نویسنده
-     * از فیلدهای شمارنده به جای کوئری استفاده می‌کند
-     *
-     * @return int
      */
     public function getTotalPostsCountAttribute()
     {
-        return $this->posts_count + $this->coauthored_count;
+        return $this->posts_count;
     }
 
     /**
      * به‌روزرسانی شمارنده‌های پست
-     * این متد بعد از ایجاد، به‌روزرسانی یا حذف پست‌های مرتبط فراخوانی می‌شود
      */
     public function updatePostCounts()
     {
+        // شمارش پست‌های اصلی
         $postsCount = Post::where('author_id', $this->id)
             ->where('is_published', true)
             ->where('hide_content', false)
             ->count();
 
+        // شمارش پست‌های همکاری
         $coAuthoredCount = DB::table('post_author')
             ->join('posts', 'posts.id', '=', 'post_author.post_id')
             ->where('post_author.author_id', $this->id)
@@ -76,8 +73,8 @@ class Author extends Model
             ->where('posts.hide_content', false)
             ->count();
 
-        $this->posts_count = $postsCount;
-        $this->coauthored_count = $coAuthoredCount;
+        // ذخیره مجموع
+        $this->posts_count = $postsCount + $coAuthoredCount;
 
         // به‌روزرسانی بدون تغییر زمان به‌روزرسانی
         $this->timestamps = false;
@@ -113,5 +110,13 @@ class Author extends Model
         return $this->posts()
             ->where('is_published', true)
             ->where('hide_content', false);
+    }
+
+    /**
+     * پیدا کردن نویسنده بر اساس slug
+     */
+    public function getRouteKeyName()
+    {
+        return 'slug';
     }
 }

@@ -3,13 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Category extends Model
 {
     protected $fillable = [
         'name',
         'slug',
-        'posts_count' // اضافه کردن فیلد جدید به لیست fillable
+        'description',
+        'image',
+        'posts_count'
+    ];
+
+    protected $casts = [
+        'posts_count' => 'integer',
     ];
 
     /**
@@ -33,14 +40,41 @@ class Category extends Model
 
     /**
      * به‌روزرسانی شمارنده پست‌ها
-     * این تابع باید بعد از ایجاد، به‌روزرسانی، یا حذف پست فراخوانی شود
      */
     public function updatePostCount()
     {
         $this->posts_count = $this->visiblePosts()->count();
+
         // به‌روزرسانی بدون تغییر زمان به‌روزرسانی
         $this->timestamps = false;
         $this->save();
         $this->timestamps = true;
+
+        // پاکسازی کش
+        $this->clearCache();
+    }
+
+    /**
+     * پاکسازی کش مرتبط
+     */
+    public function clearCache()
+    {
+        $cacheKeys = [
+            'all_categories',
+            "category_posts_{$this->id}_page_1_admin",
+            "category_posts_{$this->id}_page_1_user"
+        ];
+
+        foreach ($cacheKeys as $key) {
+            Cache::forget($key);
+        }
+    }
+
+    /**
+     * پیدا کردن دسته‌بندی بر اساس slug
+     */
+    public function getRouteKeyName()
+    {
+        return 'slug';
     }
 }

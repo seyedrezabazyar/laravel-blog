@@ -21,6 +21,55 @@ class ElasticsearchService
     }
 
     /**
+     * دریافت محتوای یک پست خاص بر اساس post_id
+     */
+    public function getPostContent(int $postId): array
+    {
+        try {
+            // ابتدا سعی کنیم مستقیماً با document ID دریافت کنیم
+            $response = $this->client->get([
+                'index' => $this->indexName,
+                'id' => $postId
+            ]);
+
+            if (isset($response['_source'])) {
+                return $response['_source'];
+            }
+
+            return [];
+
+        } catch (\Elasticsearch\Common\Exceptions\Missing404Exception $e) {
+            // اگر document یافت نشد، با جستجو امتحان کنیم
+            try {
+                $response = $this->client->search([
+                    'index' => $this->indexName,
+                    'body' => [
+                        'query' => [
+                            'term' => [
+                                'post_id' => $postId
+                            ]
+                        ],
+                        'size' => 1
+                    ]
+                ]);
+
+                if (!empty($response['hits']['hits'])) {
+                    return $response['hits']['hits'][0]['_source'];
+                }
+
+                return [];
+
+            } catch (\Exception $e) {
+                $this->logError($postId, 'get_content_search', $e->getMessage());
+                return [];
+            }
+        } catch (\Exception $e) {
+            $this->logError($postId, 'get_content', $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * ایجاد ایندکس با تنظیمات فارسی
      */
     public function createIndex(): bool
@@ -171,22 +220,31 @@ class ElasticsearchService
 
             // جستجوی متنی
             if (!empty($query)) {
-                $searchBody['query']['bool']['must'][] = [
-                    'multi_match' => [
-                        'query' => $query,
-                        'fields' => [
-                            'title^3',
-                            'author^2',
-                            'description.persian^1.5',
-                            'description.english^1.5',
-                            'category',
-                            'publisher'
-                        ],
-                        'type' => 'best_fields',
-                        'fuzziness' => 'AUTO',
-                        'operator' => 'or'
-                    ]
-                ];
+                // بررسی اینکه آیا جستجو بر اساس post_id است
+                if (preg_match('/^post_id:(\d+)$/', $query, $matches)) {
+                    $searchBody['query']['bool']['must'][] = [
+                        'term' => [
+                            'post_id' => (int)$matches[1]
+                        ]
+                    ];
+                } else {
+                    $searchBody['query']['bool']['must'][] = [
+                        'multi_match' => [
+                            'query' => $query,
+                            'fields' => [
+                                'title^3',
+                                'author^2',
+                                'description.persian^1.5',
+                                'description.english^1.5',
+                                'category',
+                                'publisher'
+                            ],
+                            'type' => 'best_fields',
+                            'fuzziness' => 'AUTO',
+                            'operator' => 'or'
+                        ]
+                    ];
+                }
             } else {
                 $searchBody['query']['bool']['must'][] = ['match_all' => (object)[]];
             }
