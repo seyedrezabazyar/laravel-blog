@@ -11,7 +11,8 @@ class GalleryController extends Controller
 {
     public function index()
     {
-        $images = PostImage::whereNull('hide_image')
+        $images = PostImage::whereNull('status')
+            ->orWhere('status', 'visible')
             ->orderBy('id', 'asc')
             ->paginate(100);
 
@@ -23,7 +24,7 @@ class GalleryController extends Controller
         try {
             $image = PostImage::findOrFail($id);
             $image->update([
-                'hide_image' => 'visible',
+                'status' => 'visible',
                 'updated_at' => now()
             ]);
 
@@ -54,7 +55,7 @@ class GalleryController extends Controller
         $imageIds = $request->input('image_ids', []);
         if (!empty($imageIds)) {
             PostImage::whereIn('id', $imageIds)->update([
-                'hide_image' => 'visible',
+                'status' => 'visible',
                 'updated_at' => now()
             ]);
 
@@ -71,7 +72,7 @@ class GalleryController extends Controller
     public function reject(Request $request, $id)
     {
         $image = PostImage::findOrFail($id);
-        $image->update(['hide_image' => 'hidden']);
+        $image->update(['status' => 'hidden']);
 
         return $request->wantsJson()
             ? response()->json(['success' => true, 'message' => 'تصویر رد شد.'])
@@ -81,7 +82,7 @@ class GalleryController extends Controller
     public function markMissing(Request $request, $id)
     {
         $image = PostImage::findOrFail($id);
-        $image->update(['hide_image' => 'missing']);
+        $image->update(['status' => 'missing']);
 
         return $request->wantsJson()
             ? response()->json(['success' => true, 'message' => 'تصویر به عنوان گمشده علامت‌گذاری شد.'])
@@ -91,7 +92,7 @@ class GalleryController extends Controller
     public function reset(Request $request, $id)
     {
         $image = PostImage::findOrFail($id);
-        $image->update(['hide_image' => null]);
+        $image->update(['status' => null]);
 
         return $request->wantsJson()
             ? response()->json(['success' => true, 'message' => 'وضعیت تصویر بازنشانی شد.'])
@@ -100,7 +101,7 @@ class GalleryController extends Controller
 
     public function visible()
     {
-        $images = PostImage::where('hide_image', 'visible')
+        $images = PostImage::where('status', 'visible')
             ->orderBy('updated_at', 'desc')
             ->paginate(100);
 
@@ -109,7 +110,7 @@ class GalleryController extends Controller
 
     public function hidden()
     {
-        $images = PostImage::where('hide_image', 'hidden')
+        $images = PostImage::where('status', 'hidden')
             ->orderBy('updated_at', 'desc')
             ->paginate(100);
 
@@ -118,7 +119,7 @@ class GalleryController extends Controller
 
     public function missing()
     {
-        $images = PostImage::where('hide_image', 'missing')
+        $images = PostImage::where('status', 'missing')
             ->orderBy('updated_at', 'desc')
             ->paginate(100);
 
