@@ -48,7 +48,7 @@ class AppServiceProvider extends ServiceProvider
 
         // بارگذاری بهینه مدل‌های رایج در مسیرها
         Route::bind('publisher', function (string $value) {
-            return Publisher::select(['id', 'name', 'slug', 'description', 'posts_count'])
+            return Publisher::select(['id', 'name', 'slug', 'posts_count'])
                 ->where('slug', $value)
                 ->firstOrFail();
         });
