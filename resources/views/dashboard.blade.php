@@ -359,7 +359,7 @@
                             <h4 class="text-lg font-medium text-center mb-2">تصاویر تایید شده</h4>
                             <div class="text-center mb-4">
                                 <span class="text-2xl font-bold text-green-600">
-                                    {{ \App\Models\PostImage::where('hide_image', 'visible')->count() }}
+                                    {{ \App\Models\PostImage::where('status', 'visible')->count() }}
                                 </span>
                                 <span class="text-gray-500 text-sm block">تصویر</span>
                             </div>
@@ -382,7 +382,7 @@
                             <h4 class="text-lg font-medium text-center mb-2">تصاویر رد شده</h4>
                             <div class="text-center mb-4">
                                 <span class="text-2xl font-bold text-red-600">
-                                    {{ \App\Models\PostImage::where('hide_image', 'hidden')->count() }}
+                                    {{ \App\Models\PostImage::where('status', 'hidden')->count() }}
                                 </span>
                                 <span class="text-gray-500 text-sm block">تصویر</span>
                             </div>
