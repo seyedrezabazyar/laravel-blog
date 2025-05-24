@@ -59,8 +59,8 @@
         <div class="w-full lg:w-7/10">
             <div class="mb-6">
                 <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ $post->elasticsearch_title ?: $post->title }}</h1>
-                @if($post->english_title)
-                    <p class="text-lg text-gray-600">{{ $post->english_title }}</p>
+                @if($post->elasticsearch_english_title)
+                    <p class="text-lg text-gray-600 mt-2">{{ $post->elasticsearch_english_title }}</p>
                 @endif
             </div>
 
@@ -134,10 +134,10 @@
                                 </td>
                             </tr>
                         @endif
-                        @if($post->elasticsearch_language || $post->languages)
+                        @if($post->elasticsearch_language || $post->language)
                             <tr class="border-b border-gray-100">
                                 <td class="py-3 pr-4 text-blue-700 font-medium w-1/4 whitespace-nowrap">زبان کتاب</td>
-                                <td class="py-3 px-4">{{ $post->elasticsearch_language ?: $post->languages }}</td>
+                                <td class="py-3 px-4">{{ $post->elasticsearch_language ?: $post->language }}</td>
                             </tr>
                         @endif
                         @if($post->elasticsearch_format || $post->format)

@@ -96,14 +96,9 @@ class Post extends Model
         return $this->belongsTo(User::class);
     }
 
-    // IMAGE URL METHODS - اصلاح شده برای استفاده از فرمول
-
-    /**
-     * دریافت URL تصویر اصلی بر اساس فرمول محاسباتی
-     */
+    // IMAGE URL METHODS
     public function getFeaturedImageUrlAttribute(): string
     {
-        // بررسی وجود MD5
         if (empty($this->md5)) {
             $this->generateMd5IfMissing();
         }
@@ -112,24 +107,17 @@ class Post extends Model
             return asset('images/default-book.png');
         }
 
-        // محاسبه دایرکتوری و تولید URL
         $directory = $this->calculateImageDirectory();
         $imageHost = config('app.custom_image_host', 'https://images.balyan.ir');
 
         return "{$imageHost}/{$directory}/{$this->md5}.jpg";
     }
 
-    /**
-     * محاسبه دایرکتوری تصویر بر اساس ID پست
-     */
     private function calculateImageDirectory(): int
     {
         return intval(($this->id - 1) / 10000) * 10000;
     }
 
-    /**
-     * تولید MD5 در صورت عدم وجود
-     */
     private function generateMd5IfMissing(): void
     {
         if (empty($this->md5)) {
@@ -138,9 +126,6 @@ class Post extends Model
         }
     }
 
-    /**
-     * دریافت URL تصویر با اندازه مشخص
-     */
     public function getFeaturedImageUrlWithSize(string $size = 'medium'): string
     {
         $baseUrl = $this->featured_image_url;
@@ -159,9 +144,6 @@ class Post extends Model
         return $baseUrl . ($sizeParams[$size] ?? $sizeParams['medium']);
     }
 
-    /**
-     * دریافت آدرس‌های responsive
-     */
     public function getFeaturedImageResponsiveUrlsAttribute(): array
     {
         $baseUrl = $this->featured_image_url;
@@ -185,20 +167,18 @@ class Post extends Model
         ];
     }
 
-    /**
-     * بررسی وجود تصویر اصلی
-     */
     public function hasFeaturedImage(): bool
     {
         return !empty($this->md5);
     }
 
-    // ELASTICSEARCH METHODS
+    // ELASTICSEARCH METHODS - اصلاح شده برای ساختار واقعی
     public function getPurifiedContentAttribute(): string
     {
         $content = $this->getContentFromElasticsearch();
-        if (!empty($content['description']['persian'])) {
-            return $content['description']['persian'];
+        // استفاده از ساختار واقعی: description_fa
+        if (!empty($content['description_fa'])) {
+            return $content['description_fa'];
         }
         return '';
     }
@@ -206,8 +186,9 @@ class Post extends Model
     public function getEnglishContentAttribute(): string
     {
         $content = $this->getContentFromElasticsearch();
-        if (!empty($content['description']['english'])) {
-            return $content['description']['english'];
+        // استفاده از ساختار واقعی: description_en
+        if (!empty($content['description_en'])) {
+            return $content['description_en'];
         }
         return '';
     }
@@ -215,7 +196,15 @@ class Post extends Model
     public function getElasticsearchTitleAttribute(): string
     {
         $content = $this->getContentFromElasticsearch();
-        return $content['title'] ?? $this->title;
+        // استفاده از ساختار واقعی: title_fa
+        return $content['title_fa'] ?? $this->title;
+    }
+
+    public function getElasticsearchEnglishTitleAttribute(): string
+    {
+        $content = $this->getContentFromElasticsearch();
+        // استفاده از ساختار واقعی: title_en
+        return $content['title_en'] ?? ($this->english_title ?? '');
     }
 
     public function getElasticsearchAuthorAttribute(): string
@@ -239,7 +228,8 @@ class Post extends Model
     public function getElasticsearchPublicationYearAttribute(): ?int
     {
         $content = $this->getContentFromElasticsearch();
-        return $content['publication_year'] ?? $this->publication_year;
+        // استفاده از ساختار واقعی: year
+        return $content['year'] ?? $this->publication_year;
     }
 
     public function getElasticsearchFormatAttribute(): ?string
@@ -269,18 +259,24 @@ class Post extends Model
     // PRIVATE METHODS
     private function getContentFromElasticsearch(): array
     {
-        static $content = null;
-        if ($content !== null) return $content;
+        static $cache = [];
+
+        if (isset($cache[$this->id])) {
+            return $cache[$this->id];
+        }
 
         try {
             if (!app()->bound('App\Services\ElasticsearchService')) {
-                return [];
+                return $cache[$this->id] = [];
             }
+
             $elasticsearchService = app('App\Services\ElasticsearchService');
             $content = $elasticsearchService->getPostContent($this->id);
-            return $content;
+
+            return $cache[$this->id] = $content ?: [];
+
         } catch (\Exception $e) {
-            return [];
+            return $cache[$this->id] = [];
         }
     }
 
@@ -311,7 +307,6 @@ class Post extends Model
     // CACHE MANAGEMENT
     public function clearCache(): void
     {
-        // پاک کردن کش‌های مرتبط
         $cacheKeys = [
             "image_url_{$this->id}_{$this->md5}",
             "post_{$this->id}_featured_image"
