@@ -49,12 +49,7 @@ class ImageUrlService
     }
 
     /**
-     * ایجاد آدرس تصویر با کش
-     *
-     * @param int $postId آیدی پست
-     * @param string $md5 هش md5 پست
-     * @param string $format فرمت تصویر
-     * @return string آدرس کامل تصویر
+     * ایجاد آدرس تصویر با کش برای عملکرد بهتر
      */
     public static function getCachedImageUrl(int $postId, string $md5, string $format = 'jpg'): string
     {
@@ -67,10 +62,6 @@ class ImageUrlService
 
     /**
      * ایجاد چندین آدرس تصویر با اندازه‌های مختلف
-     *
-     * @param int $postId آیدی پست
-     * @param string $md5 هش md5 پست
-     * @return array آرایه‌ای از آدرس‌های تصویر با اندازه‌های مختلف
      */
     public static function getResponsiveImageUrls(int $postId, string $md5): array
     {
@@ -87,8 +78,6 @@ class ImageUrlService
 
     /**
      * تولید آدرس تصویر پیش‌فرض
-     *
-     * @return string آدرس تصویر پیش‌فرض
      */
     public static function getDefaultImageUrl(): string
     {
@@ -96,10 +85,7 @@ class ImageUrlService
     }
 
     /**
-     * بررسی وجود تصویر (برای استفاده در آینده)
-     *
-     * @param string $imageUrl آدرس تصویر
-     * @return bool وضعیت وجود تصویر
+     * بررسی وجود تصویر (با کش)
      */
     public static function imageExists(string $imageUrl): bool
     {
@@ -117,9 +103,6 @@ class ImageUrlService
 
     /**
      * پاک کردن کش آدرس تصاویر
-     *
-     * @param int|null $postId آیدی پست (null برای پاک کردن کل کش)
-     * @param string|null $md5 هش md5 پست
      */
     public static function clearImageCache(?int $postId = null, ?string $md5 = null): void
     {
@@ -129,16 +112,11 @@ class ImageUrlService
                 Cache::forget("image_url_{$postId}_{$md5}_{$format}");
                 Cache::forget("image_exists_" . md5(self::generateImageUrl($postId, $md5, $format)));
             }
-        } else {
-            // پاک کردن کل کش تصاویر (با احتیاط استفاده شود)
-            Cache::flush();
         }
     }
 
     /**
      * محاسبه آمار تصاویر بر اساس دایرکتوری
-     *
-     * @return array آمار تصاویر
      */
     public static function getImageStats(): array
     {
@@ -159,9 +137,6 @@ class ImageUrlService
 
     /**
      * تبدیل آدرس قدیمی به آدرس جدید (برای migration)
-     *
-     * @param string $oldImagePath آدرس قدیمی تصویر
-     * @return array|null اطلاعات استخراج شده
      */
     public static function parseOldImagePath(string $oldImagePath): ?array
     {
@@ -182,11 +157,7 @@ class ImageUrlService
     }
 
     /**
-     * محاسبه post_id از directory و md5 (در صورت نیاز)
-     *
-     * @param int $directory شماره دایرکتوری
-     * @param string $md5 هش md5
-     * @return int|null آیدی پست
+     * محاسبه post_id از directory و md5
      */
     public static function calculatePostIdFromMd5(int $directory, string $md5): ?int
     {

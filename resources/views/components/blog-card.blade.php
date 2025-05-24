@@ -6,12 +6,8 @@
         @php
             $isAdmin = auth()->check() && auth()->user()->isAdmin();
 
-            // اگر پست MD5 دارد، URL تولید کن
-            if (!empty($post->md5)) {
-                $imageUrl = $post->featured_image_url;
-            } else {
-                $imageUrl = asset('images/default-book.png');
-            }
+            // تولید URL تصویر بر اساس فرمول جدید
+            $imageUrl = $post->featured_image_url;
 
             // بررسی وضعیت تصویر اگر رکورد PostImage وجود دارد
             $featuredImage = $post->featuredImage ?? null;

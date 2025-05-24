@@ -36,7 +36,7 @@ class PostImage extends Model
     }
 
     /**
-     * دریافت URL تصویر - سادهٔ و بدون کش برای جلوگیری از مشکل
+     * دریافت URL تصویر بر اساس فرمول محاسباتی
      */
     public function getImageUrlAttribute(): string
     {
@@ -46,7 +46,14 @@ class PostImage extends Model
             return asset('images/default-book.png');
         }
 
-        return ImageUrlService::generateImageUrl($post->id, $post->md5);
+        // محاسبه دایرکتوری بر اساس آیدی پست
+        $directory = intval(($post->id - 1) / 10000) * 10000;
+
+        // هاست تصاویر
+        $imageHost = config('app.custom_image_host', 'https://images.balyan.ir');
+
+        // تولید URL کامل
+        return "{$imageHost}/{$directory}/{$post->md5}.jpg";
     }
 
     /**
@@ -87,7 +94,15 @@ class PostImage extends Model
             ];
         }
 
-        return ImageUrlService::getResponsiveImageUrls($post->id, $post->md5);
+        $baseUrl = $this->image_url;
+
+        return [
+            'thumbnail' => $baseUrl . '?w=150&h=200&fit=crop',
+            'small' => $baseUrl . '?w=300&h=400&fit=crop',
+            'medium' => $baseUrl . '?w=600&h=800&fit=crop',
+            'large' => $baseUrl . '?w=900&h=1200&fit=crop',
+            'original' => $baseUrl,
+        ];
     }
 
     /**
@@ -97,5 +112,16 @@ class PostImage extends Model
     {
         $responsiveUrls = $this->responsive_urls;
         return $responsiveUrls[$size] ?? $responsiveUrls['medium'] ?? asset('images/default-book.png');
+    }
+
+    /**
+     * پاک کردن کش تصویر
+     */
+    public function clearImageCache(): void
+    {
+        $post = $this->post;
+        if ($post && $post->md5) {
+            \Cache::forget("image_url_{$post->id}_{$post->md5}");
+        }
     }
 }

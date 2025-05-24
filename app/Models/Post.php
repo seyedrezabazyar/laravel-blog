@@ -96,20 +96,18 @@ class Post extends Model
         return $this->belongsTo(User::class);
     }
 
-    // IMAGE URL METHODS - اصلاح شده برای حل مشکل فوری
+    // IMAGE URL METHODS - اصلاح شده برای استفاده از فرمول
 
     /**
-     * دریافت URL تصویر اصلی - اصلاح شده برای کار صحیح
+     * دریافت URL تصویر اصلی بر اساس فرمول محاسباتی
      */
     public function getFeaturedImageUrlAttribute(): string
     {
         // بررسی وجود MD5
         if (empty($this->md5)) {
-            // اگر MD5 ندارد، سعی کن یکی تولید کن
             $this->generateMd5IfMissing();
         }
 
-        // اگر هنوز MD5 ندارد، تصویر پیش‌فرض
         if (empty($this->md5)) {
             return asset('images/default-book.png');
         }
@@ -136,7 +134,6 @@ class Post extends Model
     {
         if (empty($this->md5)) {
             $this->md5 = md5($this->title . $this->id . microtime() . uniqid());
-            // ذخیره فوری بدون event triggering
             \DB::table('posts')->where('id', $this->id)->update(['md5' => $this->md5]);
         }
     }
@@ -148,12 +145,10 @@ class Post extends Model
     {
         $baseUrl = $this->featured_image_url;
 
-        // اگر تصویر پیش‌فرض است، همان را برگردان
         if (str_contains($baseUrl, 'default-book.png')) {
             return $baseUrl;
         }
 
-        // اضافه کردن پارامترهای اندازه
         $sizeParams = [
             'thumbnail' => '?w=150&h=200&fit=crop',
             'small' => '?w=300&h=400&fit=crop',
@@ -171,7 +166,6 @@ class Post extends Model
     {
         $baseUrl = $this->featured_image_url;
 
-        // اگر تصویر پیش‌فرض است
         if (str_contains($baseUrl, 'default-book.png')) {
             return [
                 'thumbnail' => $baseUrl,
@@ -189,32 +183,6 @@ class Post extends Model
             'large' => $baseUrl . '?w=900&h=1200&fit=crop',
             'original' => $baseUrl,
         ];
-    }
-
-    /**
-     * تولید HTML تگ img برای تصویر اصلی
-     */
-    public function getFeaturedImageHtml(string $alt = '', string $cssClass = 'w-full h-full object-cover'): string
-    {
-        $responsiveUrls = $this->featured_image_responsive_urls;
-        $defaultUrl = asset('images/default-book.png');
-
-        $alt = htmlspecialchars($alt ?: $this->title);
-
-        $srcset = implode(', ', [
-            $responsiveUrls['small'] . ' 300w',
-            $responsiveUrls['medium'] . ' 600w',
-            $responsiveUrls['large'] . ' 900w',
-        ]);
-
-        return sprintf(
-            '<img src="%s" srcset="%s" sizes="(max-width: 768px) 100vw, 50vw" alt="%s" class="%s" loading="lazy" onerror="this.onerror=null;this.src=\'%s\';">',
-            $responsiveUrls['medium'],
-            $srcset,
-            $alt,
-            $cssClass,
-            $defaultUrl
-        );
     }
 
     /**
@@ -343,13 +311,14 @@ class Post extends Model
     // CACHE MANAGEMENT
     public function clearCache(): void
     {
-        // پاک کردن کش‌های مرتبط اگر ImageUrlService موجود باشد
-        try {
-            if (class_exists('App\Services\ImageUrlService') && $this->md5) {
-                ImageUrlService::clearImageCache($this->id, $this->md5);
-            }
-        } catch (\Exception $e) {
-            // در صورت خطا، ادامه بده
+        // پاک کردن کش‌های مرتبط
+        $cacheKeys = [
+            "image_url_{$this->id}_{$this->md5}",
+            "post_{$this->id}_featured_image"
+        ];
+
+        foreach ($cacheKeys as $key) {
+            \Cache::forget($key);
         }
     }
 
