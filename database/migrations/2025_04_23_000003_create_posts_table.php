@@ -26,9 +26,9 @@ return new class extends Migration
             $table->unsignedSmallInteger('publication_year')->nullable()->index();
             $table->unsignedSmallInteger('pages_count')->nullable();
 
-            // فیلدهای denormalized برای عملکرد بهتر
-            $table->string('format', 20)->charset('ascii')->index(); // pdf, epub, mobi - denormalized
-            $table->string('language', 15)->charset('ascii')->index(); // fa, en, fa-en - denormalized
+            // فیلدهای denormalized برای عملکرد بهتر - قابل null
+            $table->string('format', 20)->charset('ascii')->nullable()->index(); // pdf, epub, mobi - denormalized
+            $table->string('language', 15)->charset('ascii')->nullable()->index(); // fa, en, fa-en - denormalized
 
             // وضعیت‌ها
             $table->boolean('hide_content')->default(false);
