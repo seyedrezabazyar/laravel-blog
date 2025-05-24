@@ -5,23 +5,17 @@
     <div class="w-full relative aspect-[4/3]">
         @php
             $isAdmin = auth()->check() && auth()->user()->isAdmin();
-            $featuredImage = $post->featuredImage;
-            $showDefaultImage = true;
-            $isHidden = false;
-            $imageUrl = asset('images/default-book.png');
 
-            if ($featuredImage && !empty($featuredImage->image_path)) {
-                if ($isAdmin) {
-                    // برای مدیران همیشه تصویر را نمایش بده
-                    $imageUrl = $featuredImage->image_url;
-                    $showDefaultImage = false;
-                    $isHidden = $featuredImage->isHidden();
-                } else if ($featuredImage->isVisible()) {
-                    // برای کاربران عادی فقط تصاویر visible را نمایش بده
-                    $imageUrl = $featuredImage->image_url;
-                    $showDefaultImage = false;
-                }
+            // اگر پست MD5 دارد، URL تولید کن
+            if (!empty($post->md5)) {
+                $imageUrl = $post->featured_image_url;
+            } else {
+                $imageUrl = asset('images/default-book.png');
             }
+
+            // بررسی وضعیت تصویر اگر رکورد PostImage وجود دارد
+            $featuredImage = $post->featuredImage ?? null;
+            $isHidden = $featuredImage && $featuredImage->isHidden();
         @endphp
 
             <!-- نمایش تصویر کتاب -->
@@ -56,8 +50,6 @@
                 {{ $post->title }}
             </a>
         </h3>
-
-
 
         <!-- دکمه مشاهده -->
         <div class="mt-auto">

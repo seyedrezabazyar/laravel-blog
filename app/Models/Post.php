@@ -28,30 +28,17 @@ class Post extends Model
         'indexed_at' => 'datetime',
     ];
 
-    // ===========================================
-    // SCOPES - کوئری‌های بهینه‌شده
-    // ===========================================
-
-    /**
-     * Scope برای پست‌های قابل مشاهده توسط کاربران عادی
-     */
+    // SCOPES
     public function scopeVisibleToUser($query)
     {
-        return $query->where('is_published', true)
-            ->where('hide_content', false);
+        return $query->where('is_published', true)->where('hide_content', false);
     }
 
-    /**
-     * Scope برای پست‌های قابل مشاهده توسط مدیران
-     */
     public function scopeVisibleToAdmin($query)
     {
         return $query->where('is_published', true);
     }
 
-    /**
-     * Scope برای لیست‌های بهینه (فقط فیلدهای ضروری)
-     */
     public function scopeForListing($query)
     {
         return $query->select([
@@ -61,144 +48,147 @@ class Post extends Model
         ]);
     }
 
-    /**
-     * Scope برای جستجو در عنوان و فیلدهای مرتبط
-     */
     public function scopeSearch($query, $term)
     {
         return $query->where(function($q) use ($term) {
-            $q->where('title', 'like', "%{$term}%")
-                ->orWhere('isbn', 'like', "%{$term}%");
+            $q->where('title', 'like', "%{$term}%")->orWhere('isbn', 'like', "%{$term}%");
         });
     }
 
-    // ===========================================
-    // RELATIONSHIPS - روابط دیتابیس
-    // ===========================================
-
-    /**
-     * رابطه با دسته‌بندی
-     */
+    // RELATIONSHIPS
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class)->select(['id', 'name', 'slug']);
     }
 
-    /**
-     * رابطه با نویسنده اصلی
-     */
     public function author(): BelongsTo
     {
         return $this->belongsTo(Author::class)->select(['id', 'name', 'slug']);
     }
 
-    /**
-     * رابطه با ناشر
-     */
     public function publisher(): BelongsTo
     {
         return $this->belongsTo(Publisher::class)->select(['id', 'name', 'slug']);
     }
 
-    /**
-     * رابطه با نویسندگان همکار
-     */
     public function authors(): BelongsToMany
     {
-        return $this->belongsToMany(Author::class, 'post_author')
-            ->select(['authors.id', 'name', 'slug']);
+        return $this->belongsToMany(Author::class, 'post_author')->select(['authors.id', 'name', 'slug']);
     }
 
-    /**
-     * رابطه با تصویر اصلی - نسخه بهینه‌شده (بدون image_path)
-     */
     public function featuredImage(): HasOne
     {
         return $this->hasOne(PostImage::class)
             ->select(['id', 'post_id', 'status'])
             ->where(function($query) {
-                $query->where('status', '!=', 'hidden')
-                    ->orWhereNull('status');
+                $query->where('status', '!=', 'hidden')->orWhereNull('status');
             })
             ->orderBy('id');
     }
 
-    /**
-     * رابطه با همه تصاویر - نسخه بهینه‌شده (بدون image_path)
-     */
     public function images(): HasMany
     {
-        return $this->hasMany(PostImage::class)
-            ->select(['id', 'post_id', 'status'])
-            ->orderBy('id');
+        return $this->hasMany(PostImage::class)->select(['id', 'post_id', 'status'])->orderBy('id');
     }
 
-    /**
-     * رابطه با کاربر
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    // ===========================================
-    // IMAGE URL METHODS - متدهای آدرس تصاویر
-    // ===========================================
+    // IMAGE URL METHODS - اصلاح شده برای حل مشکل فوری
 
     /**
-     * دریافت URL تصویر اصلی با سیستم محاسباتی
+     * دریافت URL تصویر اصلی - اصلاح شده برای کار صحیح
      */
     public function getFeaturedImageUrlAttribute(): string
     {
-        $cacheKey = "post_{$this->id}_featured_image_url";
+        // بررسی وجود MD5
+        if (empty($this->md5)) {
+            // اگر MD5 ندارد، سعی کن یکی تولید کن
+            $this->generateMd5IfMissing();
+        }
 
-        return Cache::remember($cacheKey, 3600, function () {
-            if (!$this->md5) {
-                return ImageUrlService::getDefaultImageUrl();
-            }
+        // اگر هنوز MD5 ندارد، تصویر پیش‌فرض
+        if (empty($this->md5)) {
+            return asset('images/default-book.png');
+        }
 
-            return ImageUrlService::generateImageUrl($this->id, $this->md5);
-        });
+        // محاسبه دایرکتوری و تولید URL
+        $directory = $this->calculateImageDirectory();
+        $imageHost = config('app.custom_image_host', 'https://images.balyan.ir');
+
+        return "{$imageHost}/{$directory}/{$this->md5}.jpg";
     }
 
     /**
-     * دریافت URL تصویر اصلی با اندازه مشخص
+     * محاسبه دایرکتوری تصویر بر اساس ID پست
+     */
+    private function calculateImageDirectory(): int
+    {
+        return intval(($this->id - 1) / 10000) * 10000;
+    }
+
+    /**
+     * تولید MD5 در صورت عدم وجود
+     */
+    private function generateMd5IfMissing(): void
+    {
+        if (empty($this->md5)) {
+            $this->md5 = md5($this->title . $this->id . microtime() . uniqid());
+            // ذخیره فوری بدون event triggering
+            \DB::table('posts')->where('id', $this->id)->update(['md5' => $this->md5]);
+        }
+    }
+
+    /**
+     * دریافت URL تصویر با اندازه مشخص
      */
     public function getFeaturedImageUrlWithSize(string $size = 'medium'): string
     {
-        $cacheKey = "post_{$this->id}_featured_image_url_{$size}";
+        $baseUrl = $this->featured_image_url;
 
-        return Cache::remember($cacheKey, 3600, function () use ($size) {
-            if (!$this->md5) {
-                return ImageUrlService::getDefaultImageUrl();
-            }
+        // اگر تصویر پیش‌فرض است، همان را برگردان
+        if (str_contains($baseUrl, 'default-book.png')) {
+            return $baseUrl;
+        }
 
-            $responsiveUrls = ImageUrlService::getResponsiveImageUrls($this->id, $this->md5);
-            return $responsiveUrls[$size] ?? $responsiveUrls['medium'] ?? ImageUrlService::getDefaultImageUrl();
-        });
+        // اضافه کردن پارامترهای اندازه
+        $sizeParams = [
+            'thumbnail' => '?w=150&h=200&fit=crop',
+            'small' => '?w=300&h=400&fit=crop',
+            'medium' => '?w=600&h=800&fit=crop',
+            'large' => '?w=900&h=1200&fit=crop',
+        ];
+
+        return $baseUrl . ($sizeParams[$size] ?? $sizeParams['medium']);
     }
 
     /**
-     * دریافت آدرس‌های تصویر اصلی با اندازه‌های مختلف
+     * دریافت آدرس‌های responsive
      */
     public function getFeaturedImageResponsiveUrlsAttribute(): array
     {
-        $cacheKey = "post_{$this->id}_featured_responsive_urls";
+        $baseUrl = $this->featured_image_url;
 
-        return Cache::remember($cacheKey, 3600, function () {
-            if (!$this->md5) {
-                $defaultUrl = ImageUrlService::getDefaultImageUrl();
-                return [
-                    'thumbnail' => $defaultUrl,
-                    'small' => $defaultUrl,
-                    'medium' => $defaultUrl,
-                    'large' => $defaultUrl,
-                    'original' => $defaultUrl,
-                ];
-            }
+        // اگر تصویر پیش‌فرض است
+        if (str_contains($baseUrl, 'default-book.png')) {
+            return [
+                'thumbnail' => $baseUrl,
+                'small' => $baseUrl,
+                'medium' => $baseUrl,
+                'large' => $baseUrl,
+                'original' => $baseUrl,
+            ];
+        }
 
-            return ImageUrlService::getResponsiveImageUrls($this->id, $this->md5);
-        });
+        return [
+            'thumbnail' => $baseUrl . '?w=150&h=200&fit=crop',
+            'small' => $baseUrl . '?w=300&h=400&fit=crop',
+            'medium' => $baseUrl . '?w=600&h=800&fit=crop',
+            'large' => $baseUrl . '?w=900&h=1200&fit=crop',
+            'original' => $baseUrl,
+        ];
     }
 
     /**
@@ -207,7 +197,7 @@ class Post extends Model
     public function getFeaturedImageHtml(string $alt = '', string $cssClass = 'w-full h-full object-cover'): string
     {
         $responsiveUrls = $this->featured_image_responsive_urls;
-        $defaultUrl = ImageUrlService::getDefaultImageUrl();
+        $defaultUrl = asset('images/default-book.png');
 
         $alt = htmlspecialchars($alt ?: $this->title);
 
@@ -232,215 +222,101 @@ class Post extends Model
      */
     public function hasFeaturedImage(): bool
     {
-        return !empty($this->md5) && $this->featuredImage()->exists();
+        return !empty($this->md5);
     }
 
-    // ===========================================
-    // ELASTICSEARCH CONTENT - محتوای Elasticsearch
-    // ===========================================
-
-    /**
-     * دریافت محتوای تمیز شده از Elasticsearch
-     */
+    // ELASTICSEARCH METHODS
     public function getPurifiedContentAttribute(): string
     {
-        $cacheKey = "post_content_{$this->id}";
-
-        return Cache::remember($cacheKey, 3600, function () {
-            $content = $this->getContentFromElasticsearch();
-
-            if (!empty($content['description']['persian'])) {
-                return $content['description']['persian'];
-            }
-
-            return $this->getContentFromFile();
-        });
+        $content = $this->getContentFromElasticsearch();
+        if (!empty($content['description']['persian'])) {
+            return $content['description']['persian'];
+        }
+        return '';
     }
 
-    /**
-     * دریافت محتوای انگلیسی تمیز شده از Elasticsearch
-     */
     public function getEnglishContentAttribute(): string
     {
-        $cacheKey = "post_english_content_{$this->id}";
-
-        return Cache::remember($cacheKey, 3600, function () {
-            $content = $this->getContentFromElasticsearch();
-
-            if (!empty($content['description']['english'])) {
-                return $content['description']['english'];
-            }
-
-            return $this->getEnglishContentFromFile();
-        });
+        $content = $this->getContentFromElasticsearch();
+        if (!empty($content['description']['english'])) {
+            return $content['description']['english'];
+        }
+        return '';
     }
 
-    /**
-     * دریافت عنوان از Elasticsearch (در صورت وجود)
-     */
     public function getElasticsearchTitleAttribute(): string
     {
         $content = $this->getContentFromElasticsearch();
         return $content['title'] ?? $this->title;
     }
 
-    /**
-     * دریافت نام نویسنده از Elasticsearch
-     */
     public function getElasticsearchAuthorAttribute(): string
     {
         $content = $this->getContentFromElasticsearch();
         return $content['author'] ?? ($this->author ? $this->author->name : '');
     }
 
-    /**
-     * دریافت دسته‌بندی از Elasticsearch
-     */
     public function getElasticsearchCategoryAttribute(): string
     {
         $content = $this->getContentFromElasticsearch();
         return $content['category'] ?? ($this->category ? $this->category->name : '');
     }
 
-    /**
-     * دریافت ناشر از Elasticsearch
-     */
     public function getElasticsearchPublisherAttribute(): string
     {
         $content = $this->getContentFromElasticsearch();
         return $content['publisher'] ?? ($this->publisher ? $this->publisher->name : '');
     }
 
-    /**
-     * دریافت سال انتشار از Elasticsearch
-     */
     public function getElasticsearchPublicationYearAttribute(): ?int
     {
         $content = $this->getContentFromElasticsearch();
         return $content['publication_year'] ?? $this->publication_year;
     }
 
-    /**
-     * دریافت فرمت از Elasticsearch
-     */
     public function getElasticsearchFormatAttribute(): ?string
     {
         $content = $this->getContentFromElasticsearch();
         return $content['format'] ?? $this->format;
     }
 
-    /**
-     * دریافت زبان از Elasticsearch
-     */
     public function getElasticsearchLanguageAttribute(): ?string
     {
         $content = $this->getContentFromElasticsearch();
         return $content['language'] ?? $this->language;
     }
 
-    /**
-     * دریافت ISBN از Elasticsearch
-     */
     public function getElasticsearchIsbnAttribute(): ?string
     {
         $content = $this->getContentFromElasticsearch();
         return $content['isbn'] ?? $this->isbn;
     }
 
-    /**
-     * دریافت تعداد صفحات از Elasticsearch
-     */
     public function getElasticsearchPagesCountAttribute(): ?int
     {
         $content = $this->getContentFromElasticsearch();
         return $content['pages_count'] ?? $this->pages_count;
     }
 
-    // ===========================================
-    // PRIVATE HELPER METHODS - متدهای کمکی خصوصی
-    // ===========================================
-
-    /**
-     * دریافت محتوا از Elasticsearch
-     */
+    // PRIVATE METHODS
     private function getContentFromElasticsearch(): array
     {
         static $content = null;
+        if ($content !== null) return $content;
 
-        // اگر قبلاً محتوا دریافت شده، آن را برگردان
-        if ($content !== null) {
-            return $content;
-        }
-
-        $cacheKey = "post_elasticsearch_data_{$this->id}";
-
-        $content = Cache::remember($cacheKey, 3600, function () {
-            try {
-                if (!app()->bound('App\Services\ElasticsearchService')) {
-                    return [];
-                }
-
-                $elasticsearchService = app('App\Services\ElasticsearchService');
-
-                // استفاده از متد جدید getPostContent
-                return $elasticsearchService->getPostContent($this->id);
-
-            } catch (\Exception $e) {
-                \Log::error("خطا در دریافت محتوا از Elasticsearch برای پست {$this->id}: " . $e->getMessage());
+        try {
+            if (!app()->bound('App\Services\ElasticsearchService')) {
                 return [];
             }
-        });
-
-        return $content;
+            $elasticsearchService = app('App\Services\ElasticsearchService');
+            $content = $elasticsearchService->getPostContent($this->id);
+            return $content;
+        } catch (\Exception $e) {
+            return [];
+        }
     }
 
-    /**
-     * دریافت محتوا از فایل (برای آینده)
-     */
-    private function getContentFromFile(): string
-    {
-        // این متد در آینده پیاده‌سازی خواهد شد
-        // فعلاً محتوای خالی برمی‌گردانیم
-        return '';
-    }
-
-    /**
-     * دریافت محتوای انگلیسی از فایل (برای آینده)
-     */
-    private function getEnglishContentFromFile(): string
-    {
-        // این متد در آینده پیاده‌سازی خواهد شد
-        // فعلاً محتوای خالی برمی‌گردانیم
-        return '';
-    }
-
-    // ===========================================
-    // DEBUG AND UTILITIES - متدهای ابزاری و اشکال‌زدایی
-    // ===========================================
-
-    /**
-     * دریافت اطلاعات کامل تصویر برای debug
-     */
-    public function getImageDebugInfo(): array
-    {
-        return [
-            'post_id' => $this->id,
-            'md5' => $this->md5,
-            'calculated_directory' => $this->md5 ? ImageUrlService::calculateDirectory($this->id) : null,
-            'featured_image_url' => $this->featured_image_url,
-            'responsive_urls' => $this->featured_image_responsive_urls,
-            'has_featured_image_record' => $this->featuredImage()->exists(),
-            'image_status' => $this->featuredImage ? $this->featuredImage->status : null,
-        ];
-    }
-
-    // ===========================================
-    // MODEL EVENTS - رویدادهای مدل
-    // ===========================================
-
-    /**
-     * تولید elasticsearch_id و md5 در هنگام ایجاد
-     */
+    // MODEL EVENTS
     protected static function boot()
     {
         parent::boot();
@@ -449,12 +325,9 @@ class Post extends Model
             if (empty($post->elasticsearch_id)) {
                 $post->elasticsearch_id = 'post_' . Str::random(40);
             }
-
             if (empty($post->slug)) {
                 $post->slug = Str::slug($post->title);
             }
-
-            // تولید md5 منحصر به فرد
             if (empty($post->md5)) {
                 $post->md5 = md5($post->title . microtime() . Str::random(10));
             }
@@ -465,67 +338,38 @@ class Post extends Model
                 $post->slug = Str::slug($post->title);
             }
         });
-
-        static::updated(function ($post) {
-            $post->clearCache();
-        });
-
-        static::deleted(function ($post) {
-            $post->clearCache();
-        });
     }
 
-    // ===========================================
-    // CACHE MANAGEMENT - مدیریت کش
-    // ===========================================
-
-    /**
-     * پاکسازی کش مرتبط با این پست
-     */
+    // CACHE MANAGEMENT
     public function clearCache(): void
     {
-        $cacheKeys = [
-            "post_{$this->id}_featured_image_url",
-            "post_{$this->id}_featured_responsive_urls",
-            "post_{$this->id}_featured_image_url_thumbnail",
-            "post_{$this->id}_featured_image_url_small",
-            "post_{$this->id}_featured_image_url_medium",
-            "post_{$this->id}_featured_image_url_large",
-            "post_{$this->id}_related_posts_admin",
-            "post_{$this->id}_related_posts_user",
-            "post_content_{$this->id}",
-            "post_english_content_{$this->id}",
-            "post_elasticsearch_data_{$this->id}",
-            "home_latest_posts",
-        ];
-
-        foreach ($cacheKeys as $key) {
-            Cache::forget($key);
-        }
-
-        // پاک کردن کش سرویس تصاویر
-        if ($this->md5) {
-            ImageUrlService::clearImageCache($this->id, $this->md5);
+        // پاک کردن کش‌های مرتبط اگر ImageUrlService موجود باشد
+        try {
+            if (class_exists('App\Services\ImageUrlService') && $this->md5) {
+                ImageUrlService::clearImageCache($this->id, $this->md5);
+            }
+        } catch (\Exception $e) {
+            // در صورت خطا، ادامه بده
         }
     }
 
-    // ===========================================
-    // ROUTE MODEL BINDING - مسیریابی مدل
-    // ===========================================
-
-    /**
-     * پیدا کردن پست بر اساس slug
-     */
+    // ROUTE MODEL BINDING
     public function getRouteKeyName(): string
     {
         return 'slug';
     }
 
-    // ===========================================
-    // LEGACY COMPATIBILITY - سازگاری عقب‌گرد (حذف شده)
-    // ===========================================
-
-    // متدهای compressedContent و description حذف شدند
-    // چون احتمالاً PostContentCompressed کلاس وجود ندارد
-    // و ContentCompressionService نیز تعریف نشده است
+    // DEBUG METHODS
+    public function getImageDebugInfo(): array
+    {
+        return [
+            'post_id' => $this->id,
+            'md5' => $this->md5,
+            'calculated_directory' => $this->calculateImageDirectory(),
+            'featured_image_url' => $this->featured_image_url,
+            'responsive_urls' => $this->featured_image_responsive_urls,
+            'has_featured_image_record' => $this->featuredImage()->exists(),
+            'image_status' => $this->featuredImage ? $this->featuredImage->status : null,
+        ];
+    }
 }
