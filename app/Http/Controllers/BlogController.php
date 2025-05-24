@@ -11,6 +11,8 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 
 class BlogController extends Controller
 {
@@ -189,16 +191,17 @@ class BlogController extends Controller
     public function author(Author $author): View
     {
         $isAdmin = auth()->check() && auth()->user()->isAdmin();
+        $perPage = 12;
+        $currentPage = request()->get('page', 1);
 
         // پست‌های نویسنده اصلی
-        $mainPostsQuery = Post::where('author_id', $author->id)
-            ->forListing();
+        $mainPostsQuery = Post::where('author_id', $author->id)->forListing();
 
         // پست‌های نویسنده همکار
         $coAuthorPostsQuery = Post::select([
             'posts.id', 'posts.title', 'posts.slug', 'posts.category_id',
             'posts.author_id', 'posts.publication_year', 'posts.format',
-            'posts.created_at'
+            'posts.created_at', 'posts.md5'
         ])
             ->join('post_author', 'posts.id', '=', 'post_author.post_id')
             ->where('post_author.author_id', $author->id)
@@ -213,42 +216,50 @@ class BlogController extends Controller
                 ->where('posts.hide_content', false);
         }
 
-        // ترکیب هر دو نوع پست
+        // گرفتن تمام پست‌ها
         $mainPosts = $mainPostsQuery->get();
         $coAuthorPosts = $coAuthorPostsQuery->get();
 
+        // ترکیب و مرتب‌سازی
         $allPosts = $mainPosts->merge($coAuthorPosts)
             ->sortByDesc('created_at')
             ->values();
 
-        // صفحه‌بندی دستی
-        $perPage = 12;
-        $currentPage = request()->get('page', 1);
+        // ایجاد pagination دستی
+        $total = $allPosts->count();
         $offset = ($currentPage - 1) * $perPage;
-
-        $paginatedPosts = $allPosts->slice($offset, $perPage);
+        $paginatedItems = $allPosts->slice($offset, $perPage);
 
         // بارگذاری روابط برای پست‌های صفحه‌بندی شده
-        $postIds = $paginatedPosts->pluck('id')->toArray();
-        $postsWithRelations = Post::whereIn('id', $postIds)
-            ->with([
-                'featuredImage',
-                'category:id,name,slug'
-            ])
-            ->get()
-            ->keyBy('id');
+        $postIds = $paginatedItems->pluck('id')->toArray();
+        if (!empty($postIds)) {
+            $postsWithRelations = Post::whereIn('id', $postIds)
+                ->with([
+                    'featuredImage',
+                    'category:id,name,slug'
+                ])
+                ->get()
+                ->keyBy('id');
 
-        // جایگزینی پست‌ها با نسخه‌های دارای رابطه
-        $posts = $paginatedPosts->map(function($post) use ($postsWithRelations) {
-            return $postsWithRelations[$post->id] ?? $post;
-        });
+            // جایگزینی پست‌ها با نسخه‌های دارای رابطه
+            $paginatedItems = $paginatedItems->map(function($post) use ($postsWithRelations) {
+                return $postsWithRelations[$post->id] ?? $post;
+            });
+        }
 
-        // شبیه‌سازی pagination
-        $hasMorePages = $allPosts->count() > ($currentPage * $perPage);
+        // ایجاد LengthAwarePaginator
+        $posts = new LengthAwarePaginator(
+            $paginatedItems,
+            $total,
+            $perPage,
+            $currentPage,
+            [
+                'path' => request()->url(),
+                'pageName' => 'page',
+            ]
+        );
 
-        return view('blog.author', compact('posts', 'author'))
-            ->with('hasMorePages', $hasMorePages)
-            ->with('currentPage', $currentPage);
+        return view('blog.author', compact('posts', 'author'));
     }
 
     /**
